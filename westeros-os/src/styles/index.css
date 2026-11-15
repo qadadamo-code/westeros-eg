@@ -4,26 +4,26 @@
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 /* ───────────── Westeros OS tokens ─────────────
-   Westeros identity: cool paper ground, the navy of the wordmark, its gold ("brass" tokens) for anything special.
+   Westeros identity: cool paper ground, the black of the logo, its gold ("brass" tokens) for anything special.
    Every colour is a token here; components never hard-code hex. */
 :root {
-  --sf-bg: #eef0f5;
-  --sf-bg-deep: #e3e7ef;
+  --sf-bg: #f3f3f1;
+  --sf-bg-deep: #e9e8e5;
   --sf-surface: #ffffff;
-  --sf-surface-2: #f5f6fa;
-  --sf-surface-3: #eaedf4;
-  --sf-ink: #101a2c;
-  --sf-ink-2: #26334a;
-  --sf-muted: #5a667b;
-  --sf-faint: #8b95a7;
-  --sf-line: #d6dbe5;
-  --sf-line-strong: #b9c1d1;
-  --sf-primary: #131f34;
-  --sf-primary-hover: #1e2f4d;
+  --sf-surface-2: #f7f7f5;
+  --sf-surface-3: #eeede9;
+  --sf-ink: #0d0d0d;
+  --sf-ink-2: #2a2a2a;
+  --sf-muted: #63625e;
+  --sf-faint: #918f8a;
+  --sf-line: #dddcd7;
+  --sf-line-strong: #c2c0ba;
+  --sf-primary: #0d0d0d;
+  --sf-primary-hover: #2b2b2b;
   --sf-primary-ink: #ffffff;
-  --sf-primary-soft: #dfe4ef;
-  --sf-brass: #fbbd13;
-  --sf-brass-ink: #131f34;
+  --sf-primary-soft: #e6e5e1;
+  --sf-brass: #f8bb18;
+  --sf-brass-ink: #0d0d0d;
   --sf-brass-soft: #fff2cc;
   --sf-brass-text: #7a5500;
   --sf-danger: #c2412d;
@@ -34,11 +34,11 @@
   --sf-warn-soft: #f8e4cd;
   --sf-info: #2f6f9f;
   --sf-info-soft: #dbe8f3;
-  --sf-sidebar: #f7f8fb;
-  --sf-overlay: rgb(10 16 28 / 0.5);
-  --sf-shadow-sm: 0 1px 2px rgb(16 26 44 / 0.06);
-  --sf-shadow: 0 1px 2px rgb(16 26 44 / 0.06), 0 12px 32px -18px rgb(16 26 44 / 0.35);
-  --sf-shadow-lg: 0 2px 6px rgb(16 26 44 / 0.06), 0 30px 70px -24px rgb(16 26 44 / 0.45);
+  --sf-sidebar: #f9f9f7;
+  --sf-overlay: rgb(0 0 0 / 0.5);
+  --sf-shadow-sm: 0 1px 2px rgb(13 13 13 / 0.06);
+  --sf-shadow: 0 1px 2px rgb(13 13 13 / 0.06), 0 12px 32px -18px rgb(13 13 13 / 0.35);
+  --sf-shadow-lg: 0 2px 6px rgb(13 13 13 / 0.06), 0 30px 70px -24px rgb(13 13 13 / 0.45);
   --sf-glow: 0 0 0 4px color-mix(in srgb, var(--sf-primary) 18%, transparent);
   --radius: 0.875rem;
   color-scheme: light;
@@ -46,12 +46,12 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --sf-bg: #0a101c; --sf-bg-deep: #070b14; --sf-surface: #131f34; --sf-surface-2: #18263f; --sf-surface-3: #1f2f4b;
-    --sf-ink: #e9edf5; --sf-ink-2: #cbd3e1; --sf-muted: #94a0b5; --sf-faint: #6b7890; --sf-line: #27354f; --sf-line-strong: #384966;
-    --sf-primary: #fbbd13; --sf-primary-hover: #ffcd45; --sf-primary-ink: #131f34; --sf-primary-soft: #3a3010;
-    --sf-brass: #fbbd13; --sf-brass-ink: #131f34; --sf-brass-soft: #33290c; --sf-brass-text: #fcd568;
+    --sf-bg: #0a0a0a; --sf-bg-deep: #050505; --sf-surface: #141414; --sf-surface-2: #1b1b1b; --sf-surface-3: #242424;
+    --sf-ink: #f1efea; --sf-ink-2: #d3d1cb; --sf-muted: #9b9993; --sf-faint: #716f6a; --sf-line: #2b2b2b; --sf-line-strong: #3d3d3d;
+    --sf-primary: #f8bb18; --sf-primary-hover: #ffcd45; --sf-primary-ink: #0d0d0d; --sf-primary-soft: #3a3010;
+    --sf-brass: #f8bb18; --sf-brass-ink: #0d0d0d; --sf-brass-soft: #33290c; --sf-brass-text: #fcd568;
     --sf-danger: #e5664f; --sf-danger-soft: #3a1c16; --sf-ok: #4cc683; --sf-ok-soft: #133524; --sf-warn: #f0a04e; --sf-warn-soft: #3a2714;
-    --sf-info: #7db7e3; --sf-info-soft: #16293a; --sf-sidebar: #0e1626; --sf-overlay: rgb(0 0 0 / 0.6);
+    --sf-info: #7db7e3; --sf-info-soft: #16293a; --sf-sidebar: #0f0f0f; --sf-overlay: rgb(0 0 0 / 0.6);
     --sf-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
     --sf-shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 16px 40px -20px rgb(0 0 0 / 0.8);
     --sf-shadow-lg: 0 2px 6px rgb(0 0 0 / 0.35), 0 30px 80px -24px rgb(0 0 0 / 0.9);
@@ -59,12 +59,12 @@
   }
 }
 :root[data-theme="dark"] {
-  --sf-bg: #0a101c; --sf-bg-deep: #070b14; --sf-surface: #131f34; --sf-surface-2: #18263f; --sf-surface-3: #1f2f4b;
-  --sf-ink: #e9edf5; --sf-ink-2: #cbd3e1; --sf-muted: #94a0b5; --sf-faint: #6b7890; --sf-line: #27354f; --sf-line-strong: #384966;
-  --sf-primary: #fbbd13; --sf-primary-hover: #ffcd45; --sf-primary-ink: #131f34; --sf-primary-soft: #3a3010;
-  --sf-brass: #fbbd13; --sf-brass-ink: #131f34; --sf-brass-soft: #33290c; --sf-brass-text: #fcd568;
+  --sf-bg: #0a0a0a; --sf-bg-deep: #050505; --sf-surface: #141414; --sf-surface-2: #1b1b1b; --sf-surface-3: #242424;
+  --sf-ink: #f1efea; --sf-ink-2: #d3d1cb; --sf-muted: #9b9993; --sf-faint: #716f6a; --sf-line: #2b2b2b; --sf-line-strong: #3d3d3d;
+  --sf-primary: #f8bb18; --sf-primary-hover: #ffcd45; --sf-primary-ink: #0d0d0d; --sf-primary-soft: #3a3010;
+  --sf-brass: #f8bb18; --sf-brass-ink: #0d0d0d; --sf-brass-soft: #33290c; --sf-brass-text: #fcd568;
   --sf-danger: #e5664f; --sf-danger-soft: #3a1c16; --sf-ok: #4cc683; --sf-ok-soft: #133524; --sf-warn: #f0a04e; --sf-warn-soft: #3a2714;
-  --sf-info: #7db7e3; --sf-info-soft: #16293a; --sf-sidebar: #0e1626; --sf-overlay: rgb(0 0 0 / 0.6);
+  --sf-info: #7db7e3; --sf-info-soft: #16293a; --sf-sidebar: #0f0f0f; --sf-overlay: rgb(0 0 0 / 0.6);
   --sf-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
   --sf-shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 16px 40px -20px rgb(0 0 0 / 0.8);
   --sf-shadow-lg: 0 2px 6px rgb(0 0 0 / 0.35), 0 30px 80px -24px rgb(0 0 0 / 0.9);

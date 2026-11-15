@@ -24,11 +24,11 @@ export const WESTEROS_SLUG = "westeros";
 export const WESTEROS_PASSWORD = "westeros2026";
 export const WESTEROS_RESTAURANT_ID = DEMO_RESTAURANT_ID;
 export const WESTEROS_BRANCH_ID = DEMO_BRANCH_ID;
-export const BRAND = { navy: "#131F34", gold: "#FBBD13" } as const;
+export const BRAND = { navy: "#0D0D0D", gold: "#F8BB18" } as const;
 
 /** First accounts. Chef names are the ones in the Cost Control sheet; the rest are role placeholders to rename in Staff. */
 export const WESTEROS_STAFF: { key: string; name: string; role: Role; pin: string; email?: string; color: string; phone: string }[] = [
-  { key: "owner", name: "إدارة وستروس", role: "owner", pin: "1000", email: "owner@westeros.local", color: "#131F34", phone: "" },
+  { key: "owner", name: "إدارة وستروس", role: "owner", pin: "1000", email: "owner@westeros.local", color: "#0D0D0D", phone: "" },
   { key: "admin", name: "مدير النظام", role: "admin", pin: "2000", email: "admin@westeros.local", color: "#6b4fa0", phone: "" },
   { key: "manager", name: "مدير الفرع", role: "manager", pin: "3000", email: "manager@westeros.local", color: "#a8700c", phone: "" },
   { key: "cashier1", name: "كاشير 1", role: "cashier", pin: "4000", color: "#c2412d", phone: "" },
