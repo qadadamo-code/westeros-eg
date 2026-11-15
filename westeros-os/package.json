@@ -1,0 +1,45 @@
+{
+  "name": "sufra-os",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "shots": "node scripts/shots.mjs",
+    "gen:seed": "tsx scripts/gen-seed-sql.ts"
+  },
+  "dependencies": {
+    "@noble/curves": "2.4.0",
+    "@noble/hashes": "2.4.0",
+    "@supabase/supabase-js": "^2.118.0",
+    "clsx": "^2.1.1",
+    "leaflet": "^1.9.4",
+    "lucide-react": "^1.61.0",
+    "motion": "^12.43.0",
+    "qrcode-generator": "^1.4.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.30.6",
+    "tailwind-merge": "^3.7.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/leaflet": "^1.9.22",
+    "@types/node": "^26.6.5",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "@vitejs/plugin-react": "^6.1.2",
+    "fake-indexeddb": "^6.2.6",
+    "jsdom": "^29.1.1",
+    "playwright-core": "^1.64.1",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
+  }
+}
