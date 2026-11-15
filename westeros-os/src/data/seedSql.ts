@@ -19,6 +19,8 @@ const JSONB = new Set(["name", "description", "address", "openingHours", "modifi
   "closeHistory", "denominations",
   // manufacturing (0015_production.sql)
   "packaging", "inputs", "outputs", "chefCodes", "meatTypes", "storageMethods",
+  // shift checklists (0016_checklists.sql)
+  "roles", "templateName",
   // HR & payroll (0010_hr.sql)
   "hr", "position", "emergencyContact", "documents", "allowances", "totals", "snapshot", "earnings", "deductions", "employer"]);
 /** business-day columns ("YYYY-MM-DD") stay relative to "today" like the timestamps */
@@ -118,6 +120,8 @@ export function seedSql(opts: SeedSqlOptions = {}): string {
     out += insert(TABLE_NAMES[c], rows(c), [], undefined, true);
   // central-kitchen manufacturing (0015_production.sql)
   for (const c of ["mfgProducts", "mfgBatches", "mfgSettings"] as CollectionName[]) out += insert(TABLE_NAMES[c], rows(c), [], undefined, true);
+  // shift checklists (0016_checklists.sql)
+  for (const c of ["checklistTemplates", "checklistRuns"] as CollectionName[]) out += insert(TABLE_NAMES[c], rows(c), [], undefined, true);
   // Sufra staff with platform-wide access (is_platform_admin())
   for (const s of STAFF.filter((x) => x.role === "platform_admin" && x.email)) out += `insert into public.platform_admins (user_id) values (${q(userId(s.key))}) on conflict do nothing;
 

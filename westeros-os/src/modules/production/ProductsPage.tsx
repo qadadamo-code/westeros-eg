@@ -69,6 +69,8 @@ function ProductDialog({ product, prod, readOnly, onClose }: { product: MfgProdu
       : { name: { ar: "", en: "" }, category: "cold_sauce", categoryCode: codeOf(prod, "cold_sauce"), method: "weight", chickenMode: null, recipeType: "main", portionGrams: null, storageMethod: "", storageTemp: "chilled", shelfLifeDays: 3, ingredientsText: "", lines: [], packaging: [], active: true },
   );
   const [busy, setBusy] = useState(false);
+  // الحد اليومي lives on the product's stock item (par level), in the product's unit here
+  const [par, setPar] = useState(() => (product ? (prod.itemById.get(product.stockItemId)?.levels?.par ?? 0) / (product.unit === "kg" ? 1000 : 1) : 0));
   const set = (p: Partial<Draft>) => setD((x) => ({ ...x, ...p }));
   // the way a product is made decides how it is stocked (kilos or pieces); fixed once it has batches
   const locked = !!product && prod.batches.some((b) => b.outputs.some((o) => o.productId === product.id));
@@ -81,14 +83,16 @@ function ProductDialog({ product, prod, readOnly, onClose }: { product: MfgProdu
       const name = { ar: d.name.ar.trim(), en: d.name.en.trim() || d.name.ar.trim() };
       const fields = { ...d, name, unit, chickenMode: d.method === "chicken" ? (d.chickenMode ?? "weight") : null, portionGrams: d.portionGrams || null, lines: clean(d.lines), packaging: clean(d.packaging) };
       const stock = { name, baseUnit: unit === "kg" ? ("g" as const) : ("pc" as const), countUnit: unit === "kg" ? "kg" : "pc", active: d.active };
+      const parBase = Math.max(0, Math.round(par * (unit === "kg" ? 1000 : 1) * 1000) / 1000);
       if (product) {
+        const levels = { ...(prod.itemById.get(product.stockItemId)?.levels ?? { min: 0, par: 0, max: 0 }), par: parBase };
         await db.update("mfgProducts", product.id, fields);
-        await db.update("stockItems", product.stockItemId, locked ? { name, active: d.active } : stock);
+        await db.update("stockItems", product.stockItemId, locked ? { name, active: d.active, levels } : { ...stock, levels });
       } else {
         const n = prod.products.length + 1;
         const code = `M${String(Math.max(n, ...prod.products.map((p) => Number(p.code.replace(/\D/g, "")) + 1 || 0))).padStart(3, "0")}`;
         const item = await db.insert("stockItems", {
-          ...stock, sku: code, category: "prep", kind: "prep", packs: [], account: "food", levels: { min: 0, par: 0, max: 0 }, branchLevels: {}, supplierIds: [], preferredSupplierId: null, lastCost: 0,
+          ...stock, sku: code, category: "prep", kind: "prep", packs: [], account: "food", levels: { min: 0, par: parBase, max: 0 }, branchLevels: {}, supplierIds: [], preferredSupplierId: null, lastCost: 0,
           defaultLocationIds: prod.settings?.productLocationId ? [prod.settings.productLocationId] : [], trackBatches: true, shelfLifeDays: null, vatBp: 0, yieldBp: 10_000, allergens: [], note: "منتج مصنع", marketKey: null,
         });
         await db.insert("mfgProducts", { ...fields, code, stockItemId: item.id, sort: n });
@@ -129,6 +133,7 @@ function ProductDialog({ product, prod, readOnly, onClose }: { product: MfgProdu
           )}
           <Num label={L("وزن الحصة", "Portion weight")} suffix={L("جم", "g")} value={d.portionGrams ?? 0} onChange={(n) => set({ portionGrams: n || null })} hint={unit === "pc" ? L("مطلوب للمنتجات التي تخزن بالقطعة", "Required for products stocked by the piece") : undefined} />
           <Num label={L("الصلاحية", "Shelf life")} suffix={L("يوم", "days")} value={d.shelfLifeDays} onChange={(n) => set({ shelfLifeDays: Math.round(n) })} hint={L("تحسب تاريخ الانتهاء على الستيكر", "Sets the expiry date on the sticker")} />
+          <Num label={L("الحد اليومي", "Daily minimum")} suffix={unit === "kg" ? L("كجم", "kg") : L("قطعة", "pc")} value={par} onChange={setPar} hint={L("الكمية اللي لازم تكون جاهزة أول اليوم، وخطة اليوم بتكمل عليها", "What should be ready at the start of the day; the daily plan tops up to it")} />
           <Select label={L("درجة التخزين", "Storage temperature")} value={d.storageTemp} onChange={(e) => set({ storageTemp: e.target.value as MfgStorageTemp })} options={[{ value: "chilled", label: L("مبرد", "Chilled") }, { value: "frozen", label: L("مجمد", "Frozen") }, { value: "room", label: L("حرارة الغرفة", "Room temperature") }]} />
           <Select label={L("طريقة التخزين", "Storage method")} value={d.storageMethod} onChange={(e) => set({ storageMethod: e.target.value })} options={[{ value: "", label: "—" }, ...[...new Set([...(prod.settings?.storageMethods ?? []), d.storageMethod].filter(Boolean))].map((s) => ({ value: s, label: s }))]} />
         </div>

@@ -196,3 +196,51 @@ export interface MfgSettings extends Row {
   /** where finished products are stored */
   productLocationId: string | null;
 }
+
+/* ───────── قوائم فتح وقفل الوردية (0016_checklists.sql; src/modules/checklists) ───────── */
+
+export type ChecklistKind = "opening" | "closing" | "other";
+export type ChecklistArea = "kitchen" | "cashier" | "floor" | "all";
+
+export interface ChecklistTask {
+  id: string;
+  text: Loc;
+}
+
+/** A list of tasks done every day by one department (kitchen opening, cashier closing …). */
+export interface ChecklistTemplate extends Row {
+  name: Loc;
+  kind: ChecklistKind;
+  area: ChecklistArea;
+  /** roles that do this list; empty = everyone */
+  roles: string[];
+  items: ChecklistTask[];
+  active: boolean;
+  sort: number;
+}
+
+export interface ChecklistRunItem {
+  taskId: string;
+  text: Loc;
+  /** membership id of who ticked it, with a snapshot of the name */
+  doneBy: string | null;
+  doneByName: string;
+  doneAt: string | null;
+  note: string;
+}
+
+/** One list on one business day in one branch: who ticked what and when. */
+export interface ChecklistRun extends Row {
+  branchId: string;
+  templateId: string;
+  templateName: Loc;
+  kind: ChecklistKind;
+  area: ChecklistArea;
+  /** business day "YYYY-MM-DD" (Cairo) */
+  day: string;
+  items: ChecklistRunItem[];
+  startedBy: string | null;
+  startedByName: string;
+  startedAt: string;
+  completedAt: string | null;
+}

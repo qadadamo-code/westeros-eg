@@ -24,7 +24,7 @@ import type {
   StorageLocation, Supplier, SupplierInvoice, SupplierItem, SupplierPayment,
 } from "./inventoryTypes";
 import type { Camera, PeopleCount, RadioClip, SupportTicket, OpsSettings, OpsAck } from "@/modules/ops/types";
-import type { MfgBatch, MfgProduct, MfgSettings } from "./productionTypes";
+import type { ChecklistRun, ChecklistTemplate, MfgBatch, MfgProduct, MfgSettings } from "./productionTypes";
 import type { AccountingSettings, BankStatementLine, CashAccount, CashTransfer, CostCentre, Expense, GlAccount, JournalDraft, RecurringExpense } from "./accountingTypes";
 
 export type { Units, Currency, Role };
@@ -1098,6 +1098,9 @@ export interface Collections {
   mfgProducts: MfgProduct;
   mfgBatches: MfgBatch;
   mfgSettings: MfgSettings;
+  /* Shift checklists (0016_checklists.sql) */
+  checklistTemplates: ChecklistTemplate;
+  checklistRuns: ChecklistRun;
 }
 export type CollectionName = keyof Collections;
 export type RowOf<C extends CollectionName> = Collections[C];
@@ -1203,5 +1206,7 @@ export const TABLE_NAMES: { [C in CollectionName]: string } = {
   mfgProducts: "mfg_products",
   mfgBatches: "mfg_batches",
   mfgSettings: "mfg_settings",
+  checklistTemplates: "checklist_templates",
+  checklistRuns: "checklist_runs",
 };
 export const COLLECTIONS = Object.keys(TABLE_NAMES) as CollectionName[];

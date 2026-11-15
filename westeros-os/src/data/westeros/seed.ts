@@ -13,6 +13,7 @@
 import { major } from "@/lib/money";
 import type { Role } from "@/auth/roles";
 import type { BaseUnit, Collections, Localized, Membership, MenuCategory, MenuItem, MfgProduct, MfgSettings, StaffCompensation, StockCategory, StockAccount, StockItem } from "../types";
+import { defaultRows } from "@/modules/checklists/defaults";
 import { buildSeed, DEMO_BRANCH_ID, DEMO_RESTAURANT_ID, hashPassword, hashPin, staffId, userId, type Seed, type SeedData, type SeedUser } from "../seed";
 import { seedId } from "@/lib/id";
 import { COLLECTIONS } from "../types";
@@ -201,6 +202,9 @@ export function buildWesterosSeed(now: Date = new Date()): Seed {
     productLocationId: locId("fridge"),
   };
   data.mfgSettings = [settings];
+
+  /* ── shift opening / closing checklists ── */
+  data.checklistTemplates = defaultRows().map((d) => ({ ...base(`checklist:${d.k}`), ...d.row }));
 
   return { data, users, pins, pinHashes };
 }

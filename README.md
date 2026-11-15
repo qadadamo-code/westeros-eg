@@ -19,6 +19,17 @@ Built on the Sufra OS codebase (Vite + React + TypeScript + Tailwind; data in th
 - `Label.tsx` — the batch sticker (product, batch number, production and expiry dates, chef, quantity, QR).
 - `src/data/westeros/` — the restaurant's own data: 282 raw materials, 93 menu items, 37 manufactured products, staff.
 - `supabase/migrations/0015_production.sql` — tables and row-level security.
+- `plan.ts`, `PlanPage.tsx` — today's production plan (خطة اليوم): what to make and how much, from the daily
+  minimum (the stock item's `levels.par`), the same weekday's usage over the last four weeks, stock on hand and
+  what expires today.
+- `variance.ts`, `VariancePage.tsx` — standard vs actual (المعياري والفعلي): each batch against its recipe, by
+  chef, product and ingredient, with trimmings.
+
+## Shift checklists (قوائم الوردية)
+
+`westeros-os/src/modules/checklists`: opening and closing lists per area (kitchen, cashier, floor). Every task is
+ticked with the name and time of who did it, managers follow the last seven days and edit the lists.
+Tables in `supabase/migrations/0016_checklists.sql`.
 
 ## Checks
 

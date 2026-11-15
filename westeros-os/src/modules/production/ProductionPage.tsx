@@ -1,6 +1,6 @@
 import { lazy, Suspense, useMemo } from "react";
 import { Link, Route, Routes } from "react-router-dom";
-import { AlarmClock, BookOpenCheck, ChefHat, ClipboardList, Factory, LayoutDashboard, PlusCircle, Settings2, Wallet } from "lucide-react";
+import { AlarmClock, BookOpenCheck, CalendarCheck, ChefHat, ClipboardList, Factory, LayoutDashboard, PlusCircle, Scale, Settings2, Wallet } from "lucide-react";
 import { useSession } from "@/auth/session";
 import { useT } from "@/i18n/i18n";
 import { formatMoney } from "@/lib/money";
@@ -15,6 +15,8 @@ const NewBatchPage = lazy(() => import("./NewBatchPage"));
 const BatchesPage = lazy(() => import("./BatchesPage"));
 const ProductsPage = lazy(() => import("./ProductsPage"));
 const SettingsPage = lazy(() => import("./SettingsPage"));
+const PlanPage = lazy(() => import("./PlanPage"));
+const VariancePage = lazy(() => import("./VariancePage"));
 
 export default function ProductionPage() {
   const { L } = useT();
@@ -34,16 +36,20 @@ export default function ProductionPage() {
         label={L("أقسام التصنيع", "Production sections")}
         items={[
           { to: "/production", end: true, label: L("المتابعة", "Overview"), icon: <LayoutDashboard />, count: expiring || null },
+          { to: "/production/plan", label: L("خطة اليوم", "Today's plan"), icon: <CalendarCheck /> },
           ...(can("production.run") ? [{ to: "/production/new", label: L("تشغيلة جديدة", "New batch"), icon: <PlusCircle /> }] : []),
           { to: "/production/batches", label: L("سجل التشغيلات", "Batch log"), icon: <ClipboardList /> },
           { to: "/production/products", label: L("المنتجات والريسبي", "Products & recipes"), icon: <BookOpenCheck /> },
+          ...(can("production.manage") ? [{ to: "/production/variance", label: L("المعياري والفعلي", "Standard vs actual"), icon: <Scale /> }] : []),
           ...(can("production.manage") ? [{ to: "/production/settings", label: L("الثوابت", "Constants"), icon: <Settings2 /> }] : []),
         ]}
       />
       <Suspense fallback={<Skeleton className="h-96" rounded="rounded-[20px]" />}>
         <Routes>
           <Route index element={<Overview prod={prod} />} />
+          <Route path="plan" element={<PlanPage />} />
           <Route path="new" element={<NewBatchPage />} />
+          <Route path="variance" element={<VariancePage />} />
           <Route path="batches" element={<BatchesPage />} />
           <Route path="products" element={<ProductsPage />} />
           <Route path="settings" element={<SettingsPage />} />

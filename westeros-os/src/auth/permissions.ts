@@ -53,6 +53,9 @@ export const PERMISSIONS = [
   "production.view", // batches, last production prices, labels
   "production.run", // make a batch (signed by the chef who is signed in)
   "production.manage", // products, recipes, constants, void a batch
+  // shift opening / closing checklists
+  "checklists.do", // tick the tasks of your department: every restaurant role
+  "checklists.manage", // edit the lists, see who did what
   // management
   "dashboard.view",
   "reports.view",
@@ -84,7 +87,7 @@ const without = (...xs: Permission[]) => new Set<Permission>(PERMISSIONS.filter(
 const only = (...xs: Permission[]) => new Set<Permission>(xs);
 
 /** ops permissions every restaurant role has (walkie-talkie, help center). */
-const OPS_ALL_STAFF: Permission[] = ["radio.use", "help.view"];
+const OPS_ALL_STAFF: Permission[] = ["radio.use", "help.view", "checklists.do"];
 const SERVICE_BASE: Permission[] = ["floor.view", "service_calls.handle", "reservations.view", "customers.view", "kitchen.view"];
 
 export const MATRIX: Record<Role, ReadonlySet<Permission>> = {

@@ -1,5 +1,5 @@
 /** Shared pieces of the manufacturing screens: number entry, ingredient picker, recipe lines, the live result panel. */
-import { useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AlertTriangle, Plus, Search, Trash2 } from "lucide-react";
 import type { MfgBatchOutput, MfgRecipeLine, StockItem } from "@/data/types";
 import { useT } from "@/i18n/i18n";
@@ -25,11 +25,19 @@ export function Num({ value, onChange, label, suffix, hint, className, autoFocus
     last.current = value;
     if (r3(parseNum(text)) !== r3(value)) setText(value ? String(r3(value)) : "");
   }
+  // inside a dialog the focus trap runs after mount, so take the focus once it has settled
+  const input = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (!autoFocus) return;
+    const t = setTimeout(() => input.current?.focus(), 80);
+    return () => clearTimeout(t);
+  }, [autoFocus]);
   return (
     <label className={cn("grid gap-1.5", className)}>
       {label ? <span className="text-[13px] font-semibold text-ink-2">{label}</span> : null}
       <span className={cn("flex overflow-hidden rounded-xl border border-line bg-surface transition-[border-color,box-shadow] focus-within:border-primary focus-within:shadow-[var(--sf-glow)]", big ? "h-13" : "h-11")}>
         <input
+          ref={input}
           autoFocus={autoFocus}
           inputMode="decimal"
           className={cn("num w-0 min-w-12 flex-1 bg-transparent px-3 outline-none", big ? "text-[19px] font-bold" : "text-[15px]")}

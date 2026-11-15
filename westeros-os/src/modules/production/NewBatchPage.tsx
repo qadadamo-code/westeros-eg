@@ -4,7 +4,7 @@
  * chef, moves the stock and opens the sticker.
  */
 import { useMemo, useState, type ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Beef, Check, CookingPot, Drumstick, Droplets, Scale, ShieldCheck, Shapes } from "lucide-react";
 import { useSession } from "@/auth/session";
 import { useDb } from "@/data/hooks";
@@ -13,7 +13,7 @@ import { useT } from "@/i18n/i18n";
 import { cn } from "@/lib/cn";
 import { formatMoney } from "@/lib/money";
 import { nowIso } from "@/lib/time";
-import { Badge, Button, Card, EmptyState, Input, Segmented, Select, Switch, useToast } from "@/ui";
+import { Badge, Button, Card, EmptyState, Input, Segmented, Select, Skeleton, Switch, useToast } from "@/ui";
 import { buildBatch, scaleLines, type BatchDraft, type BuildCtx } from "./build";
 import { LabelDialog } from "./LabelDialog";
 import { BatchError, saveBatch } from "./ops";
@@ -27,11 +27,24 @@ export default function NewBatchPage() {
   const { L } = useT();
   const { can } = useSession();
   const prod = useProduction();
-  const [tab, setTab] = useState<Tab>("weight");
-  const [run, setRun] = useState(0);
+  const [params] = useSearchParams();
+  const wanted = params.get("product");
   if (!can("production.run")) return <EmptyState icon={<ShieldCheck />} title={L("تسجيل التشغيلات للشيف وفريق المطبخ", "Recording batches is for the kitchen team")} />;
+  // opened from the daily plan with a product: wait for the products so the form starts on it
+  if (wanted && !prod.products.length) return <Skeleton className="h-96" rounded="rounded-[20px]" />;
+  return <Forms key={wanted ?? ""} prod={prod} initial={wanted ? prod.productById.get(wanted) : undefined} />;
+}
+
+const tabOf = (p: MfgProduct | undefined): Tab => (!p ? "weight" : p.method === "burger" ? (p.category === "chicken_burger" ? "chicken_burger" : "beef") : p.method);
+
+function Forms({ prod, initial }: { prod: Prod; initial: MfgProduct | undefined }) {
+  const { L } = useT();
+  const [tab, setTab] = useState<Tab>(() => tabOf(initial));
+  const [run, setRun] = useState(0);
   const key = `${tab}-${run}`;
   const again = () => setRun((n) => n + 1);
+  // the product the plan asked for is preselected once, on its own tab
+  const first = run === 0 && tabOf(initial) === tab ? initial : undefined;
   return (
     <div className="grid gap-4">
       <Segmented<Tab>
@@ -48,11 +61,11 @@ export default function NewBatchPage() {
         ]}
       />
       {tab === "weight" || tab === "portion" ? (
-        <SimpleForm key={key} method={tab} prod={prod} onDone={again} />
+        <SimpleForm key={key} method={tab} prod={prod} onDone={again} initial={first} />
       ) : tab === "chicken" ? (
-        <ChickenForm key={key} prod={prod} onDone={again} />
+        <ChickenForm key={key} prod={prod} onDone={again} initial={first} />
       ) : tab === "fat" ? (
-        <FatForm key={key} prod={prod} onDone={again} />
+        <FatForm key={key} prod={prod} onDone={again} initial={first} />
       ) : (
         <BurgerForm key={key} kind={tab === "beef" ? "beef" : "chicken"} prod={prod} onDone={again} />
       )}
@@ -199,17 +212,17 @@ function RecipeSwitch({ value, onChange, empty }: { value: boolean; onChange: (v
 
 /* ───────── 1 + 2 · by weight / by portion ───────── */
 
-function SimpleForm({ method, prod, onDone }: { method: Extract<MfgMethod, "weight" | "portion">; prod: Prod; onDone: () => void }) {
+function SimpleForm({ method, prod, onDone, initial }: { method: Extract<MfgMethod, "weight" | "portion">; prod: Prod; onDone: () => void; initial?: MfgProduct }) {
   const { L } = useT();
   const db = useDb();
   const ctx = useCtx(prod);
   const list = useMemo(() => prod.products.filter((p) => p.active && p.method === method), [prod.products, method]);
-  const [productId, setProductId] = useState("");
+  const [productId, setProductId] = useState(initial?.id ?? "");
   const [meals, setMeals] = useState(1);
   const [net, setNet] = useState(0);
-  const [lines, setLines] = useState<MfgRecipeLine[]>([]);
-  const [packaging, setPackaging] = useState<MfgRecipeLine[]>([]);
-  const [keep, setKeep] = useState(false);
+  const [lines, setLines] = useState<MfgRecipeLine[]>(initial?.lines ?? []);
+  const [packaging, setPackaging] = useState<MfgRecipeLine[]>(initial?.packaging ?? []);
+  const [keep, setKeep] = useState(!!initial && !initial.lines.length);
   const p = prod.productById.get(productId);
   const pick = (id: string) => {
     const x = prod.productById.get(id);
@@ -266,14 +279,14 @@ interface ChickenRow {
   packaging: MfgRecipeLine[];
 }
 
-function ChickenForm({ prod, onDone }: { prod: Prod; onDone: () => void }) {
+function ChickenForm({ prod, onDone, initial }: { prod: Prod; onDone: () => void; initial?: MfgProduct }) {
   const { L, lang, loc } = useT();
   const db = useDb();
   const ctx = useCtx(prod);
   const list = useMemo(() => prod.products.filter((p) => p.active && p.method === "chicken"), [prod.products]);
   const [chickenKg, setChickenKg] = useState(0);
-  const [rows, setRows] = useState<ChickenRow[]>([]);
-  const [keep, setKeep] = useState(false);
+  const [rows, setRows] = useState<ChickenRow[]>(() => (initial ? [{ productId: initial.id, weightKg: 0, count: 0, lines: initial.lines, packaging: initial.packaging }] : []));
+  const [keep, setKeep] = useState(!!initial && !initial.lines.length);
   const chicken = prod.settings?.chickenItemId ? prod.itemById.get(prod.settings.chickenItemId) : undefined;
   const toggle = (id: string) =>
     setRows((r) => {
@@ -409,11 +422,11 @@ function BurgerForm({ kind, prod, onDone }: { kind: "beef" | "chicken"; prod: Pr
 
 /* ───────── fat ───────── */
 
-function FatForm({ prod, onDone }: { prod: Prod; onDone: () => void }) {
+function FatForm({ prod, onDone, initial }: { prod: Prod; onDone: () => void; initial?: MfgProduct }) {
   const { L, lang, loc } = useT();
   const ctx = useCtx(prod);
   const list = useMemo(() => prod.products.filter((p) => p.active && p.method === "fat"), [prod.products]);
-  const [productId, setProductId] = useState(() => list[0]?.id ?? "");
+  const [productId, setProductId] = useState(() => initial?.id ?? list[0]?.id ?? "");
   const [fatKg, setFatKg] = useState(0);
   const [readyKg, setReadyKg] = useState(0);
   const p = prod.productById.get(productId) ?? list[0];
