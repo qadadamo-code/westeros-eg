@@ -14,7 +14,5 @@
     "types": ["node"],
     "typeRoots": ["../westeros-os/node_modules/@types"]
   },
-  "include": ["*.ts", "_lib/**/*.ts"],
-  // ask.ts re-exports sufra-web/api/ask (type-checked by sufra-web)
-  "exclude": ["ask.ts"]
+  "include": ["*.ts", "_lib/**/*.ts"]
 }
