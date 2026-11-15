@@ -1,6 +1,6 @@
 /**
  * Ticket data operations. Guest complaints come in through `submitGuestComplaint` (public pages: local rows, or the
- * anon RPC guest_complaint_submit in 0013_ops.sql); staff tickets to Sufra through `requestSufraSupport`, which also
+ * anon RPC guest_complaint_submit in 0013_ops.sql); staff tickets to Westeros through `requestSufraSupport`, which also
  * forwards to /api/support-ticket (email/webhook from env) when it is deployed.
  */
 import type { Db } from "@/data/hooks";
@@ -116,7 +116,7 @@ export async function recordFollowUp(db: Db, t: SupportTicket, byName: string, t
   return db.update("supportTickets", t.id, { followUp: text, followUpAt: nowIso(), notes: [...t.notes, note(db, byName, "reply", text)], firstResponseAt: t.firstResponseAt ?? nowIso() });
 }
 
-/** Staff → Sufra technical support. */
+/** Staff → Westeros technical support. */
 export async function requestSufraSupport(db: Db, x: { subject: string; body: string; category: string; priority: TicketPriority; name: string; phone: string; diagnostics: Diagnostics; restaurantName: string }): Promise<SupportTicket> {
   const existing = await db.list("supportTickets", { where: { kind: "sufra" } });
   const t = await db.insert("supportTickets", {

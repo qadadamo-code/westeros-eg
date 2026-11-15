@@ -265,7 +265,7 @@ export function ReceiptView({ model, className, style }: { model: ReceiptModel; 
               {promo}
               {footer}
               <div className="tiny" style={{ textAlign: "start" }}>
-                Sufra OS · {model.issuedAt.slice(0, 10)}
+                Westeros OS · {model.issuedAt.slice(0, 10)}
               </div>
             </div>
           </div>
@@ -309,7 +309,7 @@ export function ReceiptView({ model, className, style }: { model: ReceiptModel; 
           {eta}
           {promo}
           {footer}
-          <div className="tiny">Sufra OS</div>
+          <div className="tiny">Westeros OS</div>
         </>
       )}
     </div>

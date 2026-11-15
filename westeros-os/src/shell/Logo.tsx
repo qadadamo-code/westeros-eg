@@ -1,27 +1,23 @@
 import { cn } from "@/lib/cn";
-import { useT } from "@/i18n/i18n";
 
-/** The Sufra plate mark (same as sufra-web's favicon), drawn with tokens. */
+/** The Westeros mark: the gold W of the wordmark on its navy. (Swap for the artwork file when it is supplied.) */
 export function Mark({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 64 64" className={cn("size-9 shrink-0", className)} aria-hidden>
-      <circle cx="32" cy="32" r="29" fill="var(--sf-brass)" />
-      <circle cx="32" cy="32" r="22.5" fill="none" stroke="color-mix(in srgb, var(--sf-brass-soft) 90%, white)" strokeWidth="2.4" />
-      <circle cx="32" cy="32" r="16" fill="#f7f3ea" />
-      <circle cx="38" cy="27" r="5" fill="#0d5a53" />
+      <rect width="64" height="64" rx="15" fill="#131F34" />
+      <path d="M12 19h8.2l4.6 17.5L29.2 19h5.6l4.4 17.5L43.8 19H52l-8.6 27h-7.2L32 31.2 27.8 46h-7.2z" fill="#FBBD13" />
     </svg>
   );
 }
 
 export function Logo({ compact, className }: { compact?: boolean; className?: string }) {
-  const { t } = useT();
   return (
     <span className={cn("inline-flex items-center gap-2.5", className)}>
       <Mark />
       {!compact ? (
-        <span className="leading-none">
-          <span className="block font-display text-[21px] font-semibold">{t("app.name")}</span>
-          <span className="block text-[11px] font-semibold tracking-wide text-muted">{t("app.os")}</span>
+        <span className="leading-none" dir="ltr">
+          <span className="block font-sans text-[17px] font-extrabold tracking-[0.14em]">WESTEROS</span>
+          <span className="mt-0.5 block text-[10.5px] font-bold tracking-[0.22em] text-brass-text">OS · BURGER &amp; MORE</span>
         </span>
       ) : null}
     </span>

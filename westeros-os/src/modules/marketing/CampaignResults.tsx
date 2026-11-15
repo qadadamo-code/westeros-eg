@@ -48,7 +48,7 @@ export default function CampaignResults() {
         <div className="flex-1" />
         {c.status === "scheduled" && can("marketing.manage") ? (
           <Button icon={<Send className="size-4 flip-rtl" />} onClick={async () => {
-            const r = await sendCampaign(db, c, { restaurantName: restaurant ? loc(restaurant.name) : "Sufra", slug: restaurant?.slug ?? "", origin: window.location.origin, lang: "ar", settings });
+            const r = await sendCampaign(db, c, { restaurantName: restaurant ? loc(restaurant.name) : "Westeros", slug: restaurant?.slug ?? "", origin: window.location.origin, lang: "ar", settings });
             toast({ title: L(`اتبعتت لـ ${r.sent + r.queued}`, `Sent to ${r.sent + r.queued}`), tone: "success" });
           }}>
             {L("ابعتها دلوقتي", "Send now")}

@@ -1,5 +1,5 @@
 /**
- * Sponsored placements sold by Sufra (pure): slot catalogue, booking conflicts (capacity per day), quotes,
+ * Sponsored placements sold by Westeros (pure): slot catalogue, booking conflicts (capacity per day), quotes,
  * spend from delivery stats, and the public feed the marketplace reads (`public_sponsored(city, cuisine)`).
  */
 import type { Localized } from "@/data/types";

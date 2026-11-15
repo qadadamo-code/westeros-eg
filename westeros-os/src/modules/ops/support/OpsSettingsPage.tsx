@@ -1,4 +1,4 @@
-/** /settings/ops — guest hotline + WhatsApp, Sufra support line, ticket SLAs, walkie-talkie limits. */
+/** /settings/ops — guest hotline + WhatsApp, Westeros support line, ticket SLAs, walkie-talkie limits. */
 import { useEffect, useState } from "react";
 import { Headset, PhoneCall, RadioTower, Timer } from "lucide-react";
 import { useT } from "@/i18n/i18n";
@@ -31,8 +31,8 @@ export default function OpsSettingsPage() {
           <Input label={L("رقم الواتساب", "WhatsApp number")} dir="ltr" inputMode="tel" value={d.whatsappPhone} onChange={(e) => setD({ ...d, whatsappPhone: e.target.value })} />
         </Card>
         <Card className="grid content-start gap-3 p-4">
-          <CardHeader icon={<Headset />} title={L("دعم سُفرة الفني", "Sufra technical support")} />
-          <Input label={L("الخط الساخن لسُفرة", "Sufra hotline")} dir="ltr" value={d.sufraSupportPhone} disabled placeholder={L("هيتعلن قريباً", "To be announced")} hint={L("بيتحدد من فريق سُفرة.", "Set by the Sufra team.")} />
+          <CardHeader icon={<Headset />} title={L("دعم وستروس الفني", "Westeros technical support")} />
+          <Input label={L("الخط الساخن لوستروس", "Westeros hotline")} dir="ltr" value={d.sufraSupportPhone} disabled placeholder={L("هيتعلن قريباً", "To be announced")} hint={L("بيتحدد من فريق وستروس.", "Set by the Westeros team.")} />
           <LinkButton to="/help/request" variant="soft">{L("اطلب دعم", "Request support")}</LinkButton>
         </Card>
         <Card className="grid content-start gap-3 p-4">

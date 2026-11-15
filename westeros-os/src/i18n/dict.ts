@@ -3,8 +3,8 @@
  * Every key must have both languages — src/i18n/i18n.test.ts enforces it, including {placeholders}.
  */
 export const dict = {
-  "app.name": { ar: "سُفرة", en: "Sufra" },
-  "app.os": { ar: "نظام المطعم", en: "Restaurant OS" },
+  "app.name": { ar: "وستروس", en: "Westeros" },
+  "app.os": { ar: "نظام التشغيل", en: "OS" },
 
   "common.save": { ar: "احفظ", en: "Save" },
   "common.cancel": { ar: "إلغاء", en: "Cancel" },
@@ -65,7 +65,7 @@ export const dict = {
   "sync.localHint": { ar: "البيانات محفوظة في المتصفح ده. افتح تاب تاني (كاشير هنا ومطبخ هناك) وهتلاقيهم بيحدّثوا بعض لحظة بلحظة.", en: "Data lives in this browser. Open another tab (POS here, kitchen there) and they update each other instantly." },
   "sync.cloudHint": { ar: "متصل بقاعدة بيانات المطعم. لو النت قطع هنكمّل شغل ونبعت التغييرات أول ما يرجع.", en: "Connected to the restaurant database. If the internet drops we keep working and send changes when it's back." },
 
-  "login.title": { ar: "أهلاً بيك في سُفرة", en: "Welcome to Sufra" },
+  "login.title": { ar: "أهلاً بيك في وستروس", en: "Welcome to Westeros" },
   "login.subtitle": { ar: "ادخل بحسابك عشان تدير المطعم", en: "Sign in to run your restaurant" },
   "login.email": { ar: "الإيميل", en: "Email" },
   "login.password": { ar: "الباسورد", en: "Password" },
@@ -229,7 +229,7 @@ export const dict = {
   "guest.orderingSoon": { ar: "الطلب من الموبايل جاي قريب — دلوقتي تقدر تتفرج على المنيو وتنادي الجرسون.", en: "Ordering from your phone is coming soon — for now browse the menu and call a waiter." },
   "guest.onlineSoon": { ar: "الطلب أونلاين جاي قريب. اتفرج على المنيو لحد ما يجهز.", en: "Online ordering is coming soon. Browse the menu meanwhile." },
   "guest.soldOut": { ar: "خلص", en: "Sold out" },
-  "guest.poweredBy": { ar: "بنظام سُفرة", en: "Powered by Sufra" },
+  "guest.poweredBy": { ar: "بنظام وستروس", en: "Powered by Westeros" },
   "guest.pricesExcl": { ar: "الأسعار من غير {service}٪ خدمة و{vat}٪ ضريبة", en: "Prices exclude {service}% service and {vat}% VAT" },
   "guest.pricesIncl": { ar: "الأسعار شاملة الخدمة والضريبة", en: "Prices include service and VAT" },
 } as const satisfies Record<string, { ar: string; en: string }>;

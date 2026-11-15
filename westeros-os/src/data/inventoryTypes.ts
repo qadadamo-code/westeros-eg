@@ -71,7 +71,7 @@ export interface StockItem extends Row {
   allergens: string[];
   active: boolean;
   note: string;
-  /** matching product key in the Sufra supplier marketplace (compare prices / order online), e.g. "tomato" */
+  /** matching product key in the Westeros supplier marketplace (compare prices / order online), e.g. "tomato" */
   marketKey?: string | null;
 }
 
@@ -231,10 +231,10 @@ export interface PoLine {
 export interface MarketplaceInfo {
   /** copied marketplace supplier id (s01…) */
   supplierRef: string;
-  /** supplier's Sufra plan (subscription + commission per delivered order) */
+  /** supplier's Westeros plan (subscription + commission per delivered order) */
   plan: "starter" | "growth" | "distributor";
   commissionPct: number;
-  /** commission Sufra charges the SUPPLIER on the delivered value (not the restaurant) */
+  /** commission Westeros charges the SUPPLIER on the delivered value (not the restaurant) */
   commission: Units;
   /** delivered (chargeable) value before VAT */
   base: Units;
@@ -259,7 +259,7 @@ export interface PurchaseOrder extends Row {
   note: string;
   createdBy: string | null;
   approvedBy: string | null;
-  /** sent how (WhatsApp / phone / email / Sufra marketplace) */
+  /** sent how (WhatsApp / phone / email / Westeros marketplace) */
   sentVia: "whatsapp" | "phone" | "email" | "marketplace" | null;
   marketplace: MarketplaceInfo | null;
   /** from a suggestion run */

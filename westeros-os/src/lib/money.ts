@@ -1,5 +1,5 @@
 /**
- * Money in Sufra OS.
+ * Money in Westeros OS.
  *
  * Every amount is an integer count of **units of 0.00001 of the currency** (EGP: 1 EGP = 100 000 units,
  * 1 piastre = 1 000 units) — the exact unit `sufra-finance` uses for its `bigint` Amount, and the unit of

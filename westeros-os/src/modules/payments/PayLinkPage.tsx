@@ -62,7 +62,7 @@ export default function PayLinkPage() {
     else if (repo.kind === "local") repo.list("restaurants", { where: { slug: restaurantSlug } }).then((r) => r[0] && setName(r[0].name));
   }, [pi, repo, restaurantSlug]);
   useEffect(() => {
-    document.title = `${name ? loc(name) : "Sufra"} · ${L("لينك دفع", "Payment link")}`;
+    document.title = `${name ? loc(name) : "Westeros"} · ${L("لينك دفع", "Payment link")}`;
   }, [name, loc, L]);
 
   const pay = () => {
@@ -141,7 +141,7 @@ export default function PayLinkPage() {
           )}
         </div>
       </main>
-      <p className="mx-auto mt-4 max-w-md text-center text-[11.5px] text-faint">Sufra · {pi.id.slice(-8)}</p>
+      <p className="mx-auto mt-4 max-w-md text-center text-[11.5px] text-faint">Westeros · {pi.id.slice(-8)}</p>
     </div>
   );
 }

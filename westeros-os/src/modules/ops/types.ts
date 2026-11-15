@@ -134,7 +134,7 @@ export interface SupportTicket extends TenantRow {
   resolvedAt: string | null;
   escalatedAt: string | null;
   diagnostics: Diagnostics | null;
-  /** forwarded to Sufra support (api/support-ticket) */
+  /** forwarded to Westeros support (api/support-ticket) */
   forwardedAt: string | null;
 }
 
@@ -155,7 +155,7 @@ export interface OpsSettings extends TenantRow {
   /** guest hotline shown on the guest "contact the restaurant" sheet (falls back to the branch phone) */
   hotlinePhone: string;
   whatsappPhone: string;
-  /** Sufra technical support line (placeholder until Sufra publishes one) */
+  /** Westeros technical support line (placeholder until Westeros publishes one) */
   sufraSupportPhone: string;
   sufraSupportWhatsapp: string;
   /** on-site camera gateway base URL (go2rtc / MediaMTX) — playback templates may use {gateway} */

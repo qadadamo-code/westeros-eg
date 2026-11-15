@@ -173,7 +173,7 @@ function TableView() {
           </div>
         }
       />
-      <p className="mt-10 pb-4 text-center text-[12px] text-faint">{L("بنظام سُفرة", "Powered by Sufra")}</p>
+      <p className="mt-10 pb-4 text-center text-[12px] text-faint">{L("بنظام وستروس", "Powered by Westeros")}</p>
 
       {/* cart bar sits above the dock */}
       {ordering ? <CartBar onOpen={() => setSheet("cart")} mode="dine_in" offset={dockH} /> : null}

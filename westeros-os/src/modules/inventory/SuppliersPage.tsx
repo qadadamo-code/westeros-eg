@@ -28,7 +28,7 @@ export default function SuppliersPage() {
     {
       key: "n", header: L("المورد", "Supplier"), cell: (s) => (
         <div className="min-w-0">
-          <p className="flex items-center gap-1.5 truncate font-semibold">{loc(s.name)}{s.marketplaceId ? <Store className="size-4 shrink-0 text-brass" aria-label={L("على سوق سُفرة", "on the Sufra marketplace")} /> : null}</p>
+          <p className="flex items-center gap-1.5 truncate font-semibold">{loc(s.name)}{s.marketplaceId ? <Store className="size-4 shrink-0 text-brass" aria-label={L("على سوق وستروس", "on the Westeros marketplace")} /> : null}</p>
           <p className="truncate text-[12px] text-muted">{s.contactName} · <span dir="ltr">{s.phone}</span></p>
         </div>
       ),
@@ -77,7 +77,7 @@ function SupplierSheet({ supplier: s, onClose }: { supplier: Supplier; onClose: 
         <div className="flex flex-wrap gap-2">
           <a className="inline-flex h-11 items-center gap-2 rounded-xl border border-line px-4 font-semibold hover:bg-surface-2" href={`tel:${s.phone}`}><Phone className="size-4" />{L("اتصال", "Call")}</a>
           {s.whatsapp ? <a className="inline-flex h-11 items-center gap-2 rounded-xl bg-ok px-4 font-semibold text-white" href={waLink(s.whatsapp, L("السلام عليكم", "Hello"))} target="_blank" rel="noreferrer"><MessageCircle className="size-4" />WhatsApp</a> : null}
-          {s.marketplaceId ? <Button variant="brass" icon={<Store className="size-4" />} onClick={() => nav(`/inventory/marketplace?supplier=${s.marketplaceId}`)}>{L("كتالوجه على سوق سُفرة", "Their Sufra catalogue")}</Button> : null}
+          {s.marketplaceId ? <Button variant="brass" icon={<Store className="size-4" />} onClick={() => nav(`/inventory/marketplace?supplier=${s.marketplaceId}`)}>{L("كتالوجه على سوق وستروس", "Their Westeros catalogue")}</Button> : null}
         </div>
         <Tabs label={L("أقسام المورد", "Supplier sections")} value={tab} onChange={setTab} items={[{ value: "prices", label: L("الأسعار", "Prices"), count: offers.length }, { value: "orders", label: L("الطلبات", "Orders"), count: pos.length }, { value: "invoices", label: L("الفواتير والدفع", "Invoices & payments") }]} />
         {tab === "prices" ? (

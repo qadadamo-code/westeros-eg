@@ -12,7 +12,7 @@
 import { uuid } from "@/lib/id";
 import { nowIso, startOfDay } from "@/lib/time";
 import { loadRaw, saveRaw } from "@/lib/storage";
-import { buildSeed, hashPassword, hashPin, type SeedUser } from "../seed";
+import { buildSeed, hashPassword, hashPin, type Seed, type SeedUser } from "../seed";
 import { runQuery } from "../query";
 import { priceItems } from "../pricing";
 import { onSchedule, priceFor, sellable } from "@/modules/menu/rules";
@@ -44,6 +44,10 @@ export interface LocalAdapterOptions {
   now?: () => Date;
   /** where the email session is remembered */
   sessionKey?: string;
+  /** which tenant to start with (default: the base demo seed; the app passes the Westeros seed) */
+  buildSeed?: (now: Date) => Seed;
+  /** bump to reseed browsers that hold an older seed */
+  seedVersion?: string;
 }
 
 export class LocalAdapter implements Repo {
@@ -73,7 +77,7 @@ export class LocalAdapter implements Repo {
   }
 
   constructor(opts: LocalAdapterOptions = {}) {
-    this.opts = { name: "sufra-os", memory: false, seed: true, now: () => new Date(), sessionKey: "sufra-os.session", ...opts };
+    this.opts = { name: "sufra-os", memory: false, seed: true, now: () => new Date(), sessionKey: "sufra-os.session", buildSeed, seedVersion: SEED_VERSION, ...opts };
     this.kv = this.opts.memory ? new MemoryKV() : openKV(this.opts.name);
     for (const c of COLLECTIONS) this.rows.set(c, new Map());
     this.readyP = this.boot();
@@ -90,7 +94,7 @@ export class LocalAdapter implements Repo {
       stored = [] as Awaited<ReturnType<KV["loadAll"]>>;
     }
     const meta = stored.find((s) => s.c === META && (s.row as AnyRow).id === "seed");
-    if (this.opts.seed && (!meta || (meta.row as { version?: string }).version !== SEED_VERSION)) {
+    if (this.opts.seed && (!meta || (meta.row as { version?: string }).version !== this.opts.seedVersion)) {
       await this.kv.clear();
       stored = await this.writeSeed();
     }
@@ -118,12 +122,12 @@ export class LocalAdapter implements Repo {
   }
 
   private async writeSeed() {
-    const seed = buildSeed(this.opts.now());
+    const seed = this.opts.buildSeed(this.opts.now());
     const batch: { c: string; id: string; row: unknown }[] = [];
     for (const c of COLLECTIONS) for (const r of seed.data[c] as unknown as AnyRow[]) batch.push({ c, id: r.id, row: r });
     for (const u of seed.users) batch.push({ c: USERS, id: u.id, row: u });
     for (const [id, hash] of Object.entries(seed.pinHashes)) batch.push({ c: PINS, id, row: { id, hash } });
-    batch.push({ c: META, id: "seed", row: { id: "seed", version: SEED_VERSION, at: nowIso() } });
+    batch.push({ c: META, id: "seed", row: { id: "seed", version: this.opts.seedVersion, at: nowIso() } });
     await this.kv.putMany(batch);
     return batch.map((b) => ({ k: `${b.c}/${b.id}`, c: b.c, row: b.row }));
   }

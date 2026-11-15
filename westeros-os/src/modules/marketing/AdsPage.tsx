@@ -13,7 +13,7 @@ import { LocalizedInput, MoneyInput, pct, Section } from "./ui";
 
 export const BOOKING_TONE: Record<AdBooking["status"], Tone> = { requested: "warn", pending_payment: "warn", approved: "info", live: "ok", paused: "neutral", rejected: "danger", cancelled: "neutral", ended: "neutral" };
 export const BOOKING_LABEL: Record<AdBooking["status"], { ar: string; en: string }> = {
-  requested: { ar: "مستني موافقة سُفرة", en: "Awaiting Sufra review" },
+  requested: { ar: "مستني موافقة وستروس", en: "Awaiting Westeros review" },
   pending_payment: { ar: "مستني الدفع", en: "Awaiting payment" },
   approved: { ar: "اتوافق عليه", en: "Approved" },
   live: { ar: "شغّال", en: "Live" },
@@ -30,7 +30,7 @@ const CUISINE_AR: Record<string, string> = { egyptian: "مصري", grills: "مش
 export const cityLabel = (c: string | null, lang: "ar" | "en") => (c ? (lang === "ar" ? (CITY_AR[c] ?? c) : c[0].toUpperCase() + c.slice(1)) : lang === "ar" ? "كل المدن" : "All cities");
 export const cuisineLabel = (c: string | null, lang: "ar" | "en") => (c ? (lang === "ar" ? (CUISINE_AR[c] ?? c) : c[0].toUpperCase() + c.slice(1)) : lang === "ar" ? "كل الأنواع" : "All cuisines");
 
-/** The sponsored card as guests see it in the Sufra app ("مُموَّل"). */
+/** The sponsored card as guests see it in the Westeros app ("مُموَّل"). */
 export function SponsoredPreview({ name, headline, color, cta }: { name: string; headline: string; color: string; cta: string }) {
   const { L } = useT();
   return (
@@ -58,8 +58,8 @@ export default function AdsPage() {
       <Card className="overflow-hidden">
         <div className="grid gap-4 bg-[linear-gradient(135deg,var(--sf-primary),color-mix(in_srgb,var(--sf-primary)_40%,var(--sf-brass)))] p-6 text-white md:grid-cols-[1fr_auto] md:items-center">
           <div>
-            <p className="text-[13px] font-semibold opacity-80">{L("إعلانات سُفرة", "Sufra Ads")}</p>
-            <h2 className="mt-1 text-[26px] leading-tight text-white">{L("خلّي مطعمك أول حاجة الزبون يشوفها في تطبيق سُفرة", "Put your restaurant first in the Sufra app")}</h2>
+            <p className="text-[13px] font-semibold opacity-80">{L("إعلانات وستروس", "Westeros Ads")}</p>
+            <h2 className="mt-1 text-[26px] leading-tight text-white">{L("خلّي مطعمك أول حاجة الزبون يشوفها في تطبيق وستروس", "Put your restaurant first in the Westeros app")}</h2>
             <p className="mt-1 text-[14px] opacity-85">{L("أماكن مُموَّلة في الرئيسية وأول القائمة وأول مدينتك ونوع أكلك — بتدفع باليوم أو بالظهور أو بالضغطة.", "Sponsored spots on the home screen, top of the list, your city and your cuisine — pay per day, per view or per click.")}</p>
           </div>
           <Rocket className="hidden size-20 opacity-60 md:block" />
@@ -160,7 +160,7 @@ function BuyDialog({ slot, onClose, restaurantName, color }: { slot: AdSlot | nu
     setBusy(true);
     try {
       await requestBooking(db, { slot, startsOn: f.startsOn, endsOn: f.endsOn, targeting, budget: f.budget, creative: { headline: f.headline.ar ? f.headline : { ar: restaurantName, en: restaurantName }, imageUrl: null, cta: f.cta }, payment: f.payment }, { slug: restaurant?.slug ?? "", lang });
-      toast({ title: L("طلب الإعلان اتبعت لسُفرة", "Ad request sent to Sufra"), description: f.payment === "online" ? L("الدفع تم — هيتفعّل بعد المراجعة", "Paid — goes live after review") : L("هتوصلك فاتورة", "An invoice is on its way"), tone: "success" });
+      toast({ title: L("طلب الإعلان اتبعت لوستروس", "Ad request sent to Westeros"), description: f.payment === "online" ? L("الدفع تم — هيتفعّل بعد المراجعة", "Paid — goes live after review") : L("هتوصلك فاتورة", "An invoice is on its way"), tone: "success" });
       onClose();
     } catch (e) {
       const code = e instanceof BookingError ? e.code : (e as Error).message;
@@ -195,7 +195,7 @@ function BuyDialog({ slot, onClose, restaurantName, color }: { slot: AdSlot | nu
           <LocalizedInput label={L("جملة الإعلان", "Headline")} value={f.headline} onChange={(v) => setF({ ...f, headline: v })} />
           <LocalizedInput label={L("الزرار", "Button")} value={f.cta} onChange={(v) => setF({ ...f, cta: v })} />
           <Segmented block label={L("الدفع", "Payment")} value={f.payment} onChange={(p) => setF({ ...f, payment: p })} options={[{ value: "online", label: L("ادفع أونلاين", "Pay online"), icon: <CreditCard /> }, { value: "invoice", label: L("فاتورة", "Invoice"), icon: <FileText /> }]} />
-          <p className="text-[12.5px] text-muted">{L("كل إعلان بيتراجع من فريق سُفرة قبل ما يظهر. لو اترفض الفلوس بترجع.", "Every ad is reviewed by the Sufra team before it shows. Rejected ads are refunded.")}</p>
+          <p className="text-[12.5px] text-muted">{L("كل إعلان بيتراجع من فريق وستروس قبل ما يظهر. لو اترفض الفلوس بترجع.", "Every ad is reviewed by the Westeros team before it shows. Rejected ads are refunded.")}</p>
         </div>
         <div className="grid content-start gap-2">
           <p className="text-[13px] font-semibold text-muted">{L("معاينة", "Preview")}</p>

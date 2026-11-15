@@ -1,4 +1,4 @@
-/** /sufra-desk — Sufra platform admins: every restaurant's technical support tickets (RLS: is_platform_admin()). */
+/** /sufra-desk — Westeros platform admins: every restaurant's technical support tickets (RLS: is_platform_admin()). */
 import { useMemo, useState } from "react";
 import { Link, Route, Routes, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Headset, Search } from "lucide-react";
@@ -33,7 +33,7 @@ function Desk() {
   const list = (view === "open" ? open : tickets).filter((t) => !q || matches(`${t.number} ${t.subject} ${t.body} ${rName.get(t.restaurantId) ?? ""}`, q));
   return (
     <div className="grid gap-4">
-      <PageHeader icon={<Headset />} title={L("مكتب دعم سُفرة", "Sufra support desk")} subtitle={L("طلبات الدعم الفني من كل المطاعم", "Technical support requests from every restaurant")} />
+      <PageHeader icon={<Headset />} title={L("مكتب دعم وستروس", "Westeros support desk")} subtitle={L("طلبات الدعم الفني من كل المطاعم", "Technical support requests from every restaurant")} />
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatTile label={L("مفتوحة", "Open")} value={open.length} tone="primary" />
         <StatTile label={L("عدّت الـ SLA", "Past SLA")} value={breached} tone={breached ? "danger" : "ok"} index={1} />

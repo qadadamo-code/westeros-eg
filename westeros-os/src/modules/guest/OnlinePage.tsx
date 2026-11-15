@@ -365,7 +365,7 @@ function OnlineView() {
           </div>
         </aside>
       </div>
-      <p className="mt-10 text-center text-[12px] text-faint">{L("بنظام سُفرة", "Powered by Sufra")}</p>
+      <p className="mt-10 text-center text-[12px] text-faint">{L("بنظام وستروس", "Powered by Westeros")}</p>
 
       <div className="lg:hidden">
         <CartBar onOpen={() => setCartOpen(true)} mode={mode} deliveryFee={fee} />

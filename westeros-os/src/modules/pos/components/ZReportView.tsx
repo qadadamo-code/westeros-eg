@@ -84,7 +84,7 @@ export function ZReportView({ z, kind, zNumber, restaurant, cashier, lang, categ
       <R l={L("فروق تقريب", "Rounding")} v={z.rounding} />
       <div className="hr" />
       <div className="c" style={{ fontSize: 10 }}>
-        Sufra OS · {formatStamp(new Date().toISOString())}
+        Westeros OS · {formatStamp(new Date().toISOString())}
       </div>
     </div>
   );

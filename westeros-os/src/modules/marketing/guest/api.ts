@@ -1,6 +1,6 @@
 /**
  * Public (no-auth) marketing API used by the guest pages: menu banners & offers, coupon checks at checkout,
- * applying promos to a placed order, the loyalty card, buying gift cards, and the Sufra sponsored feed.
+ * applying promos to a placed order, the loyalty card, buying gift cards, and the Westeros sponsored feed.
  *
  *   local  (LocalAdapter): reads/writes the in-browser rows directly (same as GuestService)
  *   cloud  (SupabaseAdapter): SECURITY DEFINER RPCs from supabase/migrations/0009_crm.sql — anon never touches tables
@@ -263,7 +263,7 @@ export class PromoPublic {
     return sellGiftCard(db, { amount: x.amount, purchaser: x.purchaser, recipient: x.recipient, via: "online", method: "online", reference: x.intentId, code: x.code });
   }
 
-  /** Sponsored placements for the Sufra marketplace (sufra-web reads the same through public_sponsored). */
+  /** Sponsored placements for the Westeros marketplace (sufra-web reads the same through public_sponsored). */
   async sponsored(city: string | null, cuisine: string | null, today = new Date().toISOString().slice(0, 10)): Promise<PublicSponsored[]> {
     if (!this.local) return this.rpc("public_sponsored", { p_city: city, p_cuisine: cuisine });
     const bookings = await this.repo.list("adBookings");

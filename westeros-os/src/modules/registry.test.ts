@@ -12,7 +12,7 @@ describe("module registry", () => {
     expect(homeFor("manager")).toBe("/floor");
     expect(homeFor("cashier")).toBe("/pos");
     expect(homeFor("waiter")).toBe("/waiter");
-    expect(homeFor("chef")).toBe("/kitchen");
+    expect(homeFor("chef")).toBe("/production");
     expect(homeFor("kitchen")).toBe("/kitchen");
     expect(homeFor("delivery")).toBe("/delivery");
     expect(homeFor("accountant")).toBe("/accounting");

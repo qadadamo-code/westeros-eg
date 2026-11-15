@@ -3,7 +3,7 @@ import { Globe2 } from "lucide-react";
 import { defineModule } from "../types";
 
 /**
- * Sufra platform console (Sufra staff, role `platform_admin` — not a restaurant role): restaurants directory, sponsored
+ * Westeros platform console (Westeros staff, role `platform_admin` — not a restaurant role): restaurants directory, sponsored
  * placements (slots, pricing, bookings calendar, approvals), ad performance and the public feed that the marketplace
  * (sufra-web) reads through `public_sponsored(city, cuisine)` (0009_crm.sql; local equivalent in ./ads.ts + lib/promo).
  */
@@ -11,7 +11,7 @@ export default defineModule({
   id: "platform",
   status: "ready",
   icon: Globe2,
-  title: { ar: "منصة سُفرة", en: "Sufra platform" },
+  title: { ar: "منصة وستروس", en: "Westeros platform" },
   description: { ar: "المطاعم والإعلانات المُموَّلة وأداءها", en: "Restaurants, sponsored placements and their performance" },
   permission: "platform.admin",
   homeFor: ["platform_admin"],

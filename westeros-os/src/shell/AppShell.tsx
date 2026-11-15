@@ -100,7 +100,7 @@ export function AppShell() {
     });
   useHotkeys({ "[": toggle, "?": () => setHelp(true) });
   useEffect(() => {
-    document.title = title ? `${title} · ${lang === "ar" ? "سُفرة" : "Sufra"}` : lang === "ar" ? "سُفرة" : "Sufra";
+    document.title = title ? `${title} · ${lang === "ar" ? "وستروس" : "Westeros"}` : lang === "ar" ? "وستروس" : "Westeros";
   }, [title, lang]);
 
   return (

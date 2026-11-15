@@ -1,4 +1,4 @@
-/** /help — help center (search), request Sufra support (with diagnostics), my support tickets, system status. */
+/** /help — help center (search), request Westeros support (with diagnostics), my support tickets, system status. */
 import { useEffect, useMemo, useState } from "react";
 import { Link, Route, Routes, useNavigate, useParams } from "react-router-dom";
 import { Activity, ArrowLeft, ArrowRight, BookOpen, CheckCircle2, ChevronDown, CircleHelp, Headset, MessageCircle, Phone, Search, Send, TriangleAlert, XCircle } from "lucide-react";
@@ -23,7 +23,7 @@ export default function HelpPage() {
   const mine = useLive("supportTickets", { where: { kind: "sufra", status: ["new", "open", "pending"] } }).data.length;
   return (
     <div className="grid gap-4">
-      <PageHeader icon={<CircleHelp />} title={L("المساعدة والدعم الفني", "Help & support")} subtitle={L("إزاي تعمل أي حاجة في سُفرة — ولو فيه مشكلة، فريقنا معاك", "How to do anything in Sufra — and our team when something's wrong")} />
+      <PageHeader icon={<CircleHelp />} title={L("المساعدة والدعم الفني", "Help & support")} subtitle={L("إزاي تعمل أي حاجة في وستروس — ولو فيه مشكلة، فريقنا معاك", "How to do anything in Westeros — and our team when something's wrong")} />
       <SubNav
         label={L("المساعدة", "Help")}
         items={[
@@ -81,13 +81,13 @@ function SupportContacts() {
   const { cfg } = useOpsSettings();
   return (
     <Card className="grid content-start gap-2 p-4">
-      <CardHeader icon={<Headset />} title={L("كلّم دعم سُفرة", "Contact Sufra support")} />
+      <CardHeader icon={<Headset />} title={L("كلّم دعم وستروس", "Contact Westeros support")} />
       {cfg.sufraSupportPhone ? (
         <a href={`tel:${cfg.sufraSupportPhone}`} className="flex items-center gap-2 text-[15px] font-semibold"><Phone className="size-4" /> <span className="num" dir="ltr">{cfg.sufraSupportPhone}</span></a>
       ) : (
         <p className="text-[13px] text-muted">{L("رقم الخط الساخن لسه هيتعلن — لحد كده اطلب دعم من هنا وهنرد عليك.", "The hotline number will be published soon — until then request support here and we'll reply.")}</p>
       )}
-      {cfg.sufraSupportWhatsapp ? <a href={waLink(cfg.sufraSupportWhatsapp, "أهلاً، محتاج مساعدة في سُفرة")} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-[15px] font-semibold"><MessageCircle className="size-4" /> WhatsApp</a> : null}
+      {cfg.sufraSupportWhatsapp ? <a href={waLink(cfg.sufraSupportWhatsapp, "أهلاً، محتاج مساعدة في وستروس")} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-[15px] font-semibold"><MessageCircle className="size-4" /> WhatsApp</a> : null}
       <LinkButton to="/help/request" icon={<Send className="size-4" />}>{L("اطلب دعم", "Request support")}</LinkButton>
       <p className="text-[12px] text-muted">{L(`${ARTICLES.length} مقالة مساعدة بالعربي والإنجليزي`, `${ARTICLES.length} help articles in Arabic and English`)}</p>
     </Card>
@@ -118,7 +118,7 @@ function Request() {
   return (
     <div className="grid gap-3 lg:grid-cols-[1fr_340px]">
       <Card className="grid content-start gap-3 p-4">
-        <CardHeader icon={<Send />} title={L("اطلب دعم من فريق سُفرة", "Request support from the Sufra team")} />
+        <CardHeader icon={<Send />} title={L("اطلب دعم من فريق وستروس", "Request support from the Westeros team")} />
         <div className="grid gap-3 sm:grid-cols-2">
           <Select label={L("الموضوع", "Topic")} value={d.category} onChange={(e) => setD({ ...d, category: e.target.value })} options={SUFRA_CATEGORIES.map((c) => ({ value: c, label: CATEGORY_LABEL[c][lang] }))} />
           <Select label={L("قد إيه مستعجل؟", "How urgent?")} value={d.priority} onChange={(e) => setD({ ...d, priority: e.target.value as TicketPriority })} options={(["low", "normal", "high", "urgent"] as const).map((p) => ({ value: p, label: PRIORITY_LABEL[p][lang] }))} />
@@ -209,7 +209,7 @@ function Status() {
     { name: L("المزامنة والبيانات", "Data & sync"), h: sync.error ? "degraded" : sync.online ? "ok" : "down", note: local ? L(`وضع محلي — ${sync.peers} تابة/جهاز متصل`, `Local mode — ${sync.peers} tabs/devices connected`) : `${L("مستني", "pending")} ${sync.pending}${sync.lastSyncAt ? " · " + ago(sync.lastSyncAt, lang) : ""}` },
     { name: L("الدفع الأونلاين", "Online payments"), h: pay, note: "/api/pay-status" },
     { name: "WhatsApp", h: wa, note: "/api/whatsapp-send" },
-    { name: L("دعم سُفرة (إرسال التذاكر)", "Sufra support forwarding"), h: sup, note: "/api/support-ticket" },
+    { name: L("دعم وستروس (إرسال التذاكر)", "Westeros support forwarding"), h: sup, note: "/api/support-ticket" },
   ];
   const icon = (h: Health) => (h === "ok" ? <CheckCircle2 className="size-5 text-ok" /> : h === "down" ? <XCircle className="size-5 text-danger" /> : <TriangleAlert className={cn("size-5", h === "degraded" ? "text-warn" : "text-faint")} />);
   const label: Record<Health, string> = { ok: L("شغّال", "Operational"), degraded: L("بطيء / فيه مشكلة", "Degraded"), down: L("واقع / مش متاح", "Unavailable"), unknown: L("بيتأكد…", "Checking…"), not_configured: L("مش متفعّل", "Not configured") };

@@ -40,7 +40,7 @@ export function journalExport(target: ExportTarget, entries: LedgerEntry[], char
   }
 }
 
-/** Suggested target accounts per Sufra code (the owner's accountant confirms them once). */
+/** Suggested target accounts per Westeros code (the owner's accountant confirms them once). */
 export const ACCOUNT_MAP: { code: string; odoo: string; quickbooks: string; zoho: string }[] = [
   { code: "1101", odoo: "101501 Cash", quickbooks: "Cash on hand (Bank)", zoho: "Petty Cash (Cash)" },
   { code: "1102", odoo: "101402 Outstanding Receipts", quickbooks: "Undeposited Funds", zoho: "Undeposited Funds" },

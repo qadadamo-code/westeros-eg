@@ -1,5 +1,5 @@
 /**
- * Sufra OS data model (TypeScript side). camelCase here, snake_case in Postgres
+ * Westeros OS data model (TypeScript side). camelCase here, snake_case in Postgres
  * (supabase/migrations/0001_init.sql) — the Supabase adapter converts keys both ways.
  *
  * Conventions
@@ -24,6 +24,7 @@ import type {
   StorageLocation, Supplier, SupplierInvoice, SupplierItem, SupplierPayment,
 } from "./inventoryTypes";
 import type { Camera, PeopleCount, RadioClip, SupportTicket, OpsSettings, OpsAck } from "@/modules/ops/types";
+import type { MfgBatch, MfgProduct, MfgSettings } from "./productionTypes";
 import type { AccountingSettings, BankStatementLine, CashAccount, CashTransfer, CostCentre, Expense, GlAccount, JournalDraft, RecurringExpense } from "./accountingTypes";
 
 export type { Units, Currency, Role };
@@ -33,6 +34,7 @@ export type { ZatcaEgsUnit, ZatcaInvoiceRow, ZatcaSettings } from "@/lib/zatca/m
 export * from "./hrTypes";
 export * from "./inventoryTypes";
 export * from "./accountingTypes";
+export * from "./productionTypes";
 
 export interface Localized {
   ar: string;
@@ -1092,6 +1094,10 @@ export interface Collections {
   expenses: Expense;
   recurringExpenses: RecurringExpense;
   bankLines: BankStatementLine;
+  /* Central-kitchen manufacturing (0015_production.sql) */
+  mfgProducts: MfgProduct;
+  mfgBatches: MfgBatch;
+  mfgSettings: MfgSettings;
 }
 export type CollectionName = keyof Collections;
 export type RowOf<C extends CollectionName> = Collections[C];
@@ -1194,5 +1200,8 @@ export const TABLE_NAMES: { [C in CollectionName]: string } = {
   expenses: "expenses",
   recurringExpenses: "recurring_expenses",
   bankLines: "bank_statement_lines",
+  mfgProducts: "mfg_products",
+  mfgBatches: "mfg_batches",
+  mfgSettings: "mfg_settings",
 };
 export const COLLECTIONS = Object.keys(TABLE_NAMES) as CollectionName[];

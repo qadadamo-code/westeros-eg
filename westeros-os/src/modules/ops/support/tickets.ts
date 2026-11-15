@@ -2,7 +2,7 @@
  * Ticket rules (pure): SLA clocks, breach + escalation, numbering, transitions.
  *
  * SLA per priority (minutes): first response, and resolution. The clock runs from createdAt; "pending" (waiting for the
- * guest / Sufra) pauses nothing — kept simple and strict, like a restaurant manager would read it.
+ * guest / Westeros) pauses nothing — kept simple and strict, like a restaurant manager would read it.
  * Escalation: an unanswered ticket past its response SLA, or an unresolved one past its resolution SLA, goes up one
  * priority level (urgent stays urgent) and is flagged escalatedAt — the alerts center picks it up.
  */
@@ -79,7 +79,7 @@ const NEXT: Record<TicketStatus, TicketStatus[]> = {
 };
 export const canMove = (from: TicketStatus, to: TicketStatus) => from === to || NEXT[from].includes(to);
 
-/** Next human number: G-1001 (guest) / S-0001 (Sufra support), per restaurant. */
+/** Next human number: G-1001 (guest) / S-0001 (Westeros support), per restaurant. */
 export function nextNumber(kind: SupportTicket["kind"], existing: Pick<SupportTicket, "number" | "kind">[]): string {
   const prefix = kind === "guest" ? "G" : "S";
   const base = kind === "guest" ? 1000 : 0;

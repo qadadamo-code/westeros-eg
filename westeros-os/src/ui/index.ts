@@ -1,4 +1,4 @@
-/** Sufra OS design system. Import from "@/ui". */
+/** Westeros OS design system. Import from "@/ui". */
 export * from "./Button";
 export * from "./Input";
 export * from "./Segmented";

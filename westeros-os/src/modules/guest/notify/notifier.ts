@@ -1,5 +1,5 @@
 /**
- * Notifier — how order-status messages leave Sufra.
+ * Notifier — how order-status messages leave Westeros.
  *
  *   const n = getNotifier();
  *   await n.send({ restaurantId, to: "01005551201", lang: "ar", template: "order_received", vars, dedupeKey: `${orderId}:received` });

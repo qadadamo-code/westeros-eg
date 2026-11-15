@@ -40,7 +40,7 @@ export default function LoyaltyCardPage() {
     api.cardById(restaurantSlug, saved.customerId, saved.phone).then((c) => setCard(c), () => setCard(null));
   }, [api, svc, restaurantSlug]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
-    document.title = `${venue?.name ?? "Sufra"} · ${L("كارت الولاء", "Loyalty card")}`;
+    document.title = `${venue?.name ?? "Westeros"} · ${L("كارت الولاء", "Loyalty card")}`;
   }, [venue, L]);
 
   const signedIn = (c: LoyaltyCard) => {
@@ -67,7 +67,7 @@ export default function LoyaltyCardPage() {
           <SignIn slug={restaurantSlug} api={api} onCard={signedIn} />
         )}
         {params.get("feedback") ? <FeedbackCard svc={svc} slug={restaurantSlug} /> : null}
-        <p className="text-center text-[12px] text-faint">{L("بنظام سُفرة", "Powered by Sufra")}</p>
+        <p className="text-center text-[12px] text-faint">{L("بنظام وستروس", "Powered by Westeros")}</p>
       </main>
     </div>
   );

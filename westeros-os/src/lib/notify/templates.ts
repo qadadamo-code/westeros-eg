@@ -65,7 +65,7 @@ const EXTRA: CatalogTemplate[] = [
       en: "Thanks for choosing {{restaurant}}, {{name}} 🌿\nHow was order #{{number}}? Rating takes a second: {{rate_link}}",
     },
     button: { label: { ar: "قيّم", en: "Rate" }, urlVar: "rate_link" },
-    sample: { name: "دينا", restaurant: "سُفرة الزمالك", number: "42", rate_link: `${LINK}/o/123#rate` },
+    sample: { name: "دينا", restaurant: "وستروس الزمالك", number: "42", rate_link: `${LINK}/o/123#rate` },
   },
   {
     id: "reservation_confirmed",
@@ -76,7 +76,7 @@ const EXTRA: CatalogTemplate[] = [
       ar: "حجزك في {{restaurant}} اتأكد يا {{name}} ✅\nيوم {{date}} الساعة {{time}} — {{party}} أفراد.\nلو حابب تعدّل: {{link}}",
       en: "Your table at {{restaurant}} is confirmed, {{name}} ✅\n{{date}} at {{time}} — party of {{party}}.\nTo change it: {{link}}",
     },
-    sample: { name: "دينا", restaurant: "سُفرة الزمالك", date: "الخميس ٥ نوفمبر", time: "20:30", party: "4", link: `${LINK}/book` },
+    sample: { name: "دينا", restaurant: "وستروس الزمالك", date: "الخميس ٥ نوفمبر", time: "20:30", party: "4", link: `${LINK}/book` },
   },
   {
     id: "reservation_reminder",
@@ -88,7 +88,7 @@ const EXTRA: CatalogTemplate[] = [
       en: "Reminder, {{name}}: your table at {{restaurant}} is today at {{time}} 🍽️\nAre you coming?",
     },
     quickReplies: [{ ar: "أيوه جاي", en: "Yes, coming" }, { ar: "ألغي الحجز", en: "Cancel booking" }],
-    sample: { name: "Dina", restaurant: "Sufra Zamalek", time: "20:30" },
+    sample: { name: "Dina", restaurant: "Westeros Zamalek", time: "20:30" },
   },
   {
     id: "waitlist_table_ready",
@@ -99,7 +99,7 @@ const EXTRA: CatalogTemplate[] = [
       ar: "ترابيزتك جاهزة يا {{name}} 🎉\nمستنيينك في {{restaurant}} خلال {{minutes}} دقيقة.",
       en: "Your table is ready, {{name}} 🎉\nPlease come to {{restaurant}} within {{minutes}} minutes.",
     },
-    sample: { name: "Dina", restaurant: "Sufra Zamalek", minutes: "10" },
+    sample: { name: "Dina", restaurant: "Westeros Zamalek", minutes: "10" },
   },
   {
     id: "payment_link",
@@ -111,7 +111,7 @@ const EXTRA: CatalogTemplate[] = [
       en: "Hi {{name}}, here is the link to pay {{amount}} to {{restaurant}}:\n{{link}}\nThe link is valid for 24 hours.",
     },
     button: { label: { ar: "ادفع", en: "Pay" }, urlVar: "link" },
-    sample: { name: "Dina", amount: "520.00 EGP", restaurant: "Sufra Zamalek", link: `${LINK}/pay/demo` },
+    sample: { name: "Dina", amount: "520.00 EGP", restaurant: "Westeros Zamalek", link: `${LINK}/pay/demo` },
   },
   {
     id: "refund_processed",
@@ -145,7 +145,7 @@ const EXTRA: CatalogTemplate[] = [
     },
     footer: OPT_OUT_FOOTER,
     button: { label: { ar: "اطلب دلوقتي", en: "Order now" }, urlVar: "link" },
-    sample: { name: "دينا", offer: "خصم ٢٠٪ على أي طاجن", restaurant: "سُفرة الزمالك", code: "BACK20", until: "١٥ نوفمبر", link: LINK },
+    sample: { name: "دينا", offer: "خصم ٢٠٪ على أي طاجن", restaurant: "وستروس الزمالك", code: "BACK20", until: "١٥ نوفمبر", link: LINK },
   },
   {
     id: "birthday_offer",
@@ -157,7 +157,7 @@ const EXTRA: CatalogTemplate[] = [
       en: "Happy birthday, {{name}} 🎂\nA treat from {{restaurant}}: {{offer}} — your code {{code}} is valid until {{until}}.",
     },
     footer: OPT_OUT_FOOTER,
-    sample: { name: "Dina", restaurant: "Sufra Zamalek", offer: "أم علي هدية", code: "BDAY-7K2", until: "٣٠ نوفمبر" },
+    sample: { name: "Dina", restaurant: "Westeros Zamalek", offer: "أم علي هدية", code: "BDAY-7K2", until: "٣٠ نوفمبر" },
   },
   {
     id: "campaign_generic",

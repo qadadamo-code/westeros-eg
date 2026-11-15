@@ -33,7 +33,7 @@ export default function PurchasingPage() {
   const open = pos.find((p) => p.id === openId) ?? null;
   const cols: Column<PurchaseOrder>[] = [
     { key: "n", header: L("رقم", "No."), cell: (p) => <span className="num font-semibold" dir="ltr">{p.number}</span> },
-    { key: "s", header: L("المورد", "Supplier"), cell: (p) => <span className="flex items-center gap-1.5">{p.channel === "marketplace" ? <Store className="size-4 text-brass" aria-label={L("سوق سُفرة", "Sufra marketplace")} /> : null}{loc(inv.supplierById.get(p.supplierId)?.name)}</span> },
+    { key: "s", header: L("المورد", "Supplier"), cell: (p) => <span className="flex items-center gap-1.5">{p.channel === "marketplace" ? <Store className="size-4 text-brass" aria-label={L("سوق وستروس", "Westeros marketplace")} /> : null}{loc(inv.supplierById.get(p.supplierId)?.name)}</span> },
     { key: "d", header: L("التسليم", "Delivery"), hideOnMobile: true, cell: (p) => <span className="text-[13px] text-muted">{p.receivedAt ? dayLabel(p.receivedAt, lang) : p.expectedAt ? dayLabel(p.expectedAt, lang) : "—"}</span> },
     { key: "l", header: L("سطور", "Lines"), align: "end", hideOnMobile: true, cell: (p) => <span className="num">{p.lines.length}</span> },
     { key: "t", header: L("الإجمالي", "Total"), align: "end", cell: (p) => <Money value={p.total} whole /> },
@@ -127,7 +127,7 @@ function SuggestDialog({ open, onClose, onCreated }: { open: boolean; onClose: (
             return (
               <section key={sid} className="rounded-2xl border border-line">
                 <header className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-2.5">
-                  <span className="font-semibold">{loc(sup?.name)} {sup?.marketplaceId ? <Badge size="sm" tone="brass" className="ms-1.5">{L("سوق سُفرة", "Sufra marketplace")}</Badge> : null}</span>
+                  <span className="font-semibold">{loc(sup?.name)} {sup?.marketplaceId ? <Badge size="sm" tone="brass" className="ms-1.5">{L("سوق وستروس", "Westeros marketplace")}</Badge> : null}</span>
                   <span className="text-[13px] text-muted">{L("توريد خلال", "lead")} {sup?.leadDays ?? 1} {L("يوم", "d")} · <b className="num text-ink">{formatMoney(total, { lang, whole: true })}</b></span>
                 </header>
                 <ul className="divide-y divide-line">
@@ -250,11 +250,11 @@ export function PoSheet({ po, onClose }: { po: PurchaseOrder; onClose: () => voi
         </dl>
         {po.marketplace ? (
           <div className="rounded-2xl border border-brass/40 bg-brass-soft/50 p-3.5 text-[13.5px]">
-            <p className="flex items-center gap-1.5 font-semibold text-brass-text"><Store className="size-4" />{L("طلب عن طريق سوق سُفرة", "Ordered through the Sufra marketplace")}</p>
+            <p className="flex items-center gap-1.5 font-semibold text-brass-text"><Store className="size-4" />{L("طلب عن طريق سوق وستروس", "Ordered through the Westeros marketplace")}</p>
             <p className="mt-1 text-muted">
               {L("المورد على باقة", "Supplier plan")} <b>{po.marketplace.plan}</b> · {L("عمولة", "commission")} {po.marketplace.commissionPct}٪ {L("على المستلم فعلًا", "on delivered value")}: {po.marketplace.base ? <><b className="num text-ink">{formatMoney(po.marketplace.commission, { lang })}</b> {L("من", "of")} <span className="num">{formatMoney(po.marketplace.base, { lang, whole: true })}</span></> : <>{L("متوقع", "estimated")} <b className="num text-ink">{formatMoney(commissionUnits(po.marketplace.plan, t.net - po.deliveryFee), { lang })}</b> {L("لما يتسلّم", "once delivered")}</>}
             </p>
-            <p className="mt-0.5 text-[12px] text-muted">{L("العمولة على المورد مش عليك — سعرك هو سعر الكتالوج. سُفرة بتحصّل وتحوّل للمورد.", "Commission is charged to the supplier, not you — you pay the catalogue price. Sufra collects and pays the supplier out.")}</p>
+            <p className="mt-0.5 text-[12px] text-muted">{L("العمولة على المورد مش عليك — سعرك هو سعر الكتالوج. وستروس بتحصّل وتحوّل للمورد.", "Commission is charged to the supplier, not you — you pay the catalogue price. Westeros collects and pays the supplier out.")}</p>
           </div>
         ) : null}
         {inv0 ? (
@@ -275,8 +275,8 @@ export function PoSheet({ po, onClose }: { po: PurchaseOrder; onClose: () => voi
                   </Button>
                 ) : null}
                 {sup?.marketplaceId ? (
-                  <Button variant="brass" icon={<Store className="size-4" />} loading={busy} disabled={!lines.length} onClick={() => act(async () => { await updatePoLines(db, po.id, lines); await sendPo(db, po.id, "marketplace"); }, L("اتبعت عن طريق سُفرة", "Ordered through Sufra"))}>
-                    {L("اطلب عن طريق سُفرة", "Order through Sufra")}
+                  <Button variant="brass" icon={<Store className="size-4" />} loading={busy} disabled={!lines.length} onClick={() => act(async () => { await updatePoLines(db, po.id, lines); await sendPo(db, po.id, "marketplace"); }, L("اتبعت عن طريق وستروس", "Ordered through Westeros"))}>
+                    {L("اطلب عن طريق وستروس", "Order through Westeros")}
                   </Button>
                 ) : null}
                 {sup?.phone ? <a className="inline-flex h-11 items-center gap-2 rounded-xl border border-line px-4 font-semibold hover:bg-surface-2" href={`tel:${sup.phone}`}><Phone className="size-4" />{L("كلّمه", "Call")}</a> : null}

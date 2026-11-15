@@ -25,7 +25,8 @@ export async function createRepo(): Promise<Repo> {
     const { SupabaseAdapter } = await import("./supabase/SupabaseAdapter");
     instance = new SupabaseAdapter(cfg.url, cfg.key);
   } else {
-    instance = new LocalAdapter();
+    const { buildWesterosSeed } = await import("./westeros/seed");
+    instance = new LocalAdapter({ name: "westeros-os", sessionKey: "westeros-os.session", buildSeed: buildWesterosSeed, seedVersion: "westeros-1" });
   }
   await instance.ready();
   return instance;

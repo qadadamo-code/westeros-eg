@@ -16,8 +16,8 @@ import { MoneyInput, Section } from "./ui";
 
 const TOKENS = ["{name}", "{code}", "{points}", "{link}", "{restaurant}"];
 const STARTERS: { ar: string; en: string }[] = [
-  { ar: "{name} وحشتنا! 🍢 تعالى سُفرة الأسبوع ده وخد خصم بالكود {code}.", en: "{name}, we miss you! 🍢 Come to Sufra this week — your code {code}." },
-  { ar: "أهلًا {name} 👋 معاك {points} نقطة في نادي سُفرة. كارتك: {link}", en: "Hi {name} 👋 you have {points} points at Sufra Club. Your card: {link}" },
+  { ar: "{name} وحشتنا! 🍢 تعالى وستروس الأسبوع ده وخد خصم بالكود {code}.", en: "{name}, we miss you! 🍢 Come to Westeros this week — your code {code}." },
+  { ar: "أهلًا {name} 👋 معاك {points} نقطة في نادي وستروس. كارتك: {link}", en: "Hi {name} 👋 you have {points} points at Westeros Club. Your card: {link}" },
 ];
 
 export default function CampaignComposer() {
@@ -76,7 +76,7 @@ export default function CampaignComposer() {
         return;
       }
       const saved = await persist({ status: "draft" });
-      const r = await sendCampaign(db, saved, { restaurantName: restaurant ? loc(restaurant.name) : "Sufra", slug: restaurant?.slug ?? "", origin: window.location.origin, lang: "ar", settings });
+      const r = await sendCampaign(db, saved, { restaurantName: restaurant ? loc(restaurant.name) : "Westeros", slug: restaurant?.slug ?? "", origin: window.location.origin, lang: "ar", settings });
       toast({ title: L(`اتبعتت لـ ${r.sent + r.queued} زبون`, `Sent to ${r.sent + r.queued} guests`), description: r.queued ? L(`${r.queued} محتاجين ضغطة إرسال من واتساب`, `${r.queued} need a tap in WhatsApp`) : undefined, tone: "success" });
       navigate(`/marketing/campaigns/${saved.id}`);
     } finally {
@@ -196,7 +196,7 @@ export default function CampaignComposer() {
           <div className="flex items-center gap-3 bg-[#075e54] px-4 py-3 text-white">
             <span className="grid size-9 place-items-center rounded-full bg-white/20 font-bold">{restaurant ? loc(restaurant.name).slice(0, 1) : "S"}</span>
             <div>
-              <p className="font-semibold">{restaurant ? loc(restaurant.name) : "Sufra"}</p>
+              <p className="font-semibold">{restaurant ? loc(restaurant.name) : "Westeros"}</p>
               <p className="text-[12px] opacity-75">{L("حساب تجاري", "Business account")}</p>
             </div>
           </div>

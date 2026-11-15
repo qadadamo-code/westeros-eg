@@ -42,7 +42,7 @@ export const TEMPLATES: Record<TemplateId, Template> = {
       en: "Hi {{name}} 👋\nWe've received your order #{{number}} from {{restaurant}}.\n{{items}}\nTotal: {{total}} — Payment: {{payment}}\nTrack it here: {{link}}",
     },
     button: { label: { ar: "تابع الطلب", en: "Track order" }, urlVar: "link" },
-    sample: { name: "دينا", number: "42", restaurant: "سُفرة الزمالك", items: "٢× كفتة مشوية، ١× أم علي", total: "985.00 ج.م", payment: "كاش عند الاستلام", link: "https://sufra.app/app/r/sufra-zamalek/o/123" },
+    sample: { name: "دينا", number: "42", restaurant: "وستروس الزمالك", items: "٢× كفتة مشوية، ١× أم علي", total: "985.00 ج.م", payment: "كاش عند الاستلام", link: "https://sufra.app/app/r/sufra-zamalek/o/123" },
   }),
   order_accepted_eta: t({
     id: "order_accepted_eta",
@@ -116,7 +116,7 @@ export const TEMPLATES: Record<TemplateId, Template> = {
       ar: "وصلنا {{amount}} من {{name}} في {{restaurant}} ✅\nرقم العملية: {{reference}}\nالإيصال: {{receipt_link}}",
       en: "{{restaurant}} received {{amount}} from {{name}} ✅\nReference: {{reference}}\nReceipt: {{receipt_link}}",
     },
-    sample: { name: "Dina", amount: "520.00 EGP", restaurant: "Sufra Zamalek", reference: "DEMO-123456", receipt_link: "https://sufra.app/app/r/sufra-zamalek/t/ZM05?receipt=1" },
+    sample: { name: "Dina", amount: "520.00 EGP", restaurant: "Westeros Zamalek", reference: "DEMO-123456", receipt_link: "https://sufra.app/app/r/sufra-zamalek/t/ZM05?receipt=1" },
   }),
 };
 

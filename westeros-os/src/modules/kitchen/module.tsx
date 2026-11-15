@@ -10,7 +10,7 @@ export default defineModule({
   title: { ar: "المطبخ", en: "Kitchen" },
   description: { ar: "شاشة المطبخ: التذاكر حسب المحطة والوقت", en: "Kitchen display: tickets by station and time" },
   permission: "kitchen.view",
-  homeFor: ["chef", "kitchen"],
+  homeFor: ["kitchen"],
   shortcut: "g k",
   nav: { path: "/kitchen", group: "service", order: 30, mobile: true, useBadge: useKitchenQueue },
   routes: [

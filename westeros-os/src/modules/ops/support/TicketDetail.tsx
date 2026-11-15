@@ -59,9 +59,9 @@ export function TicketDetail({ t, mode }: { t: SupportTicket; mode: "restaurant"
   const [kind, setKind] = useState<"reply" | "internal">(mode === "requester" ? "reply" : "reply");
   const [resolution, setResolution] = useState(t.resolution);
   const [follow, setFollow] = useState(t.followUp ?? (t.kind === "guest" ? L(`أهلاً ${t.contactName || ""} — إحنا آسفين على اللي حصل. `, `Hi ${t.contactName || ""} — we're sorry about what happened. `) : ""));
-  const me = staff?.name ?? (mode === "platform" ? "Sufra" : "");
+  const me = staff?.name ?? (mode === "platform" ? "Westeros" : "");
   const done = t.status === "resolved" || t.status === "closed";
-  const byName = mode === "platform" ? L("دعم سُفرة", "Sufra support") : me;
+  const byName = mode === "platform" ? L("دعم وستروس", "Westeros support") : me;
   const notes = t.notes.filter((n) => mode !== "requester" || n.kind !== "internal");
 
   const send = async () => {

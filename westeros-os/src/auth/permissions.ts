@@ -43,12 +43,16 @@ export const PERMISSIONS = [
   // CRM & marketing (Wave 2)
   "marketing.view",
   "marketing.manage",
-  "ads.buy", // buy Sufra sponsored placements (spends money)
+  "ads.buy", // buy Westeros sponsored placements (spends money)
   // inventory & purchasing (Wave 3)
   "inventory.view", // stock, recipes, reports
   "inventory.count", // stock counts, waste, receiving deliveries
   "inventory.manage", // items, recipes, transfers, production, approve counts
   "purchasing.manage", // suppliers, purchase orders, supplier invoices & payments
+  // central-kitchen manufacturing (Westeros Cost Control)
+  "production.view", // batches, last production prices, labels
+  "production.run", // make a batch (signed by the chef who is signed in)
+  "production.manage", // products, recipes, constants, void a batch
   // management
   "dashboard.view",
   "reports.view",
@@ -69,9 +73,9 @@ export const PERMISSIONS = [
   "cameras.view", // live wall, POS ↔ video exceptions, occupancy (owner/admin/manager)
   "radio.use", // walkie-talkie: every restaurant role
   "tickets.handle", // guest complaints inbox (owner/admin/manager)
-  "help.view", // help center + "request Sufra support": every restaurant role
+  "help.view", // help center + "request Westeros support": every restaurant role
   "alerts.view", // alerts center (owner/admin/manager)
-  // Sufra platform (super-admin) — Sufra staff only, never a restaurant role
+  // Westeros platform (super-admin) — Westeros staff only, never a restaurant role
   "platform.admin",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
@@ -107,10 +111,10 @@ export const MATRIX: Record<Role, ReadonlySet<Permission>> = {
     "messages.use",
   ),
   waiter: only(...OPS_ALL_STAFF, "hr.self", ...SERVICE_BASE, "waiter.use", "orders.create", "orders.edit", "orders.transfer", "checks.split", "floor.manage", "reservations.manage", "customers.edit"),
-  chef: only(...OPS_ALL_STAFF, "hr.self", "kitchen.view", "kitchen.bump", "menu.availability", "menu.edit", "reports.view", "staff.view", "inventory.view", "inventory.count", "inventory.manage"),
-  kitchen: only(...OPS_ALL_STAFF, "hr.self", "kitchen.view", "kitchen.bump", "menu.availability", "inventory.view", "inventory.count"),
+  chef: only(...OPS_ALL_STAFF, "hr.self", "kitchen.view", "kitchen.bump", "menu.availability", "menu.edit", "reports.view", "staff.view", "inventory.view", "inventory.count", "inventory.manage", "production.view", "production.run", "production.manage"),
+  kitchen: only(...OPS_ALL_STAFF, "hr.self", "kitchen.view", "kitchen.bump", "menu.availability", "inventory.view", "inventory.count", "production.view", "production.run"),
   delivery: only(...OPS_ALL_STAFF, "hr.self", "delivery.view", "delivery.run", "customers.view"),
-  accountant: only(...OPS_ALL_STAFF, "hr.self", "dashboard.view", "reports.view", "reports.financial", "accounting.view", "accounting.post", "audit.view", "staff.view", "staff.payroll", "settings.view", "customers.view", "marketing.view", "inventory.view", "purchasing.manage"),
+  accountant: only(...OPS_ALL_STAFF, "hr.self", "dashboard.view", "reports.view", "reports.financial", "accounting.view", "accounting.post", "audit.view", "staff.view", "staff.payroll", "settings.view", "customers.view", "marketing.view", "inventory.view", "purchasing.manage", "production.view"),
   platform_admin: only("platform.admin"),
 };
 

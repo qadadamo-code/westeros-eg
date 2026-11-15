@@ -5,7 +5,7 @@ import { defineModule } from "../types";
 /**
  * Marketing: loyalty (points, tiers, stamp cards, rewards), promotions engine (src/lib/promo), gift cards, campaigns and
  * automated journeys (WhatsApp/SMS through src/lib/notify), the restaurant's own promos (QR menu banners, receipt promo
- * block), reviews, customer reports and buying Sufra sponsored placements.
+ * block), reviews, customer reports and buying Westeros sponsored placements.
  *
  *   /marketing/*            staff
  *   /r/:slug/me             guest loyalty card (phone + last order no.; OTP via WhatsApp in production — DESIGN.md)

@@ -113,7 +113,7 @@ export default function MessagingSettingsPage() {
   const testSend = async () => {
     const to = toE164(s.testNumber, s.country);
     if (!to) return toast({ title: L("اكتب رقمك الأول", "Enter your number first"), tone: "warn" });
-    const text = L(`رسالة تجربة من ${restaurant?.name.ar ?? "سُفرة"} ✅ الرسايل شغالة.`, `Test message from ${restaurant?.name.en ?? "Sufra"} ✅ messaging works.`);
+    const text = L(`رسالة تجربة من ${restaurant?.name.ar ?? "وستروس"} ✅ الرسايل شغالة.`, `Test message from ${restaurant?.name.en ?? "Westeros"} ✅ messaging works.`);
     if (s.mode === "click_to_chat" || s.mode === "off") {
       window.open(clickToChatUrl(to, text), "_blank", "noopener,noreferrer");
       return;

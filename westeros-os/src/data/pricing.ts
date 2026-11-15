@@ -1,5 +1,5 @@
 /**
- * Bridge between Sufra OS rows (Units as number) and @finance/tax (bigint Amount).
+ * Bridge between Westeros OS rows (Units as number) and @finance/tax (bigint Amount).
  * Check totals are always computed here, never by hand.
  */
 import { priceBill, type Bill, type TaxProfile } from "@finance/tax";

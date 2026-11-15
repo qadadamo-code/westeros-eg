@@ -69,8 +69,8 @@ export const ARTICLES: Article[] = [
     "New orders ring in the inbox. Accept with a prep time (items fire to the kitchen and the customer gets the ETA) or reject with a reason. Auto-accept per channel and an auto-reject countdown are in Settings.",
   ]),
   A("dispatch", "delivery", "/delivery/dispatch", ["توزيع", "طيار", "خريطة", "dispatch", "متأخر"], ["توزيع الطلبات على الطيارين", "Dispatching to riders"], [
-    "اللوحة: بيتحضر ← جاهز ← متوزع ← خرج ← وصل. سُفرة بيقترح الطيار الأنسب وبيجمع الطلبات القريبة. الطلب المتأخر بيحمر وبيظهر في مركز التنبيهات. كلّم الطيارين على قناة الدليفري في اللاسلكي.",
-    "Board: preparing → ready → assigned → out → delivered. Sufra suggests the best rider and batches nearby orders. Late orders turn red and appear in the alerts center. Talk to riders on the Delivery radio channel.",
+    "اللوحة: بيتحضر ← جاهز ← متوزع ← خرج ← وصل. وستروس بيقترح الطيار الأنسب وبيجمع الطلبات القريبة. الطلب المتأخر بيحمر وبيظهر في مركز التنبيهات. كلّم الطيارين على قناة الدليفري في اللاسلكي.",
+    "Board: preparing → ready → assigned → out → delivered. Westeros suggests the best rider and batches nearby orders. Late orders turn red and appear in the alerts center. Talk to riders on the Delivery radio channel.",
   ]),
   A("rider-app", "delivery", "/driver", ["طيار", "سواق", "rider", "driver", "تسليم"], ["تطبيق الطيار", "The rider app"], [
     "ابدأ الوردية، هتشوف طلباتك. اتصل أو واتساب للعميل، افتح الخريطة، وبعدين: استلمت ← وصلت ← سلّمت (بكود العميل أو صورة). زر اللاسلكي فوق علشان تكلّم الديسباتش وانت سايق — اضغط واتكلم.",
@@ -89,8 +89,8 @@ export const ARTICLES: Article[] = [
     "On the POS, C → coupon / points: type the customer's phone or scan their loyalty QR. Points are earned automatically on payment. Offers and coupons live under Marketing.",
   ]),
   A("eta", "pos", "/pos/eta", ["ضرايب", "eta", "إيصال إلكتروني", "مصلحة"], ["الإيصال الإلكتروني (مصلحة الضرايب)", "ETA e-receipts"], [
-    "كل إيصال بيتعمل له UUID وQR ومتسلسل مع اللي قبله. طابور ETA بيوضح المعلّق والمرفوض. الإرسال الفعلي محتاج بيانات POS من المصلحة على السيرفر — كلّم دعم سُفرة لتفعيله.",
-    "Each receipt gets a UUID, a QR and is chained to the previous one. The ETA queue shows pending and rejected ones. Actual submission needs your POS credentials on the server — ask Sufra support to enable it.",
+    "كل إيصال بيتعمل له UUID وQR ومتسلسل مع اللي قبله. طابور ETA بيوضح المعلّق والمرفوض. الإرسال الفعلي محتاج بيانات POS من المصلحة على السيرفر — كلّم دعم وستروس لتفعيله.",
+    "Each receipt gets a UUID, a QR and is chained to the previous one. The ETA queue shows pending and rejected ones. Actual submission needs your POS credentials on the server — ask Westeros support to enable it.",
   ]),
   A("cameras-wall", "cameras", "/cameras", ["كاميرات", "cctv", "بث", "nvr", "camera"], ["مشاهدة الكاميرات", "Watching the cameras"], [
     "الكاميرات ← العرض المباشر: ١ أو ٤ أو ٩ أو ١٦ شاشة، ودوسة مزدوجة لملء الشاشة. المتصفح ما بيشغّلش RTSP مباشرة — محتاج رابط HLS/WebRTC من الـ NVR Cloud أو جهاز صغير في المطعم (go2rtc). من غير ده الكاميرا بتظهر «غير متاحة في المتصفح».",
@@ -112,13 +112,13 @@ export const ARTICLES: Article[] = [
     "الضيف يقدر يشتكي من صفحة المطعم أو الـ QR. الشكوى بتبقى تذكرة فيها طلباته وزياراته ومدفوعاته. حدد الأولوية والمسؤول، واكتب ملاحظات داخلية، واقفل بالحل ورسالة متابعة. التذكرة اللي عدّت الـ SLA بتتصعّد.",
     "Guests can complain from the restaurant page or the QR menu. Each complaint becomes a ticket with their orders, visits and payments. Set priority and assignee, add internal notes, then resolve with a follow-up message. Tickets past SLA escalate.",
   ]),
-  A("sufra-support", "support", "/help", ["دعم", "مشكلة", "support", "bug", "مساعدة"], ["اطلب دعم سُفرة", "Requesting Sufra support"], [
-    "من المساعدة ← اطلب دعم: اوصف المشكلة. التذكرة بتتبعت مع بيانات الجهاز (نسخة التطبيق، المتصفح، حالة المزامنة، آخر الأخطاء) علشان فريق سُفرة يحلها أسرع. تقدر تتابع ردّنا من نفس الصفحة، وحالة الخدمة من «حالة النظام».",
-    "Help → Request support: describe the problem. The ticket is sent with diagnostics (app version, browser, sync status, last errors) so the Sufra team can fix it faster. Follow our reply on the same page; service health is under “System status”.",
+  A("sufra-support", "support", "/help", ["دعم", "مشكلة", "support", "bug", "مساعدة"], ["اطلب دعم وستروس", "Requesting Westeros support"], [
+    "من المساعدة ← اطلب دعم: اوصف المشكلة. التذكرة بتتبعت مع بيانات الجهاز (نسخة التطبيق، المتصفح، حالة المزامنة، آخر الأخطاء) علشان فريق وستروس يحلها أسرع. تقدر تتابع ردّنا من نفس الصفحة، وحالة الخدمة من «حالة النظام».",
+    "Help → Request support: describe the problem. The ticket is sent with diagnostics (app version, browser, sync status, last errors) so the Westeros team can fix it faster. Follow our reply on the same page; service health is under “System status”.",
   ]),
   A("offline", "account", undefined, ["أوفلاين", "نت", "مزامنة", "offline", "sync"], ["لما النت يقطع", "When the internet drops"], [
-    "سُفرة بيكمّل يشتغل: الطلبات بتتحفظ على الجهاز وبتتبعت بالترتيب أول ما النت يرجع. أيقونة المزامنة فوق بتوضح عدد العمليات المستنية. ما تقفلش المتصفح لحد ما العدد يبقى صفر.",
-    "Sufra keeps working: writes are kept on the device and replayed in order when the connection returns. The sync icon at the top shows how many are waiting. Don't close the browser until it reads zero.",
+    "وستروس بيكمّل يشتغل: الطلبات بتتحفظ على الجهاز وبتتبعت بالترتيب أول ما النت يرجع. أيقونة المزامنة فوق بتوضح عدد العمليات المستنية. ما تقفلش المتصفح لحد ما العدد يبقى صفر.",
+    "Westeros keeps working: writes are kept on the device and replayed in order when the connection returns. The sync icon at the top shows how many are waiting. Don't close the browser until it reads zero.",
   ]),
   A("alerts", "alerts", "/alerts", ["تنبيهات", "alerts", "إنذار", "مخزون"], ["مركز التنبيهات", "The alerts center"], [
     "كل اللي محتاج مدير في مكان واحد: نداءات متصعّدة، دليفري متأخر، مخزون قليل، عجز/زيادة في الدرج، استثناءات الكاميرات، مدفوعات فشلت، وتذاكر عدّت الـ SLA. من القواعد حدد مين يتبلّغ بإيه.",

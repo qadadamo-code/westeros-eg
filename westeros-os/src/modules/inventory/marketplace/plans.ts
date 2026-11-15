@@ -1,11 +1,11 @@
 /**
  * COPIED from sufra-web/src/data/business/supplier-plans.ts (+ commissionFor from billing.ts).
  *
- * Sufra for suppliers — subscription + commission per sale.
+ * Westeros for suppliers — subscription + commission per sale.
  *
  * EDIT HERE to change supplier pricing. Money in integer piastres; rates in percent.
  * A supplier pays: monthly subscription + commission on every DELIVERED order (cancelled/returned lines are not
- * charged) + an optional payment-collection fee when Sufra collects from the restaurant. Sufra's fees carry VAT 14%.
+ * charged) + an optional payment-collection fee when Westeros collects from the restaurant. Westeros's fees carry VAT 14%.
  */
 import { egp } from "./suppliers";
 
@@ -43,8 +43,8 @@ export const SUPPLIER_PLANS: SupplierPlan[] = [
     minCommission: egp(15),
     maxCommission: 0,
     products: 50,
-    featuresAr: ["كتالوج لحد 50 منتج", "طلبات وفواتير", "شات مع المطاعم", "تحصيل عن طريق سُفرة"],
-    featuresEn: ["Up to 50 products", "Orders & invoices", "Chat with restaurants", "Collection via Sufra"],
+    featuresAr: ["كتالوج لحد 50 منتج", "طلبات وفواتير", "شات مع المطاعم", "تحصيل عن طريق وستروس"],
+    featuresEn: ["Up to 50 products", "Orders & invoices", "Chat with restaurants", "Collection via Westeros"],
   },
   {
     id: "growth",
@@ -79,18 +79,18 @@ export const SUPPLIER_PLANS: SupplierPlan[] = [
 
 /** Fee for collecting payment from the restaurant on the supplier's behalf (card / wallet / InstaPay), percent. */
 export const PAYMENT_COLLECTION_PCT = 1.5;
-/** VAT on Sufra's own fees. */
+/** VAT on Westeros's own fees. */
 export const SUPPLIER_FEE_VAT = 0.14;
 
 export const SUPPLIER_FAQ: { qAr: string; qEn: string; aAr: string; aEn: string }[] = [
   { qAr: "العمولة بتتحسب على إيه؟", qEn: "What is commission charged on?", aAr: "على قيمة الطلب اللي اتسلّم فعلًا قبل الضريبة. الطلبات الملغية والمرتجعات مش بتتحسب.", aEn: "On the delivered order value before VAT. Cancelled orders and returns are not charged." },
-  { qAr: "إمتى بستلم فلوسي؟", qEn: "When do I get paid?", aAr: "لو التحصيل عن طريق سُفرة: كل أسبوع على حسابك البنكي أو إنستاباي بعد خصم العمولة. ولو بتحصّل بنفسك، بنبعتلك كشف حساب شهري بالعمولة.", aEn: "If Sufra collects: weekly to your bank/InstaPay, net of commission. If you collect yourself, we send a monthly commission statement." },
+  { qAr: "إمتى بستلم فلوسي؟", qEn: "When do I get paid?", aAr: "لو التحصيل عن طريق وستروس: كل أسبوع على حسابك البنكي أو إنستاباي بعد خصم العمولة. ولو بتحصّل بنفسك، بنبعتلك كشف حساب شهري بالعمولة.", aEn: "If Westeros collects: weekly to your bank/InstaPay, net of commission. If you collect yourself, we send a monthly commission statement." },
   { qAr: "الفاتورة الإلكترونية؟", qEn: "E-invoicing?", aAr: "كل طلب بيطلع فاتورة إلكترونية B2B (نوع i) باسم المطعم ورقمه الضريبي وتتبعت لمصلحة الضرايب من باقة نمو وفوق.", aEn: "Every order produces a B2B e-invoice (type i) to the restaurant's tax ID, submitted to the ETA from Growth up." },
-  { qAr: "أقدر أتواصل مع المطعم مباشرة؟", qEn: "Can I talk to restaurants directly?", aAr: "أيوه، فيه شات مباشر لكل طلب، والمطعم يقدر يطلب منك برّه سُفرة لو حب.", aEn: "Yes — every order has a direct chat, and restaurants can also contact you directly." },
+  { qAr: "أقدر أتواصل مع المطعم مباشرة؟", qEn: "Can I talk to restaurants directly?", aAr: "أيوه، فيه شات مباشر لكل طلب، والمطعم يقدر يطلب منك برّه وستروس لو حب.", aEn: "Yes — every order has a direct chat, and restaurants can also contact you directly." },
   { qAr: "فيه عقد؟", qEn: "Is there a contract?", aAr: "لأ، اشتراك شهري تلغيه وقت ما تحب.", aEn: "No — month to month, cancel any time." },
 ];
 
-/** Commission Sufra charges the SUPPLIER on a delivered order (piastres in, piastres out) — copied from billing.ts. */
+/** Commission Westeros charges the SUPPLIER on a delivered order (piastres in, piastres out) — copied from billing.ts. */
 export function commissionFor(planId: SupplierPlanId, base: number): number {
   const plan = SUPPLIER_PLANS.find((p) => p.id === planId)!;
   if (base <= 0) return 0;

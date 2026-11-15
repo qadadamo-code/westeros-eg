@@ -191,7 +191,7 @@ export function LoyaltyCard({ svc, slug, checkId, defaultName = "", defaultPhone
           <Gift className="size-5.5" />
         </span>
         <div>
-          <p className="text-[17px] font-bold">{points !== null ? L("أهلاً بيك في نادي سُفرة!", "Welcome to the Sufra club!") : L("انضم لنادي سُفرة", "Join the Sufra club")}</p>
+          <p className="text-[17px] font-bold">{points !== null ? L("أهلاً بيك في نادي وستروس!", "Welcome to the Westeros club!") : L("انضم لنادي وستروس", "Join the Westeros club")}</p>
           <p className="text-[13px] text-muted">{points !== null ? L(`رصيدك دلوقتي ${points} نقطة`, `You now have ${points} points`) : L("نقطة على كل ١٠ ج.م، وهدية في عيد ميلادك", "1 point per 10 EGP, and a birthday treat")}</p>
         </div>
       </div>

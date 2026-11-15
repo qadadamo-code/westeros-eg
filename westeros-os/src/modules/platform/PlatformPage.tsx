@@ -20,7 +20,7 @@ export default function PlatformPage() {
   const pending = useLive("adBookings", { where: { status: "requested" } }, { unscoped: true }).data.length;
   return (
     <div className="grid gap-5">
-      <PageHeader icon={<Globe2 />} kicker={L("فريق سُفرة فقط", "Sufra staff only")} title={L("منصة سُفرة", "Sufra platform")} subtitle={L("المطاعم على المنصة والأماكن المُموَّلة اللي بنبيعها", "Restaurants on the platform and the sponsored spots we sell")} />
+      <PageHeader icon={<Globe2 />} kicker={L("فريق وستروس فقط", "Westeros staff only")} title={L("منصة وستروس", "Westeros platform")} subtitle={L("المطاعم على المنصة والأماكن المُموَّلة اللي بنبيعها", "Restaurants on the platform and the sponsored spots we sell")} />
       <RouteTabs
         label={L("أقسام المنصة", "Platform sections")}
         items={[
@@ -213,7 +213,7 @@ function FeedPreview() {
     };
   }, [api, city, cuisine, bookings]);
   return (
-    <Section title={L("الـ feed العام (public_sponsored)", "Public feed (public_sponsored)")} subtitle={L("اللي تطبيق سُفرة والموقع بيعرضوه — بتسمية «مُموَّل»", "What the Sufra app and website show — labelled “Sponsored”")} icon={<Search />}>
+    <Section title={L("الـ feed العام (public_sponsored)", "Public feed (public_sponsored)")} subtitle={L("اللي تطبيق وستروس والموقع بيعرضوه — بتسمية «مُموَّل»", "What the Westeros app and website show — labelled “Sponsored”")} icon={<Search />}>
       <div className="grid gap-3 sm:grid-cols-2">
         <Select label={L("المدينة", "City")} value={city} onChange={(e) => setCity(e.target.value)} options={[{ value: "", label: cityLabel(null, lang) }, ...CITIES.map((c) => ({ value: c, label: cityLabel(c, lang) }))]} />
         <Select label={L("نوع الأكل", "Cuisine")} value={cuisine} onChange={(e) => setCuisine(e.target.value)} options={[{ value: "", label: cuisineLabel(null, lang) }, ...CUISINES.map((c) => ({ value: c, label: cuisineLabel(c, lang) }))]} />

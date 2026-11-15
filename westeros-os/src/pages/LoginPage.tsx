@@ -5,7 +5,7 @@ import { ArrowLeft, ArrowRight, Eye, EyeOff, Grid3x3, Mail, Lock as LockIcon, Pe
 import { useSession } from "@/auth/session";
 import { ROLE_LABEL } from "@/auth/roles";
 import { useRepo } from "@/data/hooks";
-import { DEMO_PASSWORD, DEMO_STAFF } from "@/data/seed";
+import { WESTEROS_PASSWORD as DEMO_PASSWORD, WESTEROS_STAFF as DEMO_STAFF } from "@/data/westeros/seed";
 import { useT } from "@/i18n/i18n";
 import { homeFor } from "@/modules/registry";
 import { cn } from "@/lib/cn";

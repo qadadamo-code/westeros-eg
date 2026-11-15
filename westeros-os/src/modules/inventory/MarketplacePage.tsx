@@ -1,7 +1,7 @@
 /**
  * Supplier marketplace inside the restaurant app — the same 25 suppliers / ~250 products as the public website
  * (copied into ./marketplace). Browse, compare prices across suppliers (and against what you pay today), then either
- * order through Sufra (a marketplace PO: catalogue price, Sufra collects, the SUPPLIER pays Sufra a monthly plan +
+ * order through Westeros (a marketplace PO: catalogue price, Westeros collects, the SUPPLIER pays Westeros a monthly plan +
  * commission per delivered order) or contact the supplier directly (call / WhatsApp).
  */
 import { useMemo, useState } from "react";
@@ -92,7 +92,7 @@ export default function MarketplacePage() {
           poLines.push(poLine(item, offer, n));
         }
         const home = inv.locations.find((l) => mine.get(lines[0].p.key)?.defaultLocationIds.includes(l.id)) ?? inv.locations[0];
-        const po = await createPo(db, { supplierId: sup.id, branchId: inv.branchId, locationId: home.id, lines: poLines, channel: "marketplace", note: L("من سوق سُفرة", "From the Sufra marketplace") });
+        const po = await createPo(db, { supplierId: sup.id, branchId: inv.branchId, locationId: home.id, lines: poLines, channel: "marketplace", note: L("من سوق وستروس", "From the Westeros marketplace") });
         first = first ?? po.id;
       }
       setCart({});
@@ -108,8 +108,8 @@ export default function MarketplacePage() {
       <Card className="flex flex-wrap items-center gap-4 p-4">
         <span className="grid size-12 place-items-center rounded-2xl bg-brass-soft text-brass-text"><Store className="size-6" /></span>
         <div className="min-w-0 flex-1">
-          <p className="font-display text-[18px] font-semibold">{L("سوق موردين سُفرة", "Sufra supplier marketplace")}</p>
-          <p className="text-[13.5px] text-muted">{L(`${SUPPLIERS.length} مورد و${PRODUCTS.length} منتج بأسعار جملة القاهرة. اطلب عن طريق سُفرة بسعر الكتالوج (المورد هو اللي بيدفع اشتراك شهري + عمولة على كل طلب بيتسلّم) — أو كلّم المورد مباشرة.`, `${SUPPLIERS.length} suppliers, ${PRODUCTS.length} products at Cairo wholesale prices. Order through Sufra at the catalogue price (the supplier pays a monthly plan + commission per delivered order) — or contact the supplier directly.`)}</p>
+          <p className="font-display text-[18px] font-semibold">{L("سوق موردين وستروس", "Westeros supplier marketplace")}</p>
+          <p className="text-[13.5px] text-muted">{L(`${SUPPLIERS.length} مورد و${PRODUCTS.length} منتج بأسعار جملة القاهرة. اطلب عن طريق وستروس بسعر الكتالوج (المورد هو اللي بيدفع اشتراك شهري + عمولة على كل طلب بيتسلّم) — أو كلّم المورد مباشرة.`, `${SUPPLIERS.length} suppliers, ${PRODUCTS.length} products at Cairo wholesale prices. Order through Westeros at the catalogue price (the supplier pays a monthly plan + commission per delivered order) — or contact the supplier directly.`)}</p>
         </div>
         <div className="flex gap-1.5 text-[12px]">
           {SUPPLIER_PLANS.map((p) => <Badge key={p.id} size="sm" tone={p.highlight ? "brass" : "neutral"}>{p[lang]} · {p.commissionPct}٪</Badge>)}
@@ -191,7 +191,7 @@ export default function MarketplacePage() {
               {[...bySupplier.keys()].some((id) => cartLines.filter((l) => l.p.supplierId === id).reduce((a, l) => a + l.p.price * l.n, 0) < supplierById[id].minOrder) ? <span className="block text-[12px] text-warn">{L("فيه مورد تحت الحد الأدنى للطلب", "A supplier is under their minimum order")}</span> : null}
             </div>
             <Button variant="ghost" onClick={() => setCart({})}>{L("فضّي", "Clear")}</Button>
-            <Button variant="brass" loading={busy} icon={<Store className="size-4" />} onClick={order}>{L("اطلب عن طريق سُفرة", "Order through Sufra")}</Button>
+            <Button variant="brass" loading={busy} icon={<Store className="size-4" />} onClick={order}>{L("اطلب عن طريق وستروس", "Order through Westeros")}</Button>
           </Card>
         </div>
       ) : null}

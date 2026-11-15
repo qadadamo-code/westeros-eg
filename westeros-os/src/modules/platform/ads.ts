@@ -1,7 +1,7 @@
 /**
- * Sponsored placements — data operations shared by the restaurant's "Buy an ad" flow and the Sufra platform console.
+ * Sponsored placements — data operations shared by the restaurant's "Buy an ad" flow and the Westeros platform console.
  *
- *   restaurant:  availability → quote → request (pay online via the payments API, or invoice) → Sufra approves → live
+ *   restaurant:  availability → quote → request (pay online via the payments API, or invoice) → Westeros approves → live
  *   platform:    approve / reject / pause / end · record delivery (impressions, clicks, orders) · public feed
  *
  * Availability looks across every restaurant's bookings, which a restaurant cannot read (RLS): in the cloud it is the
@@ -43,7 +43,7 @@ export interface BookingInput {
   payment: "online" | "invoice";
 }
 
-/** Restaurant side: validates, prices, (optionally) pays, and files the request for Sufra's review. */
+/** Restaurant side: validates, prices, (optionally) pays, and files the request for Westeros's review. */
 export async function requestBooking(db: Db, x: BookingInput, opts: { slug: string; lang: "ar" | "en" }): Promise<AdBooking> {
   const others = db.repo.kind === "local" ? await db.repo.list("adBookings", { where: { slotId: x.slot.id } }) : [];
   validateBooking(x.slot, others, { startsOn: x.startsOn, endsOn: x.endsOn, budget: x.budget, targeting: x.targeting }, today());
@@ -54,10 +54,10 @@ export async function requestBooking(db: Db, x: BookingInput, opts: { slug: stri
   const price = quote(x.slot, x.startsOn, x.endsOn, x.budget);
   let payment: AdBooking["payment"] = { method: x.payment, reference: null, paidAt: null, invoiceNo: null };
   if (x.payment === "online") {
-    // through the payments intent API (DemoProvider locally — the restaurant pays Sufra; cloud: hosted checkout, the
+    // through the payments intent API (DemoProvider locally — the restaurant pays Westeros; cloud: hosted checkout, the
     // verified webhook marks the booking paid)
     const pi = await createPaymentIntent(db.repo, {
-      restaurantId: db.restaurantId, restaurantSlug: opts.slug, kind: "link", amount: price, currency: "EGP", note: `Sufra ad · ${x.slot.type} · ${x.startsOn}→${x.endsOn}`,
+      restaurantId: db.restaurantId, restaurantSlug: opts.slug, kind: "link", amount: price, currency: "EGP", note: `Westeros ad · ${x.slot.type} · ${x.startsOn}→${x.endsOn}`,
       purposeRef: null, createdBy: db.actorId, lang: opts.lang, returnUrl: `${typeof window !== "undefined" ? window.location.origin : ""}/app/marketing/ads?pi={pi}`,
     });
     if (db.repo.kind === "local") {

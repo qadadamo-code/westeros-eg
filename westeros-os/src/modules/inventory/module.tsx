@@ -18,7 +18,7 @@ function useLowStock(): number | null {
 /**
  * Inventory, recipes & purchasing (Wave 3). Stock at weighted average (EAS 2), recipe deduction at send
  * (src/modules/inventory/deduct.ts), counts, waste, transfers, production, POs → GRN → supplier invoice (input VAT) →
- * payment, and the Sufra supplier marketplace. Schema: supabase/migrations/0012_inventory.sql.
+ * payment, and the Westeros supplier marketplace. Schema: supabase/migrations/0012_inventory.sql.
  */
 export default defineModule({
   id: "inventory",

@@ -13,7 +13,7 @@ export const ROLE_LABEL: Record<Role, Localized> = {
   kitchen: { ar: "مطبخ", en: "Kitchen" },
   delivery: { ar: "دليفري", en: "Delivery" },
   accountant: { ar: "محاسب", en: "Accountant" },
-  platform_admin: { ar: "إدارة منصة سُفرة", en: "Sufra platform admin" },
+  platform_admin: { ar: "إدارة منصة وستروس", en: "Westeros platform admin" },
 };
 
 /** Where each role lands after login. Modules can claim a role with `homeFor` in their definition. */
@@ -23,11 +23,11 @@ export const ROLE_HOME: Record<Role, string> = {
   manager: "/floor",
   cashier: "/pos",
   waiter: "/waiter",
-  chef: "/kitchen",
+  chef: "/production",
   kitchen: "/kitchen",
   delivery: "/delivery",
   accountant: "/accounting",
-  /** Sufra staff (not a restaurant role): the platform console */
+  /** Westeros staff (not a restaurant role): the platform console */
   platform_admin: "/platform",
 };
 
@@ -45,6 +45,6 @@ export const ROLE_RANK: Record<Role, number> = {
   waiter: 20,
   kitchen: 20,
   delivery: 10,
-  // Sufra staff never approve restaurant actions (discounts, voids) — rank below every restaurant role
+  // Westeros staff never approve restaurant actions (discounts, voids) — rank below every restaurant role
   platform_admin: 0,
 };

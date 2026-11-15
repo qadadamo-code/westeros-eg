@@ -1,5 +1,5 @@
 /**
- * Notifier — how a customer message leaves Sufra. One interface, one adapter per channel:
+ * Notifier — how a customer message leaves Westeros. One interface, one adapter per channel:
  *
  *   WhatsAppCloudNotifier  POST /api/whatsapp-send (our Vercel function holds the Meta token)       automatic
  *   ClickToChatNotifier    wa.me/<number>?text=… — staff taps send in their own WhatsApp          needs a tap

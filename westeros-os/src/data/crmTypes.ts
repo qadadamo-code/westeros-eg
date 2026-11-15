@@ -1,5 +1,5 @@
 /**
- * Wave 2 — CRM, loyalty, promotions, gift cards, campaigns, own promos and Sufra sponsored placements.
+ * Wave 2 — CRM, loyalty, promotions, gift cards, campaigns, own promos and Westeros sponsored placements.
  * Rows for supabase/migrations/0009_crm.sql. Rules live in src/lib/promo (pure); data operations in
  * src/modules/marketing/ops.ts and src/modules/customers/crm.ts.
  */
@@ -270,7 +270,7 @@ export interface GuestFeedback extends TenantRow {
   repliedBy?: string | null;
 }
 
-/* ───────── Sufra platform (super-admin) ───────── */
+/* ───────── Westeros platform (super-admin) ───────── */
 
 /** Restaurant marketplace profile (city / cuisines) — read by the directory and the sponsored feed. */
 export interface MarketProfile extends TenantRow {

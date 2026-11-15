@@ -163,8 +163,8 @@ export default function ZatcaSettings() {
           <span>
             <span className="font-semibold">{L("مش «معتمد» لسه:", "Not certified yet:")}</span>{" "}
             {L(
-              "الالتزام الفعلي محتاج إن كل وحدة تعدّي اختبارات الامتثال في بيئة هيئة الزكاة بكود OTP من صاحب المنشأة (بوابة فاتورة). لحد ما ده يحصل، سُفرة بتبني الفواتير وتختمها وتربطها، لكن مفيش حاجة معتمدة.",
-              "Real compliance requires each unit to pass ZATCA's compliance checks in their environment with the owner's OTP (Fatoora portal). Until then Sufra builds, stamps and chains invoices, but nothing is certified.",
+              "الالتزام الفعلي محتاج إن كل وحدة تعدّي اختبارات الامتثال في بيئة هيئة الزكاة بكود OTP من صاحب المنشأة (بوابة فاتورة). لحد ما ده يحصل، وستروس بتبني الفواتير وتختمها وتربطها، لكن مفيش حاجة معتمدة.",
+              "Real compliance requires each unit to pass ZATCA's compliance checks in their environment with the owner's OTP (Fatoora portal). Until then Westeros builds, stamps and chains invoices, but nothing is certified.",
             )}
           </span>
         </p>
@@ -371,7 +371,7 @@ export default function ZatcaSettings() {
         </pre>
         <p className="mt-2 text-[12.5px] text-muted">{L("فيه المفتاح العام بس. المفتاح الخاص عمره ما بيظهر هنا.", "Contains the public key only. The private key is never shown.")}</p>
       </Dialog>
-      <Dialog open={!!dry} onClose={() => setDry(null)} size="md" title={L("تجربة محلية للاختبارات", "Local compliance dry run")} description={L("فحوصات سُفرة بس — مش اختبار هيئة الزكاة", "Sufra's own checks — not ZATCA's")}>
+      <Dialog open={!!dry} onClose={() => setDry(null)} size="md" title={L("تجربة محلية للاختبارات", "Local compliance dry run")} description={L("فحوصات وستروس بس — مش اختبار هيئة الزكاة", "Westeros's own checks — not ZATCA's")}>
         <ul className="grid gap-2">
           {dry?.rows.map((r) => (
             <li key={r.type} className="flex items-start gap-2 text-[14px]">
@@ -420,7 +420,7 @@ function Guide() {
     { ar: "سجّل دخول بوابة فاتورة (fatoora.zatca.gov.sa) بحساب المنشأة في بوابة الزكاة.", en: "Sign in to the Fatoora portal (fatoora.zatca.gov.sa) with the business's ZATCA account." },
     { ar: "اختار «تسجيل وحدة حل جديدة» وولّد كود OTP (صالح حوالي ساعة).", en: "Choose “Onboard new solution unit” and generate an OTP (valid for about an hour)." },
     { ar: "هنا: ولّد المفتاح والـ CSR لكل جهاز كاشير، وبعدين ادخل الكود.", en: "Here: generate the key + CSR for each POS device, then enter the OTP." },
-    { ar: "سُفرة بتبعت فاتورة اختبار من كل نوع (مبسطة/ضريبية × فاتورة/دائن/مدين) لحد ما كلها تعدّي.", en: "Sufra sends a test document of every type (simplified/standard × invoice/credit/debit) until all pass." },
+    { ar: "وستروس بتبعت فاتورة اختبار من كل نوع (مبسطة/ضريبية × فاتورة/دائن/مدين) لحد ما كلها تعدّي.", en: "Westeros sends a test document of every type (simplified/standard × invoice/credit/debit) until all pass." },
     { ar: "اطلب شهادة الإنتاج — من بعدها الفواتير بتتبلّغ/تتعتمد تلقائي.", en: "Request the production CSID — from then on invoices are reported/cleared automatically." },
     { ar: "جدّد الشهادة قبل ما تنتهي، ولو جهاز اتسرق أو اتغير الغِ شهادته من البوابة.", en: "Renew the CSID before it expires; revoke it from the portal if a device is lost or replaced." },
   ];

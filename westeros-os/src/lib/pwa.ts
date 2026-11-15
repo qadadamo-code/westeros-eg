@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 
-/** Install support for Sufra OS as a home-screen app (Android/desktop prompt, iOS Share → Add to Home Screen). */
+/** Install support for Westeros OS as a home-screen app (Android/desktop prompt, iOS Share → Add to Home Screen). */
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;

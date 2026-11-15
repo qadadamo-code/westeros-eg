@@ -77,8 +77,8 @@ export default function OccupancyView() {
       <Card className="p-4 text-[13px] text-muted">
         <p className="mb-1 font-bold text-ink">{L("كاميرات العدّاد", "Counter cameras")}</p>
         {L(
-          "كتير من كاميرات Hikvision وDahua بتعدّ الداخل والخارج. سُفرة بيستقبل العدد ده (people_counts) من جهاز صغير في المطعم أو من الـ NVR — شوف DESIGN.md. اكتشاف الطاولات المشغولة بالذكاء الاصطناعي لسه فكرة تحت التجربة ومش بيغيّر حالة الطاولات.",
-          "Many Hikvision and Dahua cameras count people in/out. Sufra ingests those counts (people_counts) from a small on-site poller or the NVR — see DESIGN.md. AI table-occupancy detection is a design note only and never changes table status.",
+          "كتير من كاميرات Hikvision وDahua بتعدّ الداخل والخارج. وستروس بيستقبل العدد ده (people_counts) من جهاز صغير في المطعم أو من الـ NVR — شوف DESIGN.md. اكتشاف الطاولات المشغولة بالذكاء الاصطناعي لسه فكرة تحت التجربة ومش بيغيّر حالة الطاولات.",
+          "Many Hikvision and Dahua cameras count people in/out. Westeros ingests those counts (people_counts) from a small on-site poller or the NVR — see DESIGN.md. AI table-occupancy detection is a design note only and never changes table status.",
         )}
       </Card>
     </div>

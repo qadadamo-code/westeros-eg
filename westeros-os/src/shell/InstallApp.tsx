@@ -29,14 +29,14 @@ export function InstallApp({ variant = "icon" }: { variant?: "icon" | "button" }
       <Dialog
         open={open}
         onClose={() => setOpen(false)}
-        title={L("ثبّت سُفرة على جهازك", "Install Sufra on your device")}
+        title={L("ثبّت وستروس على جهازك", "Install Westeros on your device")}
         description={L("هيفتح زي أي تطبيق: أيقونة على الشاشة، شاشة كاملة من غير شريط المتصفح.", "It opens like any app: an icon on your home screen, full screen without the browser bar.")}
         footer={<Button onClick={() => setOpen(false)}>{L("تمام", "Got it")}</Button>}
       >
         <div className="flex items-center gap-4 rounded-2xl bg-surface-2 p-4">
           <img src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="" className="size-14 rounded-[14px] shadow-sf-sm" />
           <div>
-            <p className="font-display text-[18px] font-bold">سُفرة</p>
+            <p className="font-display text-[18px] font-bold">وستروس</p>
             <p className="text-[13px] text-muted">{L("نظام المطعم", "Restaurant system")}</p>
           </div>
         </div>
@@ -44,7 +44,7 @@ export function InstallApp({ variant = "icon" }: { variant?: "icon" | "button" }
           <ol className="mt-4 grid gap-3 text-[15px]">
             <Step n={1} icon={<Share className="size-5" />}>{L("افتح الرابط في Safari واضغط زر المشاركة تحت", "Open the link in Safari and tap the Share button")}</Step>
             <Step n={2} icon={<PlusSquare className="size-5" />}>{L("اختار «إضافة إلى الشاشة الرئيسية»", "Choose “Add to Home Screen”")}</Step>
-            <Step n={3} icon={<Download className="size-5" />}>{L("اضغط «إضافة» — هتلاقي أيقونة سُفرة على الشاشة", "Tap “Add” — the Sufra icon appears on your home screen")}</Step>
+            <Step n={3} icon={<Download className="size-5" />}>{L("اضغط «إضافة» — هتلاقي أيقونة وستروس على الشاشة", "Tap “Add” — the Westeros icon appears on your home screen")}</Step>
           </ol>
         ) : (
           <ol className="mt-4 grid gap-3 text-[15px]">

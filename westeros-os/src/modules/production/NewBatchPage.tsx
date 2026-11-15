@@ -1,0 +1,442 @@
+/**
+ * تشغيلة جديدة — the four manufacturing methods of the Cost Control document (+ fat preparation). The chef picks the
+ * method, types what went in and what came out, and sees the sheet's figures live; saving signs the batch with the
+ * chef, moves the stock and opens the sticker.
+ */
+import { useMemo, useState, type ReactNode } from "react";
+import { useNavigate } from "react-router-dom";
+import { Beef, Check, CookingPot, Drumstick, Droplets, Scale, ShieldCheck, Shapes } from "lucide-react";
+import { useSession } from "@/auth/session";
+import { useDb } from "@/data/hooks";
+import type { MfgBatch, MfgMethod, MfgProduct, MfgRecipeLine } from "@/data/types";
+import { useT } from "@/i18n/i18n";
+import { cn } from "@/lib/cn";
+import { formatMoney } from "@/lib/money";
+import { nowIso } from "@/lib/time";
+import { Badge, Button, Card, EmptyState, Input, Segmented, Select, Switch, useToast } from "@/ui";
+import { buildBatch, scaleLines, type BatchDraft, type BuildCtx } from "./build";
+import { LabelDialog } from "./LabelDialog";
+import { BatchError, saveBatch } from "./ops";
+import { ERROR_TEXT, LinesEditor, Num, ResultPanel } from "./ui";
+import { CATEGORY_LABEL, CATEGORY_ORDER, useProduction, type Prod } from "./useProduction";
+
+type Tab = "weight" | "portion" | "chicken" | "beef" | "chicken_burger" | "fat";
+const clean = (l: MfgRecipeLine[]) => l.filter((x) => x.qty > 0).map((x) => ({ itemId: x.itemId, qty: Math.round(x.qty * 10_000) / 10_000 }));
+
+export default function NewBatchPage() {
+  const { L } = useT();
+  const { can } = useSession();
+  const prod = useProduction();
+  const [tab, setTab] = useState<Tab>("weight");
+  const [run, setRun] = useState(0);
+  if (!can("production.run")) return <EmptyState icon={<ShieldCheck />} title={L("تسجيل التشغيلات للشيف وفريق المطبخ", "Recording batches is for the kitchen team")} />;
+  const key = `${tab}-${run}`;
+  const again = () => setRun((n) => n + 1);
+  return (
+    <div className="grid gap-4">
+      <Segmented<Tab>
+        label={L("طريقة التصنيع", "Manufacturing method")}
+        value={tab}
+        onChange={setTab}
+        options={[
+          { value: "weight", label: L("بالوزن", "By weight"), icon: <Scale /> },
+          { value: "portion", label: L("بالحصة", "By portion"), icon: <Shapes /> },
+          { value: "chicken", label: L("الدجاج", "Chicken"), icon: <Drumstick /> },
+          { value: "beef", label: L("برجر لحم", "Beef burger"), icon: <Beef /> },
+          { value: "chicken_burger", label: L("برجر دجاج", "Chicken burger"), icon: <CookingPot /> },
+          { value: "fat", label: L("الدهن", "Fat"), icon: <Droplets /> },
+        ]}
+      />
+      {tab === "weight" || tab === "portion" ? (
+        <SimpleForm key={key} method={tab} prod={prod} onDone={again} />
+      ) : tab === "chicken" ? (
+        <ChickenForm key={key} prod={prod} onDone={again} />
+      ) : tab === "fat" ? (
+        <FatForm key={key} prod={prod} onDone={again} />
+      ) : (
+        <BurgerForm key={key} kind={tab === "beef" ? "beef" : "chicken"} prod={prod} onDone={again} />
+      )}
+    </div>
+  );
+}
+
+/* ───────── shared ───────── */
+
+function useCtx(prod: Prod): BuildCtx {
+  const [madeAt] = useState(nowIso);
+  return useMemo(() => ({ products: prod.productById, items: prod.itemById, settings: prod.settings, unitCost: prod.unitCost, madeAt }), [prod.productById, prod.itemById, prod.settings, prod.unitCost, madeAt]);
+}
+
+/** Who signs the batch, the note, the save button — and the sticker once it is saved. */
+function SaveBar({ prod, draft, ready, onDone, afterSave }: { prod: Prod; draft: BatchDraft; ready: boolean; onDone: () => void; afterSave?: () => Promise<unknown> }) {
+  const { L, lang } = useT();
+  const db = useDb();
+  const { staff, role } = useSession();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const [chefId, setChefId] = useState(staff?.id ?? "");
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState<MfgBatch | null>(null);
+  // a chef signs their own batches; a manager may record one on behalf of the chef who made it
+  const delegate = role === "owner" || role === "admin" || role === "manager";
+  const chefs = prod.staff.filter((m) => m.active && (m.role === "chef" || m.role === "kitchen" || m.id === staff?.id));
+  const chef = (delegate ? chefs.find((c) => c.id === chefId) : null) ?? staff;
+  const code = chef ? prod.settings?.chefCodes[chef.id] : undefined;
+  const save = async () => {
+    if (!chef || !prod.branchId) return;
+    setBusy(true);
+    try {
+      const b = await saveBatch(db, draft, { chef, branchId: prod.branchId, note: note.trim() });
+      await afterSave?.();
+      setSaved(b);
+    } catch (e) {
+      toast({ tone: "error", title: L("لم تُحفظ التشغيلة", "The batch was not saved"), description: e instanceof BatchError ? e.errors.map((x) => ERROR_TEXT[x][lang]).join("، ") : String((e as Error).message ?? e) });
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="grid gap-3">
+      {delegate && chefs.length > 1 ? (
+        <Select label={L("الشيف صاحب التشغيلة", "Chef who made it")} value={chef?.id ?? ""} onChange={(e) => setChefId(e.target.value)} options={chefs.map((c) => ({ value: c.id, label: `${c.name}${prod.settings?.chefCodes[c.id] ? ` (${prod.settings.chefCodes[c.id]})` : ""}` }))} />
+      ) : (
+        <div className="flex items-center gap-2 rounded-xl bg-surface-2 px-3 py-2.5">
+          <ShieldCheck className="size-4 text-primary" aria-hidden />
+          <span className="text-[13px] text-muted">{L("تُسجل باسم", "Signed by")}</span>
+          <span className="truncate text-[14px] font-bold">{chef?.name ?? "—"}</span>
+          {code ? <Badge tone="brass" size="sm">{L("كود", "Code")} {code}</Badge> : null}
+        </div>
+      )}
+      <Input placeholder={L("ملاحظة (اختياري)", "Note (optional)")} value={note} onChange={(e) => setNote(e.target.value)} />
+      <Button size="lg" block icon={<Check />} loading={busy} disabled={!ready} onClick={save}>
+        {L("حفظ التشغيلة وطباعة الستيكر", "Save batch & print sticker")}
+      </Button>
+      <LabelDialog
+        batch={saved}
+        justSaved
+        onClose={() => {
+          setSaved(null);
+          toast({ tone: "success", title: L("التشغيلة في السجل والمخزن اتحدث", "Batch logged and stock updated"), action: { label: L("فتح السجل", "Open log"), onClick: () => navigate("/production/batches") } });
+          onDone();
+        }}
+      />
+    </div>
+  );
+}
+
+function Layout({ children, side }: { children: ReactNode; side: ReactNode }) {
+  return (
+    <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_370px]">
+      <div className="grid gap-4">{children}</div>
+      <div className="lg:sticky lg:top-4">{side}</div>
+    </div>
+  );
+}
+
+function Block({ title, hint, children, step }: { title: ReactNode; hint?: ReactNode; children: ReactNode; step?: number }) {
+  return (
+    <Card className="p-5">
+      <div className="mb-3 flex items-center gap-2.5">
+        {step ? <span className="num grid size-7 shrink-0 place-items-center rounded-full bg-primary text-[13px] font-bold text-primary-ink">{step}</span> : null}
+        <div className="min-w-0">
+          <h3 className="font-sans text-[16px] font-bold">{title}</h3>
+          {hint ? <p className="text-[12.5px] text-muted">{hint}</p> : null}
+        </div>
+      </div>
+      {children}
+    </Card>
+  );
+}
+
+function ProductChips({ products, value, onPick, multi }: { products: MfgProduct[]; value: string | string[]; onPick: (id: string) => void; multi?: boolean }) {
+  const { L, loc } = useT();
+  const on = (id: string) => (Array.isArray(value) ? value.includes(id) : value === id);
+  const groups = CATEGORY_ORDER.map((c) => ({ c, list: products.filter((p) => p.category === c) })).filter((g) => g.list.length);
+  if (!products.length) return <p className="text-[14px] text-muted">{L("لا توجد منتجات بهذه الطريقة. أضفها من صفحة المنتجات.", "No products use this method yet. Add them in Products.")}</p>;
+  return (
+    <div className="grid gap-3">
+      {groups.map((g) => (
+        <div key={g.c} className="grid gap-1.5">
+          {groups.length > 1 ? <span className="text-[12px] font-semibold text-muted">{loc(CATEGORY_LABEL[g.c])}</span> : null}
+          <div className="flex flex-wrap gap-1.5">
+            {g.list.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                aria-pressed={on(p.id)}
+                onClick={() => onPick(p.id)}
+                className={cn(
+                  "inline-flex min-h-11 items-center gap-1.5 rounded-xl border px-3.5 text-[14.5px] font-semibold transition-[background-color,border-color,color] duration-150",
+                  on(p.id) ? "border-primary bg-primary text-primary-ink shadow-sf-sm" : "border-line bg-surface text-ink-2 hover:border-line-strong hover:bg-surface-2",
+                )}
+              >
+                {multi && on(p.id) ? <Check className="size-4" aria-hidden /> : null}
+                {loc(p.name)}
+                {p.portionGrams ? <span className="num text-[12px] opacity-70">{p.portionGrams}{L("جم", "g")}</span> : null}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function RecipeSwitch({ value, onChange, empty }: { value: boolean; onChange: (v: boolean) => void; empty: boolean }) {
+  const { L } = useT();
+  return (
+    <div className="rounded-xl border border-line bg-surface-2 px-3.5 py-2">
+      <Switch
+        checked={value}
+        onChange={onChange}
+        label={<span className="text-[14px]">{L("احفظ هذه الكميات كوصفة المنتج", "Save these quantities as the product's recipe")}</span>}
+        description={empty ? L("المنتج بدون وصفة حتى الآن، والتشغيلة القادمة ستبدأ بهذه الكميات", "This product has no recipe yet; the next batch will start from these quantities") : L("يستبدل الوصفة الحالية", "Replaces the current recipe")}
+      />
+    </div>
+  );
+}
+
+/* ───────── 1 + 2 · by weight / by portion ───────── */
+
+function SimpleForm({ method, prod, onDone }: { method: Extract<MfgMethod, "weight" | "portion">; prod: Prod; onDone: () => void }) {
+  const { L } = useT();
+  const db = useDb();
+  const ctx = useCtx(prod);
+  const list = useMemo(() => prod.products.filter((p) => p.active && p.method === method), [prod.products, method]);
+  const [productId, setProductId] = useState("");
+  const [meals, setMeals] = useState(1);
+  const [net, setNet] = useState(0);
+  const [lines, setLines] = useState<MfgRecipeLine[]>([]);
+  const [packaging, setPackaging] = useState<MfgRecipeLine[]>([]);
+  const [keep, setKeep] = useState(false);
+  const p = prod.productById.get(productId);
+  const pick = (id: string) => {
+    const x = prod.productById.get(id);
+    setProductId(id);
+    setLines(x?.lines ?? []);
+    setPackaging(x?.packaging ?? []);
+    setKeep(!x?.lines.length);
+  };
+  const draft: BatchDraft =
+    method === "weight"
+      ? { method, productId, meals, netKg: net, lines: scaleLines(lines, meals), packaging: scaleLines(packaging, meals) }
+      : { method, productId, meals, netCount: Math.round(net), lines: scaleLines(lines, meals), packaging: scaleLines(packaging, meals) };
+  const built = useMemo(() => buildBatch(draft, ctx), [JSON.stringify(draft), ctx]); // eslint-disable-line react-hooks/exhaustive-deps
+  const ready = !built.errors.length && lines.some((l) => l.qty > 0);
+  return (
+    <Layout
+      side={<ResultPanel built={built} footer={<SaveBar prod={prod} draft={draft} ready={ready} onDone={onDone} afterSave={keep && p ? () => db.update("mfgProducts", p.id, { lines: clean(lines), packaging: clean(packaging) }) : undefined} />} />}
+    >
+      <Block step={1} title={L("المنتج", "Product")} hint={method === "weight" ? L("صوصات وخلطات وتتبيلات تخزن بالوزن", "Sauces, mixes and marinades stored by weight") : L("منتجات تخزن بحصة محددة (بورشن)", "Products stored in fixed portions")}>
+        <ProductChips products={list} value={productId} onPick={pick} />
+      </Block>
+      {p ? (
+        <>
+          <Block step={2} title={L("الكمية", "Quantity")}>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Num big label={L("عدد الوجبات", "Number of meals")} value={meals} onChange={setMeals} hint={L("يضرب كميات الوصفة", "Multiplies the recipe")} />
+              {method === "weight" ? (
+                <Num big label={L("الوزن الصافي بعد التجهيز", "Net weight after cooking")} suffix={L("كجم", "kg")} value={net} onChange={setNet} />
+              ) : (
+                <Num big label={L("العدد الصافي الناتج", "Net count produced")} suffix={L("قطعة", "pcs")} value={net} onChange={setNet} hint={p.portionGrams ? L(`وزن الحصة ${p.portionGrams} جم`, `Portion ${p.portionGrams} g`) : L("حدد وزن الحصة من صفحة المنتجات", "Set the portion weight in Products")} />
+              )}
+            </div>
+          </Block>
+          <Block step={3} title={L("المكونات", "Ingredients")} hint={L("الكميات الفعلية التي دخلت هذه التشغيلة", "What actually went into this batch")}>
+            <div className="grid gap-5">
+              <LinesEditor title={L("الوصفة", "Recipe")} lines={lines} onChange={setLines} by={meals} items={prod.items} itemById={prod.itemById} unitCost={prod.unitCost} />
+              <LinesEditor title={L("باكيج التخزين", "Storage packaging")} hint={L("يدخل في التكلفة فقط", "Costed only")} lines={packaging} onChange={setPackaging} by={meals} items={prod.items} itemById={prod.itemById} unitCost={prod.unitCost} />
+              <RecipeSwitch value={keep} onChange={setKeep} empty={!p.lines.length} />
+            </div>
+          </Block>
+        </>
+      ) : null}
+    </Layout>
+  );
+}
+
+/* ───────── 3 · chicken ───────── */
+
+interface ChickenRow {
+  productId: string;
+  weightKg: number;
+  count: number;
+  lines: MfgRecipeLine[];
+  packaging: MfgRecipeLine[];
+}
+
+function ChickenForm({ prod, onDone }: { prod: Prod; onDone: () => void }) {
+  const { L, lang, loc } = useT();
+  const db = useDb();
+  const ctx = useCtx(prod);
+  const list = useMemo(() => prod.products.filter((p) => p.active && p.method === "chicken"), [prod.products]);
+  const [chickenKg, setChickenKg] = useState(0);
+  const [rows, setRows] = useState<ChickenRow[]>([]);
+  const [keep, setKeep] = useState(false);
+  const chicken = prod.settings?.chickenItemId ? prod.itemById.get(prod.settings.chickenItemId) : undefined;
+  const toggle = (id: string) =>
+    setRows((r) => {
+      if (r.some((x) => x.productId === id)) return r.filter((x) => x.productId !== id);
+      const p = prod.productById.get(id);
+      if (p && !p.lines.length) setKeep(true);
+      return [...r, { productId: id, weightKg: 0, count: 0, lines: p?.lines ?? [], packaging: p?.packaging ?? [] }];
+    });
+  const set = (id: string, patch: Partial<ChickenRow>) => setRows((r) => r.map((x) => (x.productId === id ? { ...x, ...patch } : x)));
+  const draft: BatchDraft = { method: "chicken", chickenKg, outputs: rows.map((r) => ({ productId: r.productId, weightKg: r.weightKg, count: Math.round(r.count), lines: scaleLines(r.lines, r.weightKg), packaging: scaleLines(r.packaging, r.weightKg) })) };
+  const built = useMemo(() => buildBatch(draft, ctx), [JSON.stringify(draft), ctx]); // eslint-disable-line react-hooks/exhaustive-deps
+  const MODE = { weight: L("بالوزن", "By weight"), pre_count: L("متبل قبل العد", "Marinated before counting"), post_count: L("متبل بعد العد", "Marinated after counting") };
+  return (
+    <Layout
+      side={
+        <ResultPanel
+          built={built}
+          footer={<SaveBar prod={prod} draft={draft} ready={!built.errors.length} onDone={onDone} afterSave={keep ? () => Promise.all(rows.map((r) => db.update("mfgProducts", r.productId, { lines: clean(r.lines), packaging: clean(r.packaging) }))) : undefined} />}
+        />
+      }
+    >
+      <Block step={1} title={L("وزن الدجاج", "Chicken weight")} hint={chicken ? `${loc(chicken.name)} · ${formatMoney(prod.unitCost(chicken.id) * 1000, { lang })} / ${L("كجم", "kg")}` : L("حدد خامة صدور الدجاج من الثوابت", "Set the chicken raw material in Constants")}>
+        <Num big className="max-w-56" label={L("وزن صدور الدجاج قبل التجهيز", "Chicken breast before prep")} suffix={L("كجم", "kg")} value={chickenKg} onChange={setChickenKg} />
+      </Block>
+      <Block step={2} title={L("المنتجات الناتجة", "Products made")} hint={L("اختر كل منتج خرج من نفس كمية الدجاج", "Pick every product made from this chicken")}>
+        <ProductChips products={list} value={rows.map((r) => r.productId)} onPick={toggle} multi />
+      </Block>
+      {rows.map((r, i) => {
+        const p = prod.productById.get(r.productId);
+        if (!p) return null;
+        const mode = p.chickenMode ?? "weight";
+        return (
+          <Block key={r.productId} step={i + 3} title={loc(p.name)} hint={`${MODE[mode]}${p.portionGrams ? ` · ${L("حصة", "portion")} ${p.portionGrams} ${L("جم", "g")}` : ""}`}>
+            <div className="grid gap-4">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <Num big label={L("الوزن الناتج", "Output weight")} suffix={L("كجم", "kg")} value={r.weightKg} onChange={(v) => set(r.productId, { weightKg: v })} />
+                {mode !== "weight" ? <Num big label={L("العدد الناتج", "Count")} suffix={L("قطعة", "pcs")} value={r.count} onChange={(v) => set(r.productId, { count: v })} /> : null}
+              </div>
+              <LinesEditor title={L("التتبيلة والمكونات", "Marinade & ingredients")} hint={L("لكامل وزن هذا المنتج", "For this product's whole weight")} lines={r.lines} onChange={(l) => set(r.productId, { lines: l })} by={r.weightKg} items={prod.items} itemById={prod.itemById} unitCost={prod.unitCost} />
+              <LinesEditor title={L("باكيج التخزين", "Storage packaging")} lines={r.packaging} onChange={(l) => set(r.productId, { packaging: l })} by={r.weightKg} items={prod.items} itemById={prod.itemById} unitCost={prod.unitCost} />
+            </div>
+          </Block>
+        );
+      })}
+      {rows.length ? <RecipeSwitch value={keep} onChange={setKeep} empty={rows.every((r) => !prod.productById.get(r.productId)?.lines.length)} /> : null}
+    </Layout>
+  );
+}
+
+/* ───────── 4 · burger ───────── */
+
+function BurgerForm({ kind, prod, onDone }: { kind: "beef" | "chicken"; prod: Prod; onDone: () => void }) {
+  const { L, lang, loc } = useT();
+  const db = useDb();
+  const ctx = useCtx(prod);
+  const beef = kind === "beef";
+  const list = useMemo(() => prod.products.filter((p) => p.active && p.method === "burger" && p.category === (beef ? "beef_burger" : "chicken_burger")), [prod.products, beef]);
+  const first = list[0];
+  const meats = prod.settings?.meatTypes ?? [];
+  const [meatTypeId, setMeatTypeId] = useState<string | null>(null);
+  const [meatKg, setMeatKg] = useState(0);
+  const [netKg, setNetKg] = useState(0);
+  const [fatKg, setFatKg] = useState(0);
+  const [counts, setCounts] = useState<Record<string, number>>({});
+  const [lines, setLines] = useState<MfgRecipeLine[]>(() => first?.lines ?? []);
+  const [packaging, setPackaging] = useState<MfgRecipeLine[]>(() => first?.packaging ?? []);
+  const [keep, setKeep] = useState(() => !first?.lines.length);
+  const meat = meats.find((m) => m.id === meatTypeId);
+  const draft: BatchDraft = {
+    method: "burger", kind, meatTypeId, meatKg, netKg, fatKg, lines: scaleLines(lines, netKg), packaging: scaleLines(packaging, netKg),
+    products: list.map((p) => ({ productId: p.id, count: Math.round(counts[p.id] ?? 0) })),
+  };
+  const built = useMemo(() => buildBatch(draft, ctx), [JSON.stringify(draft), ctx]); // eslint-disable-line react-hooks/exhaustive-deps
+  const mince = prod.settings?.mincedChickenItemId ? prod.itemById.get(prod.settings.mincedChickenItemId) : undefined;
+  const suggested = built.suggestedFatKg ?? 0;
+  if (!list.length) return <EmptyState title={L("لا توجد منتجات برجر. أضفها من صفحة المنتجات.", "No burger products yet. Add them in Products.")} />;
+  return (
+    <Layout
+      side={
+        <ResultPanel
+          built={built}
+          footer={<SaveBar prod={prod} draft={draft} ready={!built.errors.length} onDone={onDone} afterSave={keep ? () => Promise.all(list.map((p) => db.update("mfgProducts", p.id, { lines: clean(lines), packaging: clean(packaging) }))) : undefined} />}
+        />
+      }
+    >
+      {beef ? (
+        <Block step={1} title={L("اللحم", "Meat")} hint={L("نوع اللحم يحدد وزن الدهن المقترح", "The cut sets the suggested fat weight")}>
+          <div className="grid gap-4">
+            <div className="flex flex-wrap gap-1.5">
+              {meats.map((m) => (
+                <button key={m.id} type="button" aria-pressed={m.id === meatTypeId} onClick={() => setMeatTypeId(m.id)} className={cn("inline-flex min-h-11 items-center gap-1.5 rounded-xl border px-3.5 text-[14.5px] font-semibold transition-colors", m.id === meatTypeId ? "border-primary bg-primary text-primary-ink" : "border-line bg-surface text-ink-2 hover:border-line-strong hover:bg-surface-2")}>
+                  {loc(m.name)}
+                  <span className="num text-[12px] opacity-70">{m.fatGramsPerKg}{L("جم دهن", "g fat")}</span>
+                </button>
+              ))}
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Num big label={L("وزن اللحم قبل التنظيف", "Meat before trimming")} suffix={L("كجم", "kg")} value={meatKg} onChange={setMeatKg} hint={meat?.stockItemId ? `${formatMoney(prod.unitCost(meat.stockItemId) * 1000, { lang })} / ${L("كجم", "kg")}` : undefined} />
+              <Num big label={L("الوزن الصافي بعد التنظيف", "Net after trimming")} suffix={L("كجم", "kg")} value={netKg} onChange={setNetKg} />
+              <div className="grid gap-1.5">
+                <Num big label={L("وزن الدهن المضاف", "Fat added")} suffix={L("كجم", "kg")} value={fatKg} onChange={setFatKg} />
+                {suggested > 0 ? (
+                  <button type="button" className="num text-start text-[12.5px] font-semibold text-primary hover:underline" onClick={() => setFatKg(suggested)}>
+                    {L(`المقترح ${suggested} كجم، اضغط للاستخدام`, `Suggested ${suggested} kg — tap to use`)}
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        </Block>
+      ) : (
+        <Block step={1} title={L("دجاج الفرم", "Minced chicken")} hint={mince ? `${loc(mince.name)} · ${formatMoney(prod.unitCost(mince.id) * 1000, { lang })} / ${L("كجم", "kg")}` : L("حدد خامة دجاج الفرم من الثوابت", "Set the minced chicken item in Constants")}>
+          <Num big className="max-w-56" label={L("وزن دجاج الفرم", "Minced chicken weight")} suffix={L("كجم", "kg")} value={netKg} onChange={setNetKg} />
+        </Block>
+      )}
+      <Block step={2} title={L("الخلطة", "Mix")} hint={L("كميات هذه التشغيلة", "Quantities of this batch")}>
+        <div className="grid gap-5">
+          <LinesEditor title={L("مكونات الوصفة", "Recipe")} lines={lines} onChange={setLines} by={netKg} items={prod.items} itemById={prod.itemById} unitCost={prod.unitCost} />
+          <LinesEditor title={L("باكيج التخزين", "Storage packaging")} hint={L("يدخل في التكلفة فقط", "Costed only")} lines={packaging} onChange={setPackaging} by={netKg} items={prod.items} itemById={prod.itemById} unitCost={prod.unitCost} />
+          <RecipeSwitch value={keep} onChange={setKeep} empty={!first?.lines.length} />
+        </div>
+      </Block>
+      <Block step={3} title={L("العدد الناتج", "Patties made")}>
+        <div className="grid gap-3 sm:grid-cols-3">
+          {list.map((p) => (
+            <Num key={p.id} big label={loc(p.name)} suffix={L("قطعة", "pcs")} value={counts[p.id] ?? 0} onChange={(v) => setCounts((c) => ({ ...c, [p.id]: v }))} />
+          ))}
+        </div>
+      </Block>
+    </Layout>
+  );
+}
+
+/* ───────── fat ───────── */
+
+function FatForm({ prod, onDone }: { prod: Prod; onDone: () => void }) {
+  const { L, lang, loc } = useT();
+  const ctx = useCtx(prod);
+  const list = useMemo(() => prod.products.filter((p) => p.active && p.method === "fat"), [prod.products]);
+  const [productId, setProductId] = useState(() => list[0]?.id ?? "");
+  const [fatKg, setFatKg] = useState(0);
+  const [readyKg, setReadyKg] = useState(0);
+  const p = prod.productById.get(productId) ?? list[0];
+  const [packaging, setPackaging] = useState<MfgRecipeLine[]>(() => p?.packaging ?? []);
+  const raw = prod.settings?.rawFatItemId ? prod.itemById.get(prod.settings.rawFatItemId) : undefined;
+  const draft: BatchDraft = { method: "fat", productId: p?.id ?? "", fatKg, readyKg, packaging: scaleLines(packaging, readyKg) };
+  const built = useMemo(() => buildBatch(draft, ctx), [JSON.stringify(draft), ctx]); // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <Layout side={<ResultPanel built={built} footer={<SaveBar prod={prod} draft={draft} ready={!built.errors.length} onDone={onDone} />} />}>
+      {list.length > 1 ? (
+        <Block title={L("المنتج", "Product")}>
+          <ProductChips products={list} value={p?.id ?? ""} onPick={setProductId} />
+        </Block>
+      ) : null}
+      <Block step={1} title={L("تجهيز الدهن البلدي", "Preparing beef fat")} hint={raw ? `${loc(raw.name)} · ${formatMoney(prod.unitCost(raw.id) * 1000, { lang })} / ${L("كجم", "kg")}` : L("حدد خامة الدهن من الثوابت", "Set the raw fat item in Constants")}>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Num big label={L("وزن الدهن قبل التجهيز", "Fat before prep")} suffix={L("كجم", "kg")} value={fatKg} onChange={setFatKg} />
+          <Num big label={L("وزن الدهن الجاهز", "Ready fat")} suffix={L("كجم", "kg")} value={readyKg} onChange={setReadyKg} />
+        </div>
+      </Block>
+      <Block step={2} title={L("باكيج التخزين", "Storage packaging")} hint={L("اختياري", "Optional")}>
+        <LinesEditor title={L("الأكياس والعلب", "Bags & containers")} lines={packaging} onChange={setPackaging} by={readyKg} items={prod.items} itemById={prod.itemById} unitCost={prod.unitCost} />
+      </Block>
+    </Layout>
+  );
+}

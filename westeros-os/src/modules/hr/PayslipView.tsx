@@ -25,7 +25,7 @@ export function PayslipView({ slip, restaurant, profile, lang, currency }: { sli
     <article dir={lang === "ar" ? "rtl" : "ltr"} lang={lang} className="mx-auto w-full max-w-[720px] bg-white p-6 text-[13px] leading-relaxed text-[#16211e]" style={{ fontFamily: "'IBM Plex Sans Arabic', system-ui, sans-serif" }}>
       <header className="flex items-start justify-between gap-4 border-b-2 border-[#0d5a53] pb-3">
         <div>
-          <p className="text-[18px] font-bold">{restaurant?.name[lang] ?? "Sufra"}</p>
+          <p className="text-[18px] font-bold">{restaurant?.name[lang] ?? "Westeros"}</p>
           <p className="text-[#5b6a64]">{T("قسيمة مرتب", "Payslip")} · {month}</p>
         </div>
         <div className="text-end text-[12px] text-[#5b6a64]">

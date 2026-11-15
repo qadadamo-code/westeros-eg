@@ -12,7 +12,7 @@
  */
 /** pounds → integer piastres (website convention; convert with `piastresToUnits`) */
 export const egp = (pounds: number) => Math.round(pounds * 100);
-/** piastres → Sufra OS Units (1 piastre = 1000 units) */
+/** piastres → Westeros OS Units (1 piastre = 1000 units) */
 export const piastresToUnits = (p: number) => p * 1000;
 
 export type SupplyCategory = "produce" | "meat" | "fish" | "dairy" | "dry" | "drinks" | "packaging" | "cleaning" | "equipment";

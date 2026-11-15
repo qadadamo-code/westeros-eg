@@ -30,8 +30,8 @@ export default function AggregatorsPage() {
           <p className="font-bold">{L("الربط المباشر محتاج تفعيل من التطبيق نفسه", "Direct integration has to be enabled by each app")}</p>
           <p className="text-ink-2">
             {L(
-              "مفيش تطبيق منهم بيدّي API مفتوح لأي حد: الربط بيتفعّل من مدير حسابك عندهم (برنامج شركاء الـ POS) أو عن طريق وسيط زي Deliverect أو Foodizone أو Grubtech، وبعدها الطلبات بتوصل سُفرة لوحدها وبنرجّع لهم الحالة (اتقبل، جاهز، خرج). لحد ده ما يحصل، سجّل طلباتهم يدوي من هنا بالعمولة عشان المطبخ والتقارير يبقوا كاملين.",
-              "None of them offers an open API: integration is enabled by your account manager (their POS-partner programme) or through a middleware such as Deliverect, Foodizone or Grubtech. Orders then arrive in Sufra on their own and we push statuses back (accepted, ready, picked up). Until then, key their orders in here with the commission so the kitchen and reports stay complete.",
+              "مفيش تطبيق منهم بيدّي API مفتوح لأي حد: الربط بيتفعّل من مدير حسابك عندهم (برنامج شركاء الـ POS) أو عن طريق وسيط زي Deliverect أو Foodizone أو Grubtech، وبعدها الطلبات بتوصل وستروس لوحدها وبنرجّع لهم الحالة (اتقبل، جاهز، خرج). لحد ده ما يحصل، سجّل طلباتهم يدوي من هنا بالعمولة عشان المطبخ والتقارير يبقوا كاملين.",
+              "None of them offers an open API: integration is enabled by your account manager (their POS-partner programme) or through a middleware such as Deliverect, Foodizone or Grubtech. Orders then arrive in Westeros on their own and we push statuses back (accepted, ready, picked up). Until then, key their orders in here with the commission so the kitchen and reports stay complete.",
             )}
           </p>
         </div>

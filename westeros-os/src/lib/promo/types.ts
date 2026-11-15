@@ -3,7 +3,7 @@
  * src/data/crmTypes.ts. No I/O here: everything is plain data so the rules run the same in the POS, the guest
  * checkout, tests and (ported) Postgres functions.
  *
- * Money is Units (0.00001 EGP). Rates are basis points (15% = 1500), like the rest of Sufra.
+ * Money is Units (0.00001 EGP). Rates are basis points (15% = 1500), like the rest of Westeros.
  */
 import type { Localized, OrderMode } from "@/data/types";
 import type { Units } from "@/lib/money";

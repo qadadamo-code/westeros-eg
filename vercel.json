@@ -1,0 +1,65 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "cd westeros-os && npm ci",
+  "buildCommand": "cd westeros-os && npm run build && rm -rf ../site && mkdir -p ../site && cp -r dist ../site/app",
+  "outputDirectory": "site",
+  "rewrites": [
+    {
+      "source": "/iclock/cdata",
+      "destination": "/api/attendance-push"
+    },
+    {
+      "source": "/iclock/getrequest",
+      "destination": "/api/attendance-push?cmd=getrequest"
+    },
+    {
+      "source": "/app/((?!assets/).*)",
+      "destination": "/app/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/app/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/app/sw.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        },
+        {
+          "key": "Service-Worker-Allowed",
+          "value": "/app/"
+        }
+      ]
+    },
+    {
+      "source": "/app/manifest.webmanifest",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/manifest+json"
+        }
+      ]
+    }
+  ],
+  "git": {
+    "deploymentEnabled": {
+      "dev": false
+    }
+  },
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/app/",
+      "permanent": false
+    }
+  ]
+}
