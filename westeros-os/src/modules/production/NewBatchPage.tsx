@@ -281,10 +281,15 @@ function SimpleForm({ method, prod, onDone, initial, chosen }: { method: Extract
   const [productId, setProductId] = useState(initial?.id ?? "");
   const [meals, setMeals] = useState(1);
   const [net, setNet] = useState(0);
-  const [lines, setLines] = useState<MfgRecipeLine[]>(initial?.lines ?? []);
-  const [packaging, setPackaging] = useState<MfgRecipeLine[]>(initial?.packaging ?? []);
-  const [keep, setKeep] = useState(!!initial && !initial.lines.length);
+  const [editedLines, setLines] = useState<MfgRecipeLine[]>(initial?.lines ?? []);
+  const [editedPackaging, setPackaging] = useState<MfgRecipeLine[]>(initial?.packaging ?? []);
+  const [keepEdited, setKeep] = useState(!!initial && !initial.lines.length);
   const p = prod.productById.get(productId);
+  // Cost Control: ingredients and packaging are numbers only, always straight from the recipe (edited in الوصفات)
+  const fixed = COST_CONTROL_ONLY;
+  const lines = fixed ? p?.lines ?? [] : editedLines;
+  const packaging = fixed ? p?.packaging ?? [] : editedPackaging;
+  const keep = fixed ? false : keepEdited;
   const pick = (id: string) => {
     const x = prod.productById.get(id);
     setProductId(id);
@@ -319,11 +324,11 @@ function SimpleForm({ method, prod, onDone, initial, chosen }: { method: Extract
               )}
             </div>
           </Block>
-          <Block step={chosen ? 2 : 3} title={L("المكونات", "Ingredients")} hint={L("الكميات الفعلية التي دخلت هذه التشغيلة", "What actually went into this batch")}>
+          <Block step={chosen ? 2 : 3} title={L("المكونات", "Ingredients")} hint={fixed ? "الكميات المطلوبة لهذه التشغيلة" : L("الكميات الفعلية التي دخلت هذه التشغيلة", "What actually went into this batch")}>
             <div className="grid gap-5">
-              <LinesEditor title={L("الوصفة", "Recipe")} lines={lines} onChange={setLines} by={meals} items={recipeItems(prod, p.recipeType, p.stockItemId)} itemById={prod.itemById} unitCost={prod.unitCost} />
-              <LinesEditor title={L("باكيج التخزين", "Storage packaging")} hint={L("يدخل في التكلفة فقط", "Costed only")} lines={packaging} onChange={setPackaging} by={meals} items={packagingItems(prod)} itemById={prod.itemById} unitCost={prod.unitCost} />
-              <RecipeSwitch value={keep} onChange={setKeep} empty={!p.lines.length} />
+              <LinesEditor readOnly={fixed} title={L("الوصفة", "Recipe")} lines={lines} onChange={setLines} by={meals} items={recipeItems(prod, p.recipeType, p.stockItemId)} itemById={prod.itemById} unitCost={prod.unitCost} />
+              <LinesEditor readOnly={fixed} title={L("باكيج التخزين", "Storage packaging")} hint={L("يدخل في التكلفة فقط", "Costed only")} lines={packaging} onChange={setPackaging} by={meals} items={packagingItems(prod)} itemById={prod.itemById} unitCost={prod.unitCost} />
+              {fixed ? (p.lines.length ? <p className="text-[12.5px] text-muted">الأرقام للعرض فقط. تعديل المكونات والباكيج يكون من الوصفات.</p> : <p className="text-[13px] font-semibold text-warn">المنتج بدون وصفة. عرّف وصفته من تبويب الوصفات أولاً.</p>) : <RecipeSwitch value={keep} onChange={setKeep} empty={!p.lines.length} />}
             </div>
           </Block>
         </>
@@ -349,7 +354,12 @@ function ChickenForm({ prod, onDone, initial, chosen }: { prod: Prod; onDone: ()
   const list = useMemo(() => prod.products.filter((p) => p.active && p.method === "chicken"), [prod.products]);
   const [chickenKg, setChickenKg] = useState(0);
   const [rows, setRows] = useState<ChickenRow[]>(() => (initial ? [{ productId: initial.id, weightKg: 0, count: 0, lines: initial.lines, packaging: initial.packaging }] : []));
-  const [keep, setKeep] = useState(!!initial && !initial.lines.length);
+  const [keepEdited, setKeep] = useState(!!initial && !initial.lines.length);
+  // Cost Control: ingredients and packaging are numbers only, always straight from each product's recipe
+  const fixed = COST_CONTROL_ONLY;
+  const keep = fixed ? false : keepEdited;
+  const linesOf = (r: ChickenRow) => (fixed ? prod.productById.get(r.productId)?.lines ?? [] : r.lines);
+  const packagingOf = (r: ChickenRow) => (fixed ? prod.productById.get(r.productId)?.packaging ?? [] : r.packaging);
   // the raw material this batch is cut from: any raw item, starting on the one named in the constants
   const raws = useMemo(() => prod.items.filter((i) => i.active && i.kind === "raw"), [prod.items]);
   const [rawId, setRawId] = useState<string>(() => prod.settings?.chickenItemId ?? "");
@@ -362,7 +372,7 @@ function ChickenForm({ prod, onDone, initial, chosen }: { prod: Prod; onDone: ()
       return [...r, { productId: id, weightKg: 0, count: 0, lines: p?.lines ?? [], packaging: p?.packaging ?? [] }];
     });
   const set = (id: string, patch: Partial<ChickenRow>) => setRows((r) => r.map((x) => (x.productId === id ? { ...x, ...patch } : x)));
-  const draft: BatchDraft = { method: "chicken", itemId: rawId || null, chickenKg, outputs: rows.map((r) => ({ productId: r.productId, weightKg: r.weightKg, count: Math.round(r.count), lines: scaleLines(r.lines, r.weightKg), packaging: scaleLines(r.packaging, r.weightKg) })) };
+  const draft: BatchDraft = { method: "chicken", itemId: rawId || null, chickenKg, outputs: rows.map((r) => ({ productId: r.productId, weightKg: r.weightKg, count: Math.round(r.count), lines: scaleLines(linesOf(r), r.weightKg), packaging: scaleLines(packagingOf(r), r.weightKg) })) };
   const built = useMemo(() => buildBatch(draft, ctx), [JSON.stringify(draft), ctx]); // eslint-disable-line react-hooks/exhaustive-deps
   const MODE = { weight: L("بالوزن", "By weight"), pre_count: L("متبل قبل العد", "Marinated before counting"), post_count: L("متبل بعد العد", "Marinated after counting") };
   return (
@@ -394,13 +404,13 @@ function ChickenForm({ prod, onDone, initial, chosen }: { prod: Prod; onDone: ()
                 <Num big label={L("الوزن الناتج", "Output weight")} suffix={L("كجم", "kg")} value={r.weightKg} onChange={(v) => set(r.productId, { weightKg: v })} />
                 {mode !== "weight" ? <Num big label={L("العدد الناتج", "Count")} suffix={L("قطعة", "pcs")} value={r.count} onChange={(v) => set(r.productId, { count: v })} /> : null}
               </div>
-              <LinesEditor title={L("التتبيلة والمكونات", "Marinade & ingredients")} hint={L("لكامل وزن هذا المنتج", "For this product's whole weight")} lines={r.lines} onChange={(l) => set(r.productId, { lines: l })} by={r.weightKg} items={recipeItems(prod, p.recipeType, p.stockItemId)} itemById={prod.itemById} unitCost={prod.unitCost} />
-              <LinesEditor title={L("باكيج التخزين", "Storage packaging")} lines={r.packaging} onChange={(l) => set(r.productId, { packaging: l })} by={r.weightKg} items={packagingItems(prod)} itemById={prod.itemById} unitCost={prod.unitCost} />
+              <LinesEditor readOnly={fixed} title={L("التتبيلة والمكونات", "Marinade & ingredients")} hint={L("لكامل وزن هذا المنتج", "For this product's whole weight")} lines={linesOf(r)} onChange={(l) => set(r.productId, { lines: l })} by={r.weightKg} items={recipeItems(prod, p.recipeType, p.stockItemId)} itemById={prod.itemById} unitCost={prod.unitCost} />
+              <LinesEditor readOnly={fixed} title={L("باكيج التخزين", "Storage packaging")} lines={packagingOf(r)} onChange={(l) => set(r.productId, { packaging: l })} by={r.weightKg} items={packagingItems(prod)} itemById={prod.itemById} unitCost={prod.unitCost} />
             </div>
           </Block>
         );
       })}
-      {rows.length ? <RecipeSwitch value={keep} onChange={setKeep} empty={rows.every((r) => !prod.productById.get(r.productId)?.lines.length)} /> : null}
+      {!rows.length ? null : fixed ? <p className="text-[12.5px] text-muted">الأرقام للعرض فقط. تعديل المكونات والباكيج يكون من الوصفات.</p> : <RecipeSwitch value={keep} onChange={setKeep} empty={rows.every((r) => !prod.productById.get(r.productId)?.lines.length)} />}
     </Layout>
   );
 }
