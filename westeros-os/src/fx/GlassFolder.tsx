@@ -719,6 +719,19 @@ export default function GlassFolder({
       style={{ width, height: (H + HEADROOM) * k, ...style }}
     >
       <style>{GF_CSS}</style>
+      {/* the press target sits outside the 3D stage, so every browser hit-tests it as a plain rectangle */}
+      <button
+        ref={hitRef}
+        type="button"
+        className="gf-hit"
+        style={{ top: (HEADROOM + 74) * k, height: FRONT_H * k }}
+        aria-expanded={open}
+        aria-label={(open ? "إغلاق " : "فتح ") + label + "، " + count + " شاشات"}
+        onClick={() => {
+          setMenuOpen(false)
+          setOpen(!open)
+        }}
+      />
       <div className="gf-stage" style={{ transform: "translateY(" + HEADROOM * k + "px) scale(" + k + ")" }}>
         <div className="gf-tilt">
           <div className="gf-shadow" aria-hidden="true" />
@@ -754,17 +767,6 @@ export default function GlassFolder({
               </defs>
               <path d={FRONT_PATH} stroke={"url(#gf-rim-" + uid + ")"} />
             </svg>
-            <button
-              ref={hitRef}
-              type="button"
-              className="gf-hit"
-              aria-expanded={open}
-              aria-label={(open ? "إغلاق " : "فتح ") + label + "، " + count + " شاشات"}
-              onClick={() => {
-                setMenuOpen(false)
-                setOpen(!open)
-              }}
-            />
             <div className="gf-label">
               <span className="gf-title">{label}</span>
               <span className="gf-meta" key={metaLine}>
@@ -1165,12 +1167,14 @@ canvas.gf-sheet-art[data-ready] { opacity: 1; filter: none; }
 .gf-hit {
   all: unset;
   position: absolute;
-  inset: 0;
-  z-index: 1;
+  left: 0;
+  width: 100%;
+  z-index: 20;
   cursor: pointer;
+  border-radius: 18px;
+  -webkit-tap-highlight-color: transparent;
 }
-.gf-hit:focus-visible ~ .gf-label .gf-title { text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 4px; }
-.gf-front:has(.gf-hit:focus-visible) .gf-front-rim path { stroke-width: 5; }
+.gf-hit:focus-visible { outline: 2px solid var(--gf-ink); outline-offset: 3px; }
 
 .gf-label {
   position: absolute;
@@ -1180,6 +1184,8 @@ canvas.gf-sheet-art[data-ready] { opacity: 1; filter: none; }
   gap: 4px;
   max-width: 200px;
   pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
   color: var(--gf-ink);
 }
 .gf-root[data-place="bottom-left"] .gf-label { left: 28px; bottom: 32px; }
