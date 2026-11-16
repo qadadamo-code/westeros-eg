@@ -28,5 +28,11 @@ apply() { # name, file
 for f in migrations/*.sql; do apply "$(basename "$f" .sql)" "$f"; done
 if [ -n "${SEED_FILE:-}" ]; then apply "seed-westeros-1" "$SEED_FILE"; fi
 # tables added by a later migration join the change journal (0017_history.sql)
-run -c "do \$\$ begin if to_regprocedure('public.track_changes()') is not null then perform public.track_changes(); end if; end \$\$"
+# The app is live while this runs, so re-arming the triggers can meet a lock held by a user's request: try again a few times.
+journal() { run -c "set lock_timeout = '5s'" -c "do \$\$ begin if to_regprocedure('public.track_changes()') is not null then perform public.track_changes(); end if; end \$\$"; }
+for attempt in 1 2 3 4 5; do
+  if journal; then break; fi
+  if [ "$attempt" = 5 ]; then echo "could not refresh the change journal triggers" >&2; exit 1; fi
+  echo "change journal busy, retry $attempt"; sleep 3
+done
 echo "database is up to date"
