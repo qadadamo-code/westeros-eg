@@ -61,8 +61,15 @@ let defaultCurrency: Currency = "EGP";
 export const setDefaultCurrency = (c: Currency) => void (defaultCurrency = c);
 export const getDefaultCurrency = () => defaultCurrency;
 
+let hidden = false;
+/** Prices are masked for a signed-in user whose type has no "see prices" permission (set by the shell). */
+export const setMoneyHidden = (h: boolean) => void (hidden = h);
+export const moneyHidden = () => hidden;
+export const MONEY_MASK = "•••";
+
 /** Parts so components can style digits (mono) and currency (text) separately. */
 export function moneyParts(u: Units, f: MoneyFormat): { sign: string; digits: string; currency: string } {
+  if (hidden) return { sign: "", digits: MONEY_MASK, currency: "" };
   const r = f.whole ? Math.round(u / UNITS_PER_MAJOR) * UNITS_PER_MAJOR : roundMinor(u);
   const neg = r < 0;
   const abs = Math.abs(r);

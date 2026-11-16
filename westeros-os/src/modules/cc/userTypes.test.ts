@@ -67,3 +67,26 @@ describe("category code ranges", () => {
     expect(rangeProblem("b", { from: 300, count: 10 }, all, (k) => k)).toBe("");
   });
 });
+
+import { labelCopies, labelSizes } from "@/modules/production/Label";
+import { seesPrices } from "./lib";
+
+describe("stickers and prices", () => {
+  it("prints one sticker per storage unit, rounded up", () => {
+    expect(labelCopies({ unit: "pc", count: 180, weightKg: null }, 35)).toBe(6);
+    expect(labelCopies({ unit: "pc", count: 70, weightKg: null }, 35)).toBe(2);
+    expect(labelCopies({ unit: "kg", count: null, weightKg: 12.5 }, 5)).toBe(3);
+    expect(labelCopies({ unit: "pc", count: 180, weightKg: null }, null)).toBe(1);
+  });
+  it("offers the added sticker sizes once", () => {
+    const ids = labelSizes([{ w: 50, h: 25 }, { w: 70, h: 35 }]).map((s) => s.id);
+    expect(ids.filter((x) => x === "50x25")).toHaveLength(1);
+    expect(ids).toContain("70x35");
+  });
+  it("shows prices only to types given the permission", () => {
+    expect(seesPrices({ id: "a", name: "a", role: "chef" })).toBe(false);
+    expect(seesPrices({ id: "a", name: "a", role: "chef", seePrices: true })).toBe(true);
+    expect(seesPrices({ id: "a", name: "a", role: "admin" })).toBe(true);
+    expect(seesPrices({ id: "a", name: "a", role: "admin", seePrices: false })).toBe(false);
+  });
+});

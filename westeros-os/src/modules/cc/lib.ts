@@ -128,6 +128,8 @@ const ROLE_SCREENS: Record<MfgUserType["role"], string[]> = {
 };
 /** The screens a type's users may open: its checklist, else what its permissions level allowed before checklists. */
 export const screensOf = (t: MfgUserType): string[] => t.screens ?? ROLE_SCREENS[t.role];
+/** رؤية الأسعار والتكاليف: ticked by management on the type; until it is set, only the users-management level sees them. */
+export const seesPrices = (t: MfgUserType): boolean => t.seePrices ?? t.role === "admin";
 const LEVELS: MfgUserType["role"][] = ["kitchen", "chef", "manager", "admin"];
 /**
  * The database level a checklist needs, so saving works on every ticked screen:

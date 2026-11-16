@@ -1,7 +1,8 @@
 import { useSession } from "@/auth/session";
 import { COST_CONTROL_ONLY } from "@/costControl";
 import { useLive } from "@/data/hooks";
-import { screensOf, userTypeOf } from "@/modules/cc/lib";
+import { setMoneyHidden } from "@/lib/money";
+import { screensOf, seesPrices, userTypeOf } from "@/modules/cc/lib";
 import { setAllowedScreens } from "@/modules/screens";
 
 /**
@@ -15,5 +16,8 @@ export function useScreenAccess(): string {
   const type = COST_CONTROL_ONLY && staff && staff.role !== "owner" && lists ? userTypeOf(staff, lists) : null;
   const screens = type ? screensOf(type) : null;
   setAllowedScreens(screens);
-  return screens ? screens.join(",") : "*";
+  // prices: the owner always sees them; everyone else needs the permission on their user type
+  const hide = COST_CONTROL_ONLY && !!staff && staff.role !== "owner" && (!lists || !type || !seesPrices(type));
+  setMoneyHidden(hide);
+  return `${screens ? screens.join(",") : "*"}|${hide ? "no-prices" : "prices"}`;
 }

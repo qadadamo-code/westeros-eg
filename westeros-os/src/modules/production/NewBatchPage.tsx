@@ -149,7 +149,8 @@ function SaveBar({ prod, draft, ready, onDone, afterSave, beforeSave }: { prod: 
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState<MfgBatch | null>(null);
   // a chef signs their own batches; a manager may record one on behalf of the chef who made it
-  const delegate = role === "owner" || role === "admin" || role === "manager";
+  // Cost Control: the batch always belongs to the signed-in user; only management may put it under another chef
+  const delegate = role === "owner" || role === "admin" || (!COST_CONTROL_ONLY && role === "manager");
   const chefs = prod.staff.filter((m) => m.active && (m.role === "chef" || m.role === "kitchen" || m.id === staff?.id));
   const chef = (delegate ? chefs.find((c) => c.id === chefId) : null) ?? staff;
   const code = chef ? prod.settings?.chefCodes[chef.id] : undefined;

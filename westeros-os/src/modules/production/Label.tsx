@@ -17,16 +17,32 @@ export interface LabelSize {
 export const LABEL_SIZES: LabelSize[] = [
   { id: "60x40", w: 60, h: 40 },
   { id: "50x30", w: 50, h: 30 },
+  { id: "50x25", w: 50, h: 25 },
   { id: "80x50", w: 80, h: 50 },
 ];
+/** The built-in sizes plus the ones the restaurant added (width × height in mm). */
+export function labelSizes(extra?: { w: number; h: number }[] | null): LabelSize[] {
+  const out = [...LABEL_SIZES];
+  for (const e of extra ?? []) {
+    const id = `${e.w}x${e.h}`;
+    if (e.w > 0 && e.h > 0 && !out.some((s) => s.id === id)) out.push({ id, w: e.w, h: e.h });
+  }
+  return out;
+}
 const SIZE_KEY = "westeros-os.labelSize";
-export const savedLabelSize = (): LabelSize => {
+export const savedLabelSize = (sizes: LabelSize[] = LABEL_SIZES): LabelSize => {
   try {
-    return LABEL_SIZES.find((s) => s.id === localStorage.getItem(SIZE_KEY)) ?? LABEL_SIZES[0];
+    return sizes.find((s) => s.id === localStorage.getItem(SIZE_KEY)) ?? sizes[0];
   } catch {
-    return LABEL_SIZES[0];
+    return sizes[0];
   }
 };
+/** عدد النسخ: one sticker per storage unit, so the produced quantity over what one unit holds, rounded up. */
+export function labelCopies(output: Pick<MfgBatchOutput, "unit" | "count" | "weightKg">, storageQty: number | null | undefined): number {
+  const made = output.unit === "pc" ? output.count ?? 0 : output.weightKg ?? 0;
+  if (!storageQty || storageQty <= 0 || made <= 0) return 1;
+  return Math.max(1, Math.ceil(made / storageQty - 1e-9));
+}
 export const saveLabelSize = (id: string) => {
   try {
     localStorage.setItem(SIZE_KEY, id);
@@ -81,8 +97,8 @@ export function BatchLabel({ batch, output, size, index, of }: { batch: LabelBat
 
 const ROOT_ID = "ws-label-root";
 
-/** Prints `copies` stickers for each product of the batch through the browser's print dialog. */
-export function printLabels(batch: LabelBatch, outputs: MfgBatchOutput[], size: LabelSize, copies: number): Promise<void> {
+/** Prints the stickers of each product of the batch (`copies`: one number for all, or one per product) through the browser's print dialog. */
+export function printLabels(batch: LabelBatch, outputs: MfgBatchOutput[], size: LabelSize, copies: number | number[]): Promise<void> {
   if (typeof document === "undefined") return Promise.resolve();
   document.getElementById(ROOT_ID)?.remove();
   document.getElementById(`${ROOT_ID}-css`)?.remove();
@@ -102,11 +118,11 @@ export function printLabels(batch: LabelBatch, outputs: MfgBatchOutput[], size: 
   document.head.appendChild(css);
   document.body.appendChild(host);
   const root = createRoot(host);
-  const n = Math.max(1, Math.min(200, Math.round(copies)));
+  const nOf = (oi: number) => Math.max(1, Math.min(200, Math.round(Array.isArray(copies) ? copies[oi] ?? 1 : copies)));
   flushSync(() =>
     root.render(
       <>
-        {outputs.flatMap((o, oi) => Array.from({ length: n }, (_, i) => <BatchLabel key={`${oi}-${i}`} batch={batch} output={o} size={size} index={i + 1} of={n} />))}
+        {outputs.flatMap((o, oi) => Array.from({ length: nOf(oi) }, (_, i) => <BatchLabel key={`${oi}-${i}`} batch={batch} output={o} size={size} index={i + 1} of={nOf(oi)} />))}
       </>,
     ),
   );

@@ -236,6 +236,8 @@ export interface MfgLists {
   burgerTypes: { id: "beef" | "chicken"; name: string }[];
   /** اسماء الوصفات */
   recipeNames: { main: string; sub: string; marinade: string };
+  /** sticker sizes added by the restaurant (mm), offered next to the built-in ones */
+  labelSizes?: MfgLabelSize[];
   /** مدى أكواد كل فئة: raw by category name, sale and product by category id. Ranges of one kind never overlap. */
   codeRanges?: { raw?: Record<string, CodeRange>; sale?: Record<string, CodeRange>; product?: Record<string, CodeRange> };
   /** أنواع المستخدمين (طبيعة المستخدم): the name the restaurant uses and the permissions it gives */
@@ -249,7 +251,9 @@ export interface MfgLists {
  */
 /** Codes `from` … `from + count − 1` */
 export interface CodeRange { from: number; count: number }
-export interface MfgUserType { id: string; name: string; from?: number; count?: number; code?: number; role: "admin" | "manager" | "chef" | "kitchen"; /** the screens its users may open (module ids); missing = what the role allows */ screens?: string[] }
+/** مقاس ستيكر مضاف من شاشة الطباعة، بالمليمتر */
+export interface MfgLabelSize { w: number; h: number }
+export interface MfgUserType { id: string; name: string; from?: number; count?: number; code?: number; role: "admin" | "manager" | "chef" | "kitchen"; /** the screens its users may open (module ids); missing = what the role allows */ screens?: string[]; /** may see prices and costs (الأمور المالية); unset = only the level that manages users */ seePrices?: boolean }
 
 /* ───────── قوائم فتح وقفل الوردية (0016_checklists.sql; src/modules/checklists) ───────── */
 

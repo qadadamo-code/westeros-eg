@@ -5,7 +5,7 @@ import { Crown } from "lucide-react";
 import type { LeadSource, Localized } from "@/data/types";
 import { useT } from "@/i18n/i18n";
 import { cn } from "@/lib/cn";
-import { major, UNITS_PER_MAJOR, type Units } from "@/lib/money";
+import { major, MONEY_MASK, moneyHidden, UNITS_PER_MAJOR, type Units } from "@/lib/money";
 import { RFM_LABEL, type RfmSegment, type Tier } from "@/lib/promo";
 import { Badge, Card, CardHeader, Input } from "@/ui";
 
@@ -81,6 +81,7 @@ export function MoneyInput({ value, onChange, label, hint, className }: { value:
     const cur = text.trim() ? safeMajor(text) : 0;
     if (cur !== value) setText(value ? String(value / UNITS_PER_MAJOR) : "");
   }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (moneyHidden()) return <Input wrapClassName={className} label={label} value={MONEY_MASK} disabled readOnly />;
   return (
     <Input
       wrapClassName={className}

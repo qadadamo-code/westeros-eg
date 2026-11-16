@@ -4,7 +4,7 @@ import { AlertTriangle, Plus, Search, Trash2 } from "lucide-react";
 import type { MfgBatchOutput, MfgRecipeLine, StockItem } from "@/data/types";
 import { useT } from "@/i18n/i18n";
 import { cn } from "@/lib/cn";
-import { formatMoney, type Units } from "@/lib/money";
+import { formatMoney, moneyHidden, type Units } from "@/lib/money";
 import { BASE_NAME } from "@/modules/inventory/units";
 import { Badge, Card, IconButton, Money } from "@/ui";
 import type { BuildError, BuiltBatch } from "./build";
@@ -120,12 +120,13 @@ export function LinesEditor({ title, hint, lines, onChange, by = 1, items, itemB
   const k = by > 0 ? by : 1;
   const used = useMemo(() => new Set(lines.map((l) => l.itemId)), [lines]);
   const total = lines.reduce((a, l) => a + Math.round(l.qty * k * unitCost(l.itemId)), 0);
+  const noPrices = moneyHidden();
   return (
     <div className="grid gap-2">
       <div className="flex items-baseline gap-2">
         <h4 className="font-sans text-[14px] font-bold">{title}</h4>
         {hint ? <span className="text-[12.5px] text-muted">{hint}</span> : null}
-        {lines.length ? <span className="num ms-auto text-[13px] font-semibold text-ink-2">{formatMoney(total, { lang })}</span> : null}
+        {lines.length && !noPrices ? <span className="num ms-auto text-[13px] font-semibold text-ink-2">{formatMoney(total, { lang })}</span> : null}
       </div>
       {lines.length ? (
         <ul className="grid gap-1.5">
@@ -136,9 +137,11 @@ export function LinesEditor({ title, hint, lines, onChange, by = 1, items, itemB
               <li key={l.itemId} className="flex items-center gap-2 rounded-xl border border-line bg-surface px-2.5 py-1.5">
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[14px] font-semibold">{it ? loc(it.name) : "—"}</span>
-                  <span className={cn("num block text-[12px]", price > 0 ? "text-muted" : "text-warn")}>
-                    {price > 0 ? formatMoney(Math.round(l.qty * k * price), { lang }) : L("بدون سعر", "No price yet")}
-                  </span>
+                  {noPrices ? null : (
+                    <span className={cn("num block text-[12px]", price > 0 ? "text-muted" : "text-warn")}>
+                      {price > 0 ? formatMoney(Math.round(l.qty * k * price), { lang }) : L("بدون سعر", "No price yet")}
+                    </span>
+                  )}
                 </span>
                 {readOnly ? (
                   <span className="num text-[14px] font-semibold">{r3(l.qty * k)} {it ? BASE_NAME[it.baseUnit][lang] : ""}</span>
@@ -217,15 +220,20 @@ function Row({ label, value, strong, tone }: { label: ReactNode; value: ReactNod
 /** The figures of the Cost Control document for the batch being typed — updates on every keystroke. */
 export function ResultPanel({ built, footer }: { built: BuiltBatch; footer?: ReactNode }) {
   const { L, lang, loc } = useT();
+  const noPrices = moneyHidden();
   const any = built.totalCost > 0 || built.outputs.some((o) => (o.weightKg ?? 0) > 0 || (o.count ?? 0) > 0);
   return (
     <Card className="overflow-hidden">
-      <div className="bg-primary px-5 py-4 text-primary-ink">
-        <div className="text-[12.5px] font-semibold opacity-80">{L("تكلفة التشغيلة", "Batch cost")}</div>
-        <div className="num mt-0.5 text-[30px] leading-none font-bold">
-          <Money value={built.totalCost} />
+      {noPrices ? (
+        <div className="bg-primary px-5 py-3 text-[14px] font-bold text-primary-ink">{L("ناتج التشغيلة", "Batch output")}</div>
+      ) : (
+        <div className="bg-primary px-5 py-4 text-primary-ink">
+          <div className="text-[12.5px] font-semibold opacity-80">{L("تكلفة التشغيلة", "Batch cost")}</div>
+          <div className="num mt-0.5 text-[30px] leading-none font-bold">
+            <Money value={built.totalCost} />
+          </div>
         </div>
-      </div>
+      )}
       <div className="grid gap-1 px-5 py-3">
         {built.outputs.map((o, i) => (
           <div key={i} className="rounded-xl bg-surface-2 px-3 py-2">
@@ -233,10 +241,12 @@ export function ResultPanel({ built, footer }: { built: BuiltBatch; footer?: Rea
               <span className="truncate text-[14px] font-bold">{loc(o.name)}</span>
               <span className="num text-[13px] text-muted">{outQtyText(o, lang)}</span>
             </div>
-            <div className="mt-0.5 flex items-baseline justify-between gap-2">
-              <span className="text-[12.5px] text-muted">{o.unit === "kg" ? L("سعر الكيلو", "Price per kg") : L("سعر القطعة", "Price per piece")}</span>
-              <span className="num text-[16px] font-bold text-brass-text">{formatMoney(o.unitCost, { lang })}</span>
-            </div>
+            {noPrices ? null : (
+              <div className="mt-0.5 flex items-baseline justify-between gap-2">
+                <span className="text-[12.5px] text-muted">{o.unit === "kg" ? L("سعر الكيلو", "Price per kg") : L("سعر القطعة", "Price per piece")}</span>
+                <span className="num text-[16px] font-bold text-brass-text">{formatMoney(o.unitCost, { lang })}</span>
+              </div>
+            )}
             {o.scaleDiffG ? <div className="num mt-0.5 text-[12px] text-muted">{L("فرق الميزان", "Scale difference")}: {fmtG(o.scaleDiffG, lang)}</div> : null}
           </div>
         ))}
@@ -252,7 +262,7 @@ export function ResultPanel({ built, footer }: { built: BuiltBatch; footer?: Rea
           {built.suggestedFatKg != null ? <Row label={L("وزن الدهن المقترح", "Suggested fat")} value={fmtKg(built.suggestedFatKg, lang)} /> : null}
           {built.scaleDiffG != null ? <Row label={L("هدر الميزان", "Scale difference")} value={fmtG(built.scaleDiffG, lang)} /> : null}
         </div>
-        {built.unpriced.length ? (
+        {built.unpriced.length && !noPrices ? (
           <div className="mt-2 flex gap-2 rounded-xl bg-warn-soft px-3 py-2 text-[12.5px] text-ink-2">
             <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warn" aria-hidden />
             <span>
