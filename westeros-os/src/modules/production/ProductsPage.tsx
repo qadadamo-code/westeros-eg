@@ -149,11 +149,14 @@ function ProductDialog({ product, prod, readOnly, onClose }: { product: MfgProdu
 /**
  * What a recipe may contain, by its type (Cost Control document, 5.2): a main recipe takes raw materials, sub-recipes
  * and marinades; a sub-recipe takes raw materials and marinades; a marinade takes raw materials only. The raw meat,
- * the single raw material and the fat never appear in a recipe: the methods weigh them on their own.
+ * chicken and fat never appear in any recipe: the raw materials of the meat category (ثوابت النظام > فئة الخام للحوم)
+ * and the ones named in تعريف اللحوم. The methods weigh them on their own.
  */
 export function recipeItems(prod: Pick<Prod, "items" | "products" | "settings">, type: MfgProduct["recipeType"], selfStockId?: string): StockItem[] {
   const s = prod.settings;
-  const hidden = new Set<string>([s?.chickenItemId, s?.rawFatItemId, ...(s?.meatTypes ?? []).map((m) => m.stockItemId), selfStockId].filter((x): x is string => !!x));
+  const named = new Set<string>([s?.chickenItemId, s?.rawFatItemId, s?.mincedChickenItemId, ...(s?.meatTypes ?? []).map((m) => m.stockItemId), selfStockId].filter((x): x is string => !!x));
+  const meatCat = s?.lists?.meatCategory ?? s?.lists?.rawCategories?.find((c) => c.includes("لحوم")) ?? "";
+  const hidden = new Set<string>([...named, ...(meatCat ? prod.items.filter((i) => i.kind === "raw" && (i.spec?.category ?? i.note) === meatCat).map((i) => i.id) : [])]);
   const typeOf = new Map(prod.products.map((p) => [p.stockItemId, p.recipeType]));
   const allowed = type === "main" ? ["sub", "marinade"] : type === "sub" ? ["marinade"] : [];
   return prod.items.filter((i) => !hidden.has(i.id) && (i.kind !== "prep" || allowed.includes(typeOf.get(i.id) ?? "main")));

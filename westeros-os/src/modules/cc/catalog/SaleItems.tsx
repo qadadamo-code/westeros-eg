@@ -95,9 +95,10 @@ function SaleDialog({ item, recipe, cats, items, cc, readOnly, onClose }: { item
   const [lines, setLines] = useState<MfgRecipeLine[]>(() => (recipe?.lines ?? []).map((l) => ({ itemId: l.itemId, qty: l.qty })));
   const [busy, setBusy] = useState(false);
   const set = (p: Partial<typeof d>) => setD((x) => ({ ...x, ...p }));
-  // مكونات الصنف: المنتجات المصنعة فقط (plus anything already on this item's recipe, so an old line still shows its name)
+  // مكونات الصنف: المنتجات المصنعة ذات الوصفة الرئيسية فقط. الوصفات الفرعية والتتبيلات تدخل في الرئيسية، لا في صنف البيع
+  // (plus anything already on this item's recipe, so an old line still shows its name)
   const choices = useMemo(() => {
-    const made = new Set(prod.products.filter((p) => p.active).map((p) => p.stockItemId));
+    const made = new Set(prod.products.filter((p) => p.active && p.recipeType === "main").map((p) => p.stockItemId));
     const onRecipe = new Set((recipe?.lines ?? []).map((l) => l.itemId));
     return prod.items.filter((i) => (i.active && made.has(i.id)) || onRecipe.has(i.id));
   }, [prod.products, prod.items, recipe]);
@@ -135,7 +136,7 @@ function SaleDialog({ item, recipe, cats, items, cc, readOnly, onClose }: { item
           <Select label="فئة الصنف" value={d.categoryId} onChange={(e) => set({ categoryId: e.target.value })} options={cats.map((c) => ({ value: c.id, label: c.name.ar }))} />
           <MoneyInput label="سعر البيع" value={d.price} onChange={(price) => set({ price })} />
         </div>
-        <LinesEditor readOnly={readOnly} title="مكونات الصنف" hint="من المنتجات المصنعة فقط" lines={lines} onChange={setLines} items={choices} itemById={prod.itemById} unitCost={prod.unitCost} />
+        <LinesEditor readOnly={readOnly} title="مكونات الصنف" hint="من المنتجات المصنعة ذات الوصفة الرئيسية فقط" lines={lines} onChange={setLines} items={choices} itemById={prod.itemById} unitCost={prod.unitCost} />
       </fieldset>
     </Dialog>
   );
