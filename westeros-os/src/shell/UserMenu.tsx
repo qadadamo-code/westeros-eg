@@ -78,7 +78,7 @@ export function UserMenu({ side = "bottom", align = "end", full }: { side?: "top
             </MenuItem>
             <MenuSeparator />
             {s.deviceRestaurantId ? (
-              <MenuItem icon={s.method === "pin" ? <Lock /> : <Users />} onClick={() => (close(), s.lock())}>
+              <MenuItem icon={s.method === "pin" ? <Lock /> : <Users />} onClick={() => (close(), s.method === "pin" ? s.rest() : s.lock())}>
                 {s.method === "pin" ? t("shell.lock") : t("shell.switchUser")}
               </MenuItem>
             ) : null}

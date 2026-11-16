@@ -7,7 +7,7 @@ import { useT } from "@/i18n/i18n";
 import { loadRaw, saveRaw } from "@/lib/storage";
 import { allowed, modules } from "@/modules/registry";
 import { useScreenAccess } from "./useScreenAccess";
-import { Skeleton, useCommands, useHotkeys, useReduced, useToast } from "@/ui";
+import { Skeleton, useCommands, useHotkeys, useReduced } from "@/ui";
 import { Languages, Lock, Moon } from "lucide-react";
 import { useTheme } from "@/theme/theme";
 import { BottomNav } from "./BottomNav";
@@ -36,8 +36,6 @@ export function PageFallback() {
 /** Locks a PIN session after the restaurant's idle timeout. */
 function useAutoLock() {
   const s = useSession();
-  const { t } = useT();
-  const { toast } = useToast();
   const settings = useLive("settings").data[0];
   const minutes = settings?.autoLockMinutes ?? 0;
   useEffect(() => {
@@ -46,8 +44,7 @@ function useAutoLock() {
     const arm = () => {
       clearTimeout(timer);
       timer = setTimeout(() => {
-        s.lock();
-        toast({ title: t("toast.locked") });
+        s.rest();
       }, minutes * 60_000);
     };
     const events = ["pointerdown", "keydown", "touchstart"] as const;

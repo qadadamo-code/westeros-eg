@@ -11,6 +11,7 @@ import { CommandProvider, ToastProvider } from "@/ui";
 import { modules } from "@/modules/registry";
 import type { ModuleDef, ModuleRoute } from "@/modules/types";
 import { AppShell, BareLayout } from "@/shell/AppShell";
+import { LockOverlay } from "@/shell/LockOverlay";
 import { ComingSoon } from "@/shell/ComingSoon";
 import { ModuleCtx } from "@/shell/ModuleContext";
 import { ErrorBoundary } from "@/shell/ErrorBoundary";
@@ -83,6 +84,7 @@ function Root() {
               <ApprovalProvider>
                 <CommandProvider>
                   <AppRoutes />
+                  <LockOverlay />
                 </CommandProvider>
               </ApprovalProvider>
             </SessionProvider>

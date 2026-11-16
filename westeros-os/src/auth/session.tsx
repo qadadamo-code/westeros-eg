@@ -18,6 +18,8 @@ import { can, type Permission } from "./permissions";
 import type { Role } from "./roles";
 
 const PIN_KEY = "sufra-os.pinSession";
+/** set while the screen is covered by the PIN lock; survives a reload so a refresh cannot skip the PIN */
+const REST_KEY = "sufra-os.screenLock";
 const DEVICE_KEY = "sufra-os.device";
 const RESTAURANT_KEY = "sufra-os.restaurant";
 const branchKey = (rid: string) => `sufra-os.branch.${rid}`;
@@ -35,6 +37,8 @@ export interface SessionState {
   method: "password" | "pin" | null;
   /** restaurant this device is paired to for PIN sign-in */
   deviceRestaurantId: string | null;
+  /** screen is covered by the PIN lock; the person stays signed in and the page under it keeps its place and typed values */
+  resting: boolean;
 }
 
 interface SessionApi extends SessionState {
@@ -42,7 +46,11 @@ interface SessionApi extends SessionState {
   can: (p: Permission) => boolean;
   signIn: (email: string, password: string) => Promise<void>;
   pinSignIn: (membershipId: string, pin: string) => Promise<Membership | null>;
+  /** sign the acting person out of the device (back to the names screen) */
   lock: () => void;
+  /** cover the screen until the same person types the PIN; nothing under it is lost */
+  rest: () => void;
+  wake: (pin: string) => Promise<boolean>;
   signOut: () => Promise<void>;
   switchRestaurant: (id: string) => Promise<void>;
   switchBranch: (id: string) => void;
@@ -50,7 +58,7 @@ interface SessionApi extends SessionState {
 
 const Ctx = createContext<SessionApi | null>(null);
 
-const INITIAL: SessionState = { status: "booting", user: null, memberships: [], restaurant: null, branches: [], branchId: null, staff: null, method: null, deviceRestaurantId: null };
+const INITIAL: SessionState = { status: "booting", user: null, memberships: [], restaurant: null, branches: [], branchId: null, staff: null, method: null, deviceRestaurantId: null, resting: false };
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const repo = useRepo();
@@ -82,7 +90,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       const [m] = await repo.list("memberships", { where: { id: pin.membershipId, active: true } }).catch(() => []);
       if (m) {
         const t = await loadTenant(m.restaurantId, m);
-        if (t) return setS({ status: "ready", user, memberships, ...t, staff: m, method: "pin", deviceRestaurantId: device });
+        if (t) return setS({ status: "ready", user, memberships, ...t, staff: m, method: "pin", deviceRestaurantId: device, resting: loadRaw(REST_KEY) === "1" });
       }
       saveJSON(PIN_KEY, null);
     }
@@ -91,7 +99,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       const savedR = loadRaw(RESTAURANT_KEY);
       const pick = memberships.find((x) => x.restaurant.id === savedR) ?? memberships[0];
       const t = await loadTenant(pick.restaurant.id, pick.membership);
-      if (t) return setS({ status: "ready", user, memberships, ...t, staff: pick.membership, method: "password", deviceRestaurantId: device });
+      if (t) return setS({ status: "ready", user, memberships, ...t, staff: pick.membership, method: "password", deviceRestaurantId: device, resting: false });
     }
     // 3) nobody: a paired device shows the PIN screen
     setS({ ...INITIAL, status: device ? "locked" : "signed-out", user, memberships, deviceRestaurantId: device });
@@ -128,7 +136,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       saveJSON(PIN_KEY, { membershipId: m.id, restaurantId: rid });
       const t = await loadTenant(rid, m);
       if (!t) return null;
-      setS((p) => ({ ...p, status: "ready", ...t, staff: m, method: "pin" }));
+      saveRaw(REST_KEY, "");
+      setS((p) => ({ ...p, status: "ready", ...t, staff: m, method: "pin", resting: false }));
       return m;
     },
     [repo, s.deviceRestaurantId, loadTenant],
@@ -136,8 +145,27 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const lock = useCallback(() => {
     saveJSON(PIN_KEY, null);
-    setS((p) => ({ ...p, status: p.deviceRestaurantId ? "locked" : "signed-out", staff: null, method: null }));
+    saveRaw(REST_KEY, "");
+    setS((p) => ({ ...p, status: p.deviceRestaurantId ? "locked" : "signed-out", staff: null, method: null, resting: false }));
   }, []);
+
+  const rest = useCallback(() => {
+    saveRaw(REST_KEY, "1");
+    setS((p) => (p.staff && p.method === "pin" ? { ...p, resting: true } : p));
+  }, []);
+
+  const wake = useCallback(
+    async (pin: string) => {
+      const rid = s.deviceRestaurantId;
+      if (!rid || !s.staff) return false;
+      const m = await repo.auth.verifyPin(rid, s.staff.id, pin);
+      if (!m) return false;
+      saveRaw(REST_KEY, "");
+      setS((p) => ({ ...p, resting: false }));
+      return true;
+    },
+    [repo, s.deviceRestaurantId, s.staff],
+  );
 
   const signOut = useCallback(async () => {
     saveJSON(PIN_KEY, null);
@@ -179,8 +207,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const role = s.staff?.role ?? null;
   const api = useMemo<SessionApi>(
-    () => ({ ...s, role, can: (p) => can(role, p), signIn, pinSignIn, lock, signOut, switchRestaurant, switchBranch }),
-    [s, role, signIn, pinSignIn, lock, signOut, switchRestaurant, switchBranch],
+    () => ({ ...s, role, can: (p) => can(role, p), signIn, pinSignIn, lock, rest, wake, signOut, switchRestaurant, switchBranch }),
+    [s, role, signIn, pinSignIn, lock, rest, wake, signOut, switchRestaurant, switchBranch],
   );
 
   // amounts without an explicit currency follow the restaurant (EGP / SAR)
