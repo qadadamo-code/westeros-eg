@@ -104,6 +104,8 @@ export interface StockRequestLine {
   /** in the unit shown on the request (storage unit for raw materials, kilo or piece for products) */
   qty: number;
   unit: string;
+  /** the warehouse this line enters (purchase) or leaves from (supply); empty = the request's warehouse */
+  locationId?: string | null;
 }
 export interface StockRequest extends Row {
   kind: "purchase" | "supply";
@@ -118,6 +120,10 @@ export interface StockRequest extends Row {
   keeperName: string;
   status: StockRequestStatus;
   note: string;
+  /** purchase: the warehouse the quantities enter when the request is finished. supply: the warehouse they leave from. */
+  toLocationId?: string | null;
+  /** set once the quantities were moved, so a request never moves stock twice */
+  receivedAt?: string | null;
 }
 
 export type LocationKind = "store" | "kitchen" | "bar" | "fridge" | "freezer" | "central";
