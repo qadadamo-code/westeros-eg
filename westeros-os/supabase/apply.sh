@@ -27,4 +27,6 @@ apply() { # name, file
 }
 for f in migrations/*.sql; do apply "$(basename "$f" .sql)" "$f"; done
 if [ -n "${SEED_FILE:-}" ]; then apply "seed-westeros-1" "$SEED_FILE"; fi
+# tables added by a later migration join the change journal (0017_history.sql)
+run -c "do \$\$ begin if to_regprocedure('public.track_changes()') is not null then perform public.track_changes(); end if; end \$\$"
 echo "database is up to date"

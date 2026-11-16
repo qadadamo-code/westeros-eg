@@ -111,6 +111,31 @@ export interface GuestApi {
   orderStatus(slug: string, orderId: string): Promise<GuestOrderStatus | null>;
 }
 
+/* ───────── History: undo and restore (0017_history.sql) ───────── */
+
+/** One journalled change to a row. */
+export interface ChangeRow {
+  id: number;
+  table: string;
+  rowId: string;
+  op: "I" | "U" | "D";
+  before: Record<string, unknown> | null;
+  after: Record<string, unknown> | null;
+  source: "app" | "undo" | "restore";
+  undoneAt: string | null;
+  createdAt: string;
+}
+
+export interface HistoryApi {
+  list(restaurantId: string, limit?: number): Promise<ChangeRow[]>;
+  /** how many journalled changes happened after this moment */
+  countSince(restaurantId: string, iso: string): Promise<number>;
+  undo(id: number): Promise<void>;
+  /** reverses every change after this moment; resolves with how many were reversed */
+  restoreTo(restaurantId: string, iso: string): Promise<number>;
+  prune(restaurantId: string): Promise<void>;
+}
+
 /* ───────── The repository ───────── */
 
 export interface Repo {
@@ -133,6 +158,8 @@ export interface Repo {
 
   auth: AuthApi;
   guest: GuestApi;
+  /** change journal with undo and restore (cloud database only) */
+  history?: HistoryApi;
 
   /** demo only (local): wipe and re-seed */
   reset?(): Promise<void>;

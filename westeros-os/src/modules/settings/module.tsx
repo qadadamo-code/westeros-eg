@@ -17,6 +17,7 @@ export default defineModule({
     { path: "/settings/tax", title: { ar: "الضرايب", en: "Tax" }, permission: "settings.tax", element: lazy(() => import("./tax/TaxSettings")) },
     { path: "/settings/zatca", title: { ar: "هيئة الزكاة", en: "ZATCA" }, permission: "settings.tax", element: lazy(() => import("./zatca/ZatcaSettings")) },
     { path: "/settings/users", title: { ar: "المستخدمين", en: "Users" }, permission: "staff.manage" },
+    { path: "/settings/history", title: { ar: "السجل والاسترجاع", en: "History & restore" }, element: lazy(() => import("./history/HistoryPage")) },
   ],
   tabs: [
     { path: "/settings", title: { ar: "عام", en: "General" } },
@@ -27,6 +28,7 @@ export default defineModule({
     { path: "/settings/delivery", title: { ar: "التوصيل", en: "Delivery" } },
     { path: "/settings/messaging", title: { ar: "الرسايل", en: "Messaging" } }, // route lives in src/modules/messaging
     { path: "/settings/users", title: { ar: "المستخدمين", en: "Users" } },
+    { path: "/settings/history", title: { ar: "السجل والاسترجاع", en: "History & restore" } },
   ],
   features: [
     { ar: "شكل الفاتورة: الهيدر والفوتر واللوجو والـ QR وعرض الورق", en: "Invoice layout: header, footer, logo, QR and paper width" },

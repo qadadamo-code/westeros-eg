@@ -13,7 +13,7 @@ import { uuid } from "@/lib/id";
 import { nowIso } from "@/lib/time";
 import { loadJSON, saveJSON } from "@/lib/storage";
 import { runQuery } from "../query";
-import type { AuthApi, AuthUser, ChangeEvent, GuestApi, Insertable, Patch, Query, Repo, SyncStatus, Unsubscribe } from "../repo";
+import type { AuthApi, AuthUser, ChangeEvent, GuestApi, HistoryApi, Insertable, Patch, Query, Repo, SyncStatus, Unsubscribe } from "../repo";
 import { TABLE_NAMES, type CollectionName, type Membership, type Restaurant, type RowOf } from "../types";
 
 type AnyRow = { id: string } & Record<string, unknown>;
@@ -352,6 +352,37 @@ export class SupabaseAdapter implements Repo {
   };
 
   /* ───────── guest RPCs (anon) ───────── */
+
+  history: HistoryApi = {
+    list: async (restaurantId, limit = 150) => {
+      const { data, error } = await this.client
+        .from("change_log")
+        .select("id, table_name, row_id, op, before, after, source, undone_at, created_at")
+        .eq("restaurant_id", restaurantId)
+        .order("id", { ascending: false })
+        .limit(limit);
+      if (error) throw error;
+      return (data ?? []).map((r) => ({ id: r.id, table: r.table_name, rowId: r.row_id, op: r.op, before: r.before, after: r.after, source: r.source, undoneAt: r.undone_at, createdAt: r.created_at }));
+    },
+    countSince: async (restaurantId, iso) => {
+      const { count, error } = await this.client.from("change_log").select("id", { count: "exact", head: true }).eq("restaurant_id", restaurantId).gt("created_at", iso);
+      if (error) throw error;
+      return count ?? 0;
+    },
+    undo: async (id) => {
+      const { error } = await this.client.rpc("undo_change", { p_id: id });
+      if (error) throw error;
+    },
+    restoreTo: async (restaurantId, iso) => {
+      const { data, error } = await this.client.rpc("restore_to", { p_restaurant_id: restaurantId, p_ts: iso });
+      if (error) throw error;
+      return Number(data ?? 0);
+    },
+    prune: async (restaurantId) => {
+      const { error } = await this.client.rpc("prune_change_log", { p_restaurant_id: restaurantId });
+      if (error) throw error;
+    },
+  };
 
   guest: GuestApi = {
     menu: async (slug, tableCode) => {

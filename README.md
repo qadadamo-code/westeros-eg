@@ -31,6 +31,13 @@ Built on the Sufra OS codebase (Vite + React + TypeScript + Tailwind; data in th
 ticked with the name and time of who did it, managers follow the last seven days and edit the lists.
 Tables in `supabase/migrations/0016_checklists.sql`.
 
+## History and restore (السجل والاسترجاع)
+
+`supabase/migrations/0017_history.sql` journals every change to the restaurant's data (the row before and after).
+Settings → السجل والاسترجاع: a manager undoes one wrong change, the owner takes the whole restaurant back to a moment
+within the last 30 days; a restore is itself journalled, so it can be taken back. Database tests:
+`supabase/tests/history.sh`.
+
 ## Checks
 
 ```
