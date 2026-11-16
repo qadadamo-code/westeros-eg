@@ -79,6 +79,12 @@ export function BatchLabel({ batch, output, size, index, of }: { batch: LabelBat
         <span style={{ fontSize: `${2.2 * u}mm`, fontWeight: 700 }}>{TEMP[output.storageTemp]}{output.storageMethod ? ` · ${output.storageMethod}` : ""}</span>
       </div>
       <div style={{ fontSize: `${4.3 * u}mm`, fontWeight: 800, lineHeight: 1.15, margin: `${0.9 * u}mm 0 ${0.6 * u}mm`, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{output.name.ar}</div>
+      {output.ingredientsText?.trim() ? (
+        <div style={{ fontSize: `${2.05 * u}mm`, fontWeight: 600, lineHeight: 1.2, maxHeight: `${2.05 * 1.2 * 2 * u}mm`, overflow: "hidden", marginBottom: `${0.5 * u}mm`, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+          <span style={{ fontWeight: 800 }}>المكونات: </span>
+          {output.ingredientsText.trim()}
+        </div>
+      ) : null}
       <div style={{ display: "flex", gap: `${2 * u}mm`, flex: 1, minHeight: 0 }}>
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
           <Line k="إنتاج" v={`${d2(batch.madeAt)} ${t2(batch.madeAt)}`} />
