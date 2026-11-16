@@ -81,7 +81,7 @@ function ByProduct({ prod, initial }: { prod: Prod; initial: MfgProduct | undefi
         <div className="min-w-0">
           <p className="text-[12.5px] text-muted">الصنف اللي بيتصنع</p>
           <p className="truncate font-sans text-[18px] font-bold">{loc(p.name)} <span className="num text-[13px] font-semibold text-muted">{p.code}</span></p>
-          <p className="text-[13px] text-muted">{loc(categoryName(prod.categories, p.category))}</p>
+          <p className="text-[13px] text-muted">{loc(categoryName(prod.categories, p.category))}{p.method === "burger" ? " · تشغيلة واحدة بتطلع كل أصناف البرجر في الفئة دي" : ""}</p>
         </div>
         <Button variant="outline" icon={<RefreshCw />} onClick={() => setProductId("")}>تغيير الصنف</Button>
       </Card>
@@ -89,10 +89,9 @@ function ByProduct({ prod, initial }: { prod: Prod; initial: MfgProduct | undefi
         <SimpleForm key={key} method={p.method} prod={prod} onDone={again} initial={p} chosen />
       ) : p.method === "chicken" ? (
         <ChickenForm key={key} prod={prod} onDone={again} initial={p} chosen />
-      ) : prod.categories.some((c) => c.id === p.category && c.burger) ? (
-        <BurgerForm key={key} kind={prod.categories.find((c) => c.id === p.category)?.burger ?? "beef"} categoryId={p.category} prod={prod} onDone={again} />
       ) : (
-        <EmptyState title="فئة هذا الصنف غير محددة كنوع برجر" body="حدد فئته في ثوابت النظام تحت تعريف أنواع البرجر، أو غير طريقة تصنيعه من قائمة المنتجات." />
+        // one burger run makes every burger product of the category: meat with fat for the beef type, minced chicken otherwise
+        <BurgerForm key={`${p.category}-${run}`} kind={prod.categories.find((c) => c.id === p.category)?.burger ?? "chicken"} categoryId={p.category} prod={prod} onDone={again} />
       )}
     </div>
   );
@@ -138,7 +137,7 @@ function useCtx(prod: Prod): BuildCtx {
 }
 
 /** Who signs the batch, the note, the save button — and the sticker once it is saved. */
-function SaveBar({ prod, draft, ready, onDone, afterSave }: { prod: Prod; draft: BatchDraft; ready: boolean; onDone: () => void; afterSave?: () => Promise<unknown> }) {
+function SaveBar({ prod, draft, ready, onDone, afterSave, beforeSave }: { prod: Prod; draft: BatchDraft; ready: boolean; onDone: () => void; afterSave?: () => Promise<unknown>; /** product fields the batch itself needs, saved first */ beforeSave?: () => Promise<unknown> }) {
   const { L, lang } = useT();
   const db = useDb();
   const { staff, role } = useSession();
@@ -157,6 +156,7 @@ function SaveBar({ prod, draft, ready, onDone, afterSave }: { prod: Prod; draft:
     if (!chef || !prod.branchId) return;
     setBusy(true);
     try {
+      await beforeSave?.();
       const b = await saveBatch(db, draft, { chef, branchId: prod.branchId, note: note.trim() });
       await afterSave?.();
       setSaved(b);
@@ -433,6 +433,15 @@ function BurgerForm({ kind, categoryId, prod, onDone }: { kind: "beef" | "chicke
   const [netKg, setNetKg] = useState(0);
   const [fatKg, setFatKg] = useState(0);
   const [counts, setCounts] = useState<Record<string, number>>({});
+  // وزن القطعة: typed here for a product that has none yet, and kept on the product when the batch is saved
+  const [portions, setPortions] = useState<Record<string, number>>({});
+  const missing = list.filter((p) => !p.portionGrams);
+  const burgerCtx = useMemo<BuildCtx>(() => {
+    if (!Object.values(portions).some((g) => g > 0)) return ctx;
+    const products = new Map(ctx.products);
+    for (const p of list) if (!p.portionGrams && portions[p.id] > 0) products.set(p.id, { ...p, portionGrams: portions[p.id] });
+    return { ...ctx, products };
+  }, [ctx, list, portions]);
   const [lines, setLines] = useState<MfgRecipeLine[]>(() => first?.lines ?? []);
   const [packaging, setPackaging] = useState<MfgRecipeLine[]>(() => first?.packaging ?? []);
   const [keep, setKeep] = useState(() => !first?.lines.length);
@@ -441,7 +450,10 @@ function BurgerForm({ kind, categoryId, prod, onDone }: { kind: "beef" | "chicke
     method: "burger", kind, meatTypeId, meatKg, netKg, fatKg, lines: scaleLines(lines, netKg), packaging: scaleLines(packaging, netKg),
     products: list.map((p) => ({ productId: p.id, count: Math.round(counts[p.id] ?? 0) })),
   };
-  const built = useMemo(() => buildBatch(draft, ctx), [JSON.stringify(draft), ctx]); // eslint-disable-line react-hooks/exhaustive-deps
+  const built = useMemo(() => buildBatch(draft, burgerCtx), [JSON.stringify(draft), burgerCtx]); // eslint-disable-line react-hooks/exhaustive-deps
+  const savePortions = async () => {
+    for (const p of missing) if (portions[p.id] > 0 && (counts[p.id] ?? 0) > 0) await db.update("mfgProducts", p.id, { portionGrams: portions[p.id] });
+  };
   const mince = prod.settings?.mincedChickenItemId ? prod.itemById.get(prod.settings.mincedChickenItemId) : undefined;
   const suggested = built.suggestedFatKg ?? 0;
   if (!list.length) return <EmptyState title={L("لا توجد منتجات في هذه الفئة بطريقة البرجر. أضفها من صفحة المنتجات.", "No burger products in this category yet. Add them in Products.")} />;
@@ -450,7 +462,7 @@ function BurgerForm({ kind, categoryId, prod, onDone }: { kind: "beef" | "chicke
       side={
         <ResultPanel
           built={built}
-          footer={<SaveBar prod={prod} draft={draft} ready={!built.errors.length} onDone={onDone} afterSave={keep ? () => Promise.all(list.map((p) => db.update("mfgProducts", p.id, { lines: clean(lines), packaging: clean(packaging) }))) : undefined} />}
+          footer={<SaveBar prod={prod} draft={draft} ready={!built.errors.length} onDone={onDone} beforeSave={savePortions} afterSave={keep ? () => Promise.all(list.map((p) => db.update("mfgProducts", p.id, { lines: clean(lines), packaging: clean(packaging) }))) : undefined} />}
         />
       }
     >
@@ -491,10 +503,13 @@ function BurgerForm({ kind, categoryId, prod, onDone }: { kind: "beef" | "chicke
           <RecipeSwitch value={keep} onChange={setKeep} empty={!first?.lines.length} />
         </div>
       </Block>
-      <Block step={3} title={L("العدد الناتج", "Patties made")}>
+      <Block step={3} title={L("العدد الناتج", "Patties made")} hint={L("نفس الكمية بتطلع كل الأصناف دي. اكتب عدد كل صنف، وسيب اللي ما اتصنعش صفر", "The same quantity makes all of these. Type each count; leave zero for what was not made")}>
         <div className="grid gap-3 sm:grid-cols-3">
           {list.map((p) => (
-            <Num key={p.id} big label={loc(p.name)} suffix={L("قطعة", "pcs")} value={counts[p.id] ?? 0} onChange={(v) => setCounts((c) => ({ ...c, [p.id]: v }))} />
+            <div key={p.id} className="grid content-start gap-2">
+              <Num big label={loc(p.name)} suffix={L("قطعة", "pcs")} value={counts[p.id] ?? 0} onChange={(v) => setCounts((c) => ({ ...c, [p.id]: v }))} hint={p.portionGrams ? L(`وزن القطعة ${p.portionGrams} جم`, `Piece ${p.portionGrams} g`) : undefined} />
+              {p.portionGrams ? null : <Num label={L("وزن القطعة", "Piece weight")} suffix={L("جم", "g")} value={portions[p.id] ?? 0} onChange={(v) => setPortions((c) => ({ ...c, [p.id]: v }))} hint={L("يتسجل على الصنف مع أول تشغيلة", "Saved on the product with the first batch")} />}
+            </div>
           ))}
         </div>
       </Block>
