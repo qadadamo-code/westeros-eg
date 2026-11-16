@@ -239,8 +239,11 @@ export interface MfgLists {
   /** membership id → user type id */
   userTypeOf?: Record<string, string>;
 }
-/** code: the first digit(s) of the code of every user of this type (type 1 → users 101, 102 …) */
-export interface MfgUserType { id: string; name: string; code: number; role: "admin" | "manager" | "chef" | "kitchen" }
+/**
+ * طبيعة المستخدم. Its users take their codes from one range: `from` … `from + count − 1`. Ranges of two types never overlap.
+ * (`code` is the first shape of this, kept so rows saved with it still read.)
+ */
+export interface MfgUserType { id: string; name: string; from?: number; count?: number; code?: number; role: "admin" | "manager" | "chef" | "kitchen" }
 
 /* ───────── قوائم فتح وقفل الوردية (0016_checklists.sql; src/modules/checklists) ───────── */
 

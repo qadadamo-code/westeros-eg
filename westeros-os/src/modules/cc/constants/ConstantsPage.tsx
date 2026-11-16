@@ -6,8 +6,8 @@ import type { MfgCategoryDef, MfgLists, MfgMeatType, MfgSettings, MfgUnitDef, Mf
 import { uuid } from "@/lib/id";
 import { PageHeader } from "@/shell/PageHeader";
 import { Num } from "@/modules/production/ui";
-import { Button, Card, CardHeader, EmptyState, IconButton, Input, Select } from "@/ui";
-import { nextUserCode, specOf, USER_ROLE_LABEL, userTypeOf, userTypesOf } from "../lib";
+import { Button, Card, CardHeader, EmptyState, IconButton, Input, Select, useToast } from "@/ui";
+import { nextUserCode, overlapping, rangeOf, specOf, USER_ROLE_LABEL, userTypeOf, userTypesOf } from "../lib";
 import { useCc } from "../useCc";
 
 const BASE_LABEL: Record<MfgUnitDef["base"], string> = { g: "وزن (جرام)", ml: "حجم (مل)", pc: "عدد (قطعة)" };
@@ -15,6 +15,8 @@ const BASE_LABEL: Record<MfgUnitDef["base"], string> = { g: "وزن (جرام)",
 export default function ConstantsPage() {
   const cc = useCc();
   const db = useDb();
+  const { toast } = useToast();
+  const [bump, setBump] = useState(0);
   const prod = cc.prod;
   const s = prod.settings;
   const saleCats = useLive("menuCategories", { orderBy: [{ field: "sort" }] }).data;
@@ -44,6 +46,35 @@ export default function ConstantsPage() {
   const members = prod.staff.filter((m) => m.active);
   const userTypes = userTypesOf(lists);
   const setType = (id: string, p: Partial<MfgUserType>) => setLists({ userTypes: userTypes.map((t) => (t.id === id ? { ...t, ...p } : t)) });
+  // a user's code: inside the range of the user's type, and no two users share one
+  const setUserCode = (m: (typeof members)[number], code: number) => {
+    if (code === (s.chefCodes[m.id] ?? 0)) return;
+    const t = userTypeOf(m, lists);
+    const r = t ? rangeOf(userTypes.find((x) => x.id === t.id) ?? t) : null;
+    const twin = members.find((x) => x.id !== m.id && s.chefCodes[x.id] === code);
+    const problem = !Number.isInteger(code) || code < 1 ? "اكتب رقم صحيح من 1 أو أكثر" : r && (code < r.from || code > r.to) ? `كود "${t!.name}" لازم يكون من ${r.from} إلى ${r.to}` : twin ? `الكود ${code} مستخدم مع "${twin.name}"` : "";
+    if (problem) {
+      toast({ tone: "error", title: "الكود غير مقبول", description: problem });
+      setBump((n) => n + 1);
+      return;
+    }
+    void patch({ chefCodes: { ...s.chefCodes, [m.id]: code } });
+  };
+  // the code range of a type: refused when it crosses another type's range or leaves a user of the type outside it
+  const setRange = (t: MfgUserType, from: number, count: number) => {
+    const r = rangeOf(t);
+    if (from === r.from && count === (t.count ?? 100)) return;
+    const next: MfgUserType = { ...t, from: Math.round(from), count: Math.round(count) };
+    const clash = Number.isFinite(from) && Number.isFinite(count) && from >= 1 && count >= 1 ? overlapping(next, userTypes) : null;
+    const out = members.find((m) => userTypeOf(m, lists)?.id === t.id && s.chefCodes[m.id] && (s.chefCodes[m.id] < next.from! || s.chefCodes[m.id] > next.from! + next.count! - 1));
+    const problem = !(from >= 1 && count >= 1) ? "اكتب رقم صحيح من 1 أو أكثر" : clash ? `الأكواد دي متداخلة مع "${clash.name}" (من ${rangeOf(clash).from} إلى ${rangeOf(clash).to})` : out ? `المستخدم "${out.name}" كوده ${s.chefCodes[out.id]} وهيبقى برا المدى` : "";
+    if (problem) {
+      toast({ tone: "error", title: "المدى غير مقبول", description: problem });
+      setBump((n) => n + 1); // put the typed numbers back
+      return;
+    }
+    void setType(t.id, { from: next.from, count: next.count });
+  };
   // choosing the user's type gives the permissions of the type and a code built from the type's code
   const setUserType = async (memberId: string, typeId: string) => {
     const t = userTypes.find((x) => x.id === typeId);
@@ -154,17 +185,24 @@ export default function ConstantsPage() {
         <Chips title="طريقة التخزين" subtitle="القائمة المعرفة مسبقاً في بيانات المنتج المصنع" values={s.storageMethods} onChange={(storageMethods) => patch({ storageMethods })} placeholder="طريقة تخزين جديدة" />
 
         <Card>
-          <CardHeader title="تعريف أنواع المستخدمين" subtitle="طبيعة المستخدم وكودها وصلاحياتها. كود المستخدم يبدأ بكود نوعه"
-            action={<Button size="sm" variant="outline" icon={<Plus />} onClick={() => setLists({ userTypes: [...userTypes, { id: uuid(), name: "نوع جديد", code: Math.max(0, ...userTypes.map((t) => t.code)) + 1, role: "kitchen" }] })}>نوع جديد</Button>} />
+          <CardHeader title="تعريف أنواع المستخدمين" subtitle="لكل طبيعة مستخدم مدى أكواد: بداية الكود وعدد المستخدمين. الأكواد لا تتداخل بين الأنواع"
+            action={<Button size="sm" variant="outline" icon={<Plus />} onClick={() => setLists({ userTypes: [...userTypes, { id: uuid(), name: "نوع جديد", from: Math.max(0, ...userTypes.map((t) => rangeOf(t).to)) + 1, count: 100, role: "kitchen" }] })}>نوع جديد</Button>} />
           <ul className="grid gap-2 px-5 pb-5">
             {userTypes.map((t) => {
               const inUse = members.some((m) => userTypeOf(m, lists)?.id === t.id);
+              const r = rangeOf(t);
               return (
-                <li key={t.id} className="grid items-end gap-2 rounded-xl border border-line p-3 sm:grid-cols-[minmax(0,1fr)_90px_minmax(0,1.2fr)_auto]">
-                  <Input label="طبيعة المستخدم" defaultValue={t.name} onBlur={(e) => e.target.value.trim() && e.target.value !== t.name && setType(t.id, { name: e.target.value.trim() })} />
-                  <Num label="الكود" value={t.code} onChange={(n) => setType(t.id, { code: Math.max(0, Math.round(n)) })} />
-                  <Select label="الصلاحيات" value={t.role} onChange={(e) => setType(t.id, { role: e.target.value as MfgUserType["role"] })} options={(Object.keys(USER_ROLE_LABEL) as MfgUserType["role"][]).map((r) => ({ value: r, label: USER_ROLE_LABEL[r] }))} />
-                  <IconButton label={inUse ? "مستخدم مع مستخدمين" : "حذف"} disabled={inUse || userTypes.length <= 1} onClick={() => setLists({ userTypes: userTypes.filter((x) => x.id !== t.id) })}><Trash2 /></IconButton>
+                <li key={`${t.id}:${r.from}:${r.to}:${bump}`} className="grid gap-2 rounded-xl border border-line p-3">
+                  <div className="grid items-end gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_auto]">
+                    <Input label="طبيعة المستخدم" defaultValue={t.name} onBlur={(e) => e.target.value.trim() && e.target.value !== t.name && setType(t.id, { name: e.target.value.trim() })} />
+                    <Select label="الصلاحيات" value={t.role} onChange={(e) => setType(t.id, { role: e.target.value as MfgUserType["role"] })} options={(Object.keys(USER_ROLE_LABEL) as MfgUserType["role"][]).map((x) => ({ value: x, label: USER_ROLE_LABEL[x] }))} />
+                    <IconButton label={inUse ? "مستخدم مع مستخدمين" : "حذف"} disabled={inUse || userTypes.length <= 1} onClick={() => setLists({ userTypes: userTypes.filter((x) => x.id !== t.id) })}><Trash2 /></IconButton>
+                  </div>
+                  <div className="grid items-end gap-2 sm:grid-cols-[120px_120px_minmax(0,1fr)]">
+                    <Input label="بداية الكود" inputMode="numeric" dir="ltr" defaultValue={String(r.from)} onBlur={(e) => setRange(t, Number(e.target.value), t.count ?? 100)} />
+                    <Input label="عدد المستخدمين" inputMode="numeric" dir="ltr" defaultValue={String(t.count ?? 100)} onBlur={(e) => setRange(t, r.from, Number(e.target.value))} />
+                    <p className="pb-2.5 text-[13.5px] text-muted">الأكواد من <b className="num text-ink">{r.from}</b> إلى <b className="num text-ink">{r.to}</b></p>
+                  </div>
                 </li>
               );
             })}
@@ -178,7 +216,7 @@ export default function ConstantsPage() {
               <li key={m.id} className="grid items-end gap-2 rounded-xl border border-line p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_100px]">
                 <span className="min-w-0 truncate pb-2.5 text-[14.5px] font-semibold">{m.name}</span>
                 <Select label="طبيعة المستخدم" value={userTypeOf(m, lists)?.id ?? ""} onChange={(e) => void setUserType(m.id, e.target.value)} options={[...(userTypeOf(m, lists) ? [] : [{ value: "", label: "—" }]), ...userTypes.map((t) => ({ value: t.id, label: t.name }))]} />
-                <Num label="الكود" value={s.chefCodes[m.id] ?? 0} onChange={(n) => patch({ chefCodes: { ...s.chefCodes, [m.id]: Math.round(n) } })} />
+                <Input key={`${s.chefCodes[m.id] ?? 0}:${bump}`} label="الكود" inputMode="numeric" dir="ltr" defaultValue={String(s.chefCodes[m.id] ?? 0)} onBlur={(e) => setUserCode(m, Number(e.target.value))} />
               </li>
             ))}
           </ul>

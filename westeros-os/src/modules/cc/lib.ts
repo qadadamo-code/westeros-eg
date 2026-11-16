@@ -106,10 +106,10 @@ export const fmtDay = (d: string | null | undefined) => (d ? d.split("-").revers
 /* ───────── أنواع المستخدمين ───────── */
 
 export const DEFAULT_USER_TYPES: MfgUserType[] = [
-  { id: "chef", name: "شيف", code: 1, role: "chef" },
-  { id: "kitchen", name: "مساعد مطبخ", code: 2, role: "kitchen" },
-  { id: "manager", name: "مدير", code: 3, role: "manager" },
-  { id: "admin", name: "إداري", code: 4, role: "admin" },
+  { id: "chef", name: "شيف", from: 1, count: 100, role: "chef" },
+  { id: "kitchen", name: "مساعد مطبخ", from: 101, count: 100, role: "kitchen" },
+  { id: "manager", name: "مدير", from: 201, count: 100, role: "manager" },
+  { id: "admin", name: "إداري", from: 301, count: 100, role: "admin" },
 ];
 export const USER_ROLE_LABEL: Record<MfgUserType["role"], string> = {
   admin: "كل الصلاحيات",
@@ -117,17 +117,34 @@ export const USER_ROLE_LABEL: Record<MfgUserType["role"], string> = {
   chef: "التصنيع والمخازن",
   kitchen: "تسجيل التشغيلات فقط",
 };
-export const userTypesOf = (lists: MfgLists): MfgUserType[] => (lists.userTypes?.length ? lists.userTypes : DEFAULT_USER_TYPES);
+/** The types with their code ranges filled in: a type saved without a range gets the next free hundred. */
+export function userTypesOf(lists: MfgLists): MfgUserType[] {
+  const types = lists.userTypes?.length ? lists.userTypes : DEFAULT_USER_TYPES;
+  let next = 1;
+  return types.map((t) => {
+    const from = t.from && t.from > 0 ? t.from : next;
+    const count = t.count && t.count > 0 ? t.count : 100;
+    next = Math.max(next, from + count);
+    return { ...t, from, count };
+  });
+}
+export const rangeOf = (t: MfgUserType) => ({ from: t.from ?? 1, to: (t.from ?? 1) + (t.count ?? 100) - 1 });
+/** The type whose range crosses this type's range, if any: the ranges must not overlap. */
+export function overlapping(t: MfgUserType, all: MfgUserType[]): MfgUserType | null {
+  const a = rangeOf(t);
+  return all.find((x) => x.id !== t.id && rangeOf(x).from <= a.to && a.from <= rangeOf(x).to) ?? null;
+}
 /** طبيعة المستخدم: the type chosen for the member, else the type that matches the member's permissions. */
 export function userTypeOf(member: { id: string; role: string }, lists: MfgLists): MfgUserType | null {
   const types = userTypesOf(lists);
   return types.find((t) => t.id === lists.userTypeOf?.[member.id]) ?? types.find((t) => t.role === member.role) ?? null;
 }
-/** كود المستخدم بناء على طبيعته: the type's code followed by the next serial of that type (type 1 → 101, 102 …). */
+/** كود المستخدم بناء على طبيعته: the member's own code if it is inside the type's range, else the first free code of the range (0 = the range is full). */
 export function nextUserCode(type: MfgUserType, codes: Record<string, number>, memberId?: string): number {
-  const base = type.code * 100;
+  const { from, to } = rangeOf(type);
   const own = memberId ? codes[memberId] : undefined;
-  if (own && own > base && own < base + 100) return own; // already a code of this type
-  const used = Object.values(codes).filter((c) => c > base && c < base + 100);
-  return base + (used.length ? Math.max(...used) - base : 0) + 1;
+  if (own && own >= from && own <= to) return own;
+  const used = new Set(Object.entries(codes).filter(([id]) => id !== memberId).map(([, c]) => c));
+  for (let c = from; c <= to; c++) if (!used.has(c)) return c;
+  return 0;
 }

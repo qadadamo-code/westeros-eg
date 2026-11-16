@@ -67,12 +67,13 @@ function UserDialog({ cc, member, onClose }: { cc: Cc; member: Membership | null
   };
   return (
     <Dialog open onClose={onClose} title={member ? "تعديل مستخدم" : "مستخدم جديد"}
-      footer={<div className="flex justify-end gap-2"><Button variant="ghost" onClick={onClose}>إلغاء</Button><Button loading={busy} disabled={!name.trim() || !pinOk} onClick={save}>حفظ</Button></div>}>
+      footer={<div className="flex justify-end gap-2"><Button variant="ghost" onClick={onClose}>إلغاء</Button><Button loading={busy} disabled={!name.trim() || !pinOk || (!!type && !code)} onClick={save}>حفظ</Button></div>}>
       <div className="grid gap-3">
         <Input label="الاسم" value={name} onChange={(e) => setName(e.target.value)} />
         <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_120px]">
           <Select label="طبيعة المستخدم" hint="الأنواع معرفة في ثوابت النظام" value={typeId} onChange={(e) => setTypeId(e.target.value)} options={[...(type ? [] : [{ value: "", label: "—" }]), ...types.map((t) => ({ value: t.id, label: t.name }))]} />
           <Field label="الكود"><div className="flex h-11 items-center rounded-xl border border-line bg-surface-2 px-3 num">{code || "—"}</div></Field>
+          {type && !code ? <p className="text-[13px] text-danger sm:col-span-2">أكواد "{type.name}" خلصت. زود عدد المستخدمين للنوع ده من ثوابت النظام.</p> : null}
         </div>
         <Input label={member ? "PIN جديد (اتركه فاضي لو مش هتغيره)" : "PIN للدخول (من 4 إلى 6 أرقام)"} inputMode="numeric" dir="ltr" maxLength={6} value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))} />
         {member && !owner ? <Switch checked={active} onChange={setActive} label="المستخدم شغال" description="المستخدم الموقوف لا يقدر يدخل" /> : null}
