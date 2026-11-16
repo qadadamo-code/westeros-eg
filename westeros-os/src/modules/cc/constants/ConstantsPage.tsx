@@ -62,10 +62,9 @@ export default function ConstantsPage() {
             action={<Button size="sm" variant="outline" icon={<Plus />} onClick={() => patch({ productCategories: [...cats, { id: uuid(), name: { ar: "فئة جديدة", en: "New category" }, code: Math.max(0, ...cats.map((c) => c.code)) + 1, burger: null }] })}>فئة جديدة</Button>} />
           <ul className="grid gap-2 px-5 pb-5">
             {cats.map((c) => (
-              <li key={c.id} className="grid items-end gap-2 rounded-xl border border-line p-3 sm:grid-cols-[minmax(0,1.4fr)_110px_minmax(0,1fr)_auto]">
+              <li key={c.id} className="grid items-end gap-2 rounded-xl border border-line p-3 sm:grid-cols-[minmax(0,1fr)_110px_auto]">
                 <Input label="اسم الفئة" defaultValue={c.name.ar} onBlur={(e) => e.target.value.trim() && e.target.value !== c.name.ar && setCat(c.id, { name: { ar: e.target.value.trim(), en: e.target.value.trim() } })} />
                 <Num label="الكود" value={c.code} onChange={(n) => setCat(c.id, { code: Math.max(0, Math.round(n)) })} />
-                <Select label="نوع البرجر" value={c.burger ?? ""} onChange={(e) => setCat(c.id, { burger: (e.target.value || null) as MfgCategoryDef["burger"] })} options={[{ value: "", label: "ليست برجر" }, ...lists.burgerTypes.map((b) => ({ value: b.id, label: b.name }))]} />
                 <IconButton label={usedCats.has(c.id) ? "فيها منتجات، انقلها أولاً" : "حذف"} disabled={usedCats.has(c.id)} onClick={() => patch({ productCategories: cats.filter((x) => x.id !== c.id) })}><Trash2 /></IconButton>
               </li>
             ))}
@@ -86,10 +85,12 @@ export default function ConstantsPage() {
         </Card>
 
         <Card>
-          <CardHeader title="تعريف أنواع البرجر" />
+          <CardHeader title="تعريف أنواع البرجر" subtitle="اختر فئة المنتجات لكل نوع، عشان طريقة تصنيع البرجر تعرف منتجاتها" />
           <div className="grid gap-3 px-5 pb-5 sm:grid-cols-2">
-            {lists.burgerTypes.map((b) => (
-              <Input key={b.id} label={b.id === "beef" ? "برجر من لحم ودهن" : "برجر من فرم الدجاج"} defaultValue={b.name} onBlur={(e) => e.target.value.trim() && e.target.value !== b.name && setLists({ burgerTypes: lists.burgerTypes.map((x) => (x.id === b.id ? { ...x, name: e.target.value.trim() } : x)) })} />
+            {(["beef", "chicken"] as const).map((kind) => (
+              <Select key={kind} label={kind === "beef" ? "برجر لحم (لحم ودهن)" : "برجر دجاج (فرم)"} value={cats.find((c) => c.burger === kind)?.id ?? ""}
+                onChange={(e) => patch({ productCategories: cats.map((c) => (c.id === e.target.value ? { ...c, burger: kind } : c.burger === kind ? { ...c, burger: null } : c)) })}
+                options={[{ value: "", label: "بدون" }, ...cats.map((c) => ({ value: c.id, label: c.name.ar }))]} />
             ))}
           </div>
         </Card>
