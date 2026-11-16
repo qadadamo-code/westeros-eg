@@ -7,7 +7,7 @@ import type { MfgChickenMode, MfgMethod, MfgProduct, MfgStorageTemp } from "@/da
 import { Num } from "@/modules/production/ui";
 import { categoryName } from "@/modules/production/useProduction";
 import { Button, Card, Dialog, EmptyState, Input, Select, Table, Textarea, useToast, type Column } from "@/ui";
-import { num } from "../lib";
+import { codeRanges, nextCodeIn, num } from "../lib";
 import { ImageField, ReadOnly } from "../ui";
 import { useCc, type Cc } from "../useCc";
 
@@ -68,7 +68,6 @@ function ProductDialog({ product, cc, readOnly, onClose }: { product: MfgProduct
   const db = useDb();
   const { toast } = useToast();
   const prod = cc.prod;
-  const nextCode = `M${String(Math.max(prod.products.length + 1, ...prod.products.map((p) => (Number(p.code.replace(/\D/g, "")) || 0) + 1))).padStart(3, "0")}`;
   const [d, setD] = useState(() => ({
     name: product?.name.ar ?? "", imageUrl: product?.imageUrl ?? null, category: product?.category ?? prod.categories[0]?.id ?? "", mfgUnit: product?.mfgUnit ?? "",
     storageMethod: product?.storageMethod ?? "", storageQty: product?.storageQty ?? 0, storageTemp: product?.storageTemp ?? ("chilled" as MfgStorageTemp), shelfLifeDays: product?.shelfLifeDays ?? 0,
@@ -76,6 +75,9 @@ function ProductDialog({ product, cc, readOnly, onClose }: { product: MfgProduct
   }));
   const [busy, setBusy] = useState(false);
   const set = (p: Partial<typeof d>) => setD((x) => ({ ...x, ...p }));
+  // كود المنتج: the next free code of the category's range (ثوابت النظام)
+  const nextNo = nextCodeIn(codeRanges(cc.lists.codeRanges?.product, prod.categories.map((c) => c.id))[d.category], prod.products.map((p) => p.code));
+  const nextCode = nextNo ? `M${String(nextNo).padStart(3, "0")}` : "";
   // the way a product is made decides how it is stocked (kilos or pieces): fixed once it has batches
   const locked = !!product && prod.batches.some((b) => b.outputs.some((o) => o.productId === product.id));
   const opt = METHOD_OPTIONS.find((o) => o.value === d.method) ?? METHOD_OPTIONS[0];
@@ -113,11 +115,11 @@ function ProductDialog({ product, cc, readOnly, onClose }: { product: MfgProduct
   };
   return (
     <Dialog open onClose={onClose} size="xl" title={product ? "تعديل منتج" : "اضافة منتج"}
-      footer={<div className="flex justify-end gap-2"><Button variant="ghost" onClick={onClose}>{readOnly ? "إغلاق" : "إلغاء"}</Button>{readOnly ? null : <Button loading={busy} disabled={!d.name.trim() || !d.category} onClick={save}>حفظ</Button>}</div>}>
+      footer={<div className="flex justify-end gap-2"><Button variant="ghost" onClick={onClose}>{readOnly ? "إغلاق" : "إلغاء"}</Button>{readOnly ? null : <Button loading={busy} disabled={!d.name.trim() || !d.category || (!product && !nextCode)} onClick={save}>حفظ</Button>}</div>}>
       <fieldset disabled={readOnly} className="grid gap-4">
         <div className="grid gap-3 sm:grid-cols-2">
           <Input label="اسم المنتج" value={d.name} onChange={(e) => set({ name: e.target.value })} />
-          <ReadOnly label="كود المنتج"><span className="num">{product?.code ?? nextCode}</span></ReadOnly>
+          <ReadOnly label="كود المنتج"><span className="num">{product?.code ?? (nextCode || "أكواد الفئة خلصت")}</span></ReadOnly>
         </div>
         <ImageField value={d.imageUrl} onChange={(imageUrl) => set({ imageUrl })} />
         <div className="grid gap-3 sm:grid-cols-2">

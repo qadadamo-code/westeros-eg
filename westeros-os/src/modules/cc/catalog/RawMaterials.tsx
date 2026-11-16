@@ -8,7 +8,7 @@ import { formatMoney, major } from "@/lib/money";
 import { MoneyInput } from "@/modules/marketing/ui";
 import { Num } from "@/modules/production/ui";
 import { Badge, Button, Card, Dialog, EmptyState, Input, Select, Switch, Table, useToast, type Column } from "@/ui";
-import { conversionOf, fmtDay, mfgUnitPrice, num, specOf, stockFieldsOf } from "../lib";
+import { conversionOf, fmtDay, mfgUnitPrice, nextCodeIn, num, rawRanges, specOf, stockFieldsOf } from "../lib";
 import { ImageField, Result } from "../ui";
 import { sheetNumber } from "../xlsx";
 import { useCc, type Cc } from "../useCc";
@@ -119,9 +119,8 @@ export default function RawMaterials() {
 function RawDialog({ item, cc, cats, readOnly, onClose }: { item: StockItem | null; cc: Cc; cats: string[]; readOnly: boolean; onClose: () => void }) {
   const db = useDb();
   const { toast } = useToast();
-  const nextCode = String(Math.max(10000, ...cc.raws.map((i) => Number(i.sku) || 0)) + 1);
   const [name, setName] = useState(item?.name.ar ?? "");
-  const [sku, setSku] = useState(item?.sku ?? nextCode);
+  const [typed, setTyped] = useState<string | null>(item?.sku ?? null);
   const [mfg, setMfg] = useState(item ? item.mfg !== false : true);
   const [s, setS] = useState<RawSpec>(() => (item ? specOf(item, cc.lists) : { image: null, category: cats[0] ?? "", storageUnit: cc.lists.storageUnits[0] ?? "كيلو", mfgUnit: cc.lists.mfgUnits[0]?.name ?? "كيلو", perStorage: 1, lastPrice: 0, lastPurchaseDate: null, expiryDate: null }));
   const [busy, setBusy] = useState(false);
@@ -129,6 +128,10 @@ function RawDialog({ item, cc, cats, readOnly, onClose }: { item: StockItem | nu
   // once stock exists, the manufacturing unit cannot switch between weight, volume and pieces
   const moved = !!item && cc.levels.some((l) => l.itemId === item.id);
   const units = cc.lists.mfgUnits.filter((u) => !moved || u.base === item!.baseUnit);
+  // كود الخام: the next free code of the category's range (ثوابت النظام), until the user types one
+  const auto = nextCodeIn(rawRanges(cc.lists, cc.raws)[s.category], cc.raws.map((i) => i.sku));
+  const sku = typed ?? (auto ? String(auto) : "");
+  const setSku = setTyped;
   const dupe = cc.raws.some((i) => i.sku === sku.trim() && i.id !== item?.id);
   const valid = !!name.trim() && !!sku.trim() && !dupe && s.perStorage > 0;
   const save = async () => {
@@ -151,7 +154,7 @@ function RawDialog({ item, cc, cats, readOnly, onClose }: { item: StockItem | nu
       <fieldset disabled={readOnly} className="grid gap-4">
         <div className="grid gap-3 sm:grid-cols-2">
           <Input label="اسم الخام" value={name} onChange={(e) => setName(e.target.value)} />
-          <Input label="كود الخام" dir="ltr" className="num" value={sku} onChange={(e) => setSku(e.target.value)} error={dupe ? "الكود مستخدم لخام آخر" : undefined} />
+          <Input label="كود الخام" dir="ltr" className="num" value={sku} onChange={(e) => setSku(e.target.value)} error={dupe ? "الكود مستخدم لخام آخر" : undefined} hint={!item && typed === null ? (auto ? "تلقائي حسب فئة الخام" : "أكواد الفئة خلصت، زود عدد الأصناف من ثوابت النظام") : undefined} />
         </div>
         <ImageField value={s.image} onChange={(image) => set({ image })} />
         <div className="grid gap-3 sm:grid-cols-2">

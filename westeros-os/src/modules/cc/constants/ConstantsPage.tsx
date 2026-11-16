@@ -2,12 +2,12 @@
 import { useState, type ReactNode } from "react";
 import { Plus, Settings2, Trash2, X } from "lucide-react";
 import { useDb, useLive } from "@/data/hooks";
-import type { MfgCategoryDef, MfgLists, MfgMeatType, MfgSettings, MfgUnitDef } from "@/data/types";
+import type { CodeRange, MfgCategoryDef, MfgLists, MfgMeatType, MfgSettings, MfgUnitDef } from "@/data/types";
 import { uuid } from "@/lib/id";
 import { PageHeader } from "@/shell/PageHeader";
 import { Num } from "@/modules/production/ui";
-import { Button, Card, CardHeader, EmptyState, IconButton, Input, Select } from "@/ui";
-import { specOf } from "../lib";
+import { Button, Card, CardHeader, EmptyState, IconButton, Input, Select, useToast } from "@/ui";
+import { codeRanges, rangeProblem, rawRanges, specOf, type CodeKind } from "../lib";
 import { useCc } from "../useCc";
 
 const BASE_LABEL: Record<MfgUnitDef["base"], string> = { g: "وزن (جرام)", ml: "حجم (مل)", pc: "عدد (قطعة)" };
@@ -29,6 +29,13 @@ export default function ConstantsPage() {
   const usedRawCats = new Set(cc.raws.map((i) => specOf(i, lists).category));
   const usedUnits = new Set(cc.raws.map((i) => specOf(i, lists).storageUnit));
   const usedSale = new Set(menuItems.map((i) => i.categoryId));
+  // مدى أكواد كل فئة: a new item takes the next free code of its category
+  const ranges: Record<CodeKind, Record<string, CodeRange>> = {
+    raw: rawRanges(lists, cc.raws),
+    sale: codeRanges(lists.codeRanges?.sale, saleCats.map((c) => c.id)),
+    product: codeRanges(lists.codeRanges?.product, cats.map((c) => c.id)),
+  };
+  const saveRange = (kind: CodeKind, key: string, next: CodeRange) => setLists({ codeRanges: { ...lists.codeRanges, [kind]: { ...ranges[kind], [key]: next } } });
   const setMeat = (id: string, p: Partial<MfgMeatType>) => patch({ meatTypes: s.meatTypes.map((m) => (m.id === id ? { ...m, ...p } : m)) });
   // تعريف اللحوم: only the raw materials of the meat category, also the warehouse-only ones (choosing one brings it into manufacturing)
   const meatCat = lists.meatCategory ?? lists.rawCategories.find((c) => c.includes("لحوم")) ?? "";
@@ -61,21 +68,36 @@ export default function ConstantsPage() {
           </ul>
         </Card>
 
-        <Chips title="تعريف فئات مواد الخام" subtitle="الفئة المستخدمة في مادة خام لا تحذف" used={usedRawCats} values={lists.rawCategories} onChange={(rawCategories) => setLists({ rawCategories })} placeholder="فئة خام جديدة" />
+        <Card>
+          <CardHeader title="تعريف فئات مواد الخام" subtitle="لكل فئة مدى أكواد: بداية الكود وعدد الأصناف. الخام الجديد ياخد أول كود فاضي في فئته" />
+          <ul className="grid gap-2 px-5 pb-3">
+            {lists.rawCategories.map((c) => (
+              <li key={c} className="grid items-end gap-2 rounded-xl border border-line p-3 grid-cols-[minmax(0,1fr)_auto]">
+                <div className="grid gap-2">
+                  <span className="text-[14.5px] font-semibold">{c}</span>
+                  <RangeInputs id={c} ranges={ranges.raw} nameOf={(k) => k} onSave={(r) => saveRange("raw", c, r)} />
+                </div>
+                <IconButton label={usedRawCats.has(c) ? "مستخدمة في مواد خام" : "حذف"} disabled={usedRawCats.has(c)} onClick={() => setLists({ rawCategories: lists.rawCategories.filter((x) => x !== c) })}><Trash2 /></IconButton>
+              </li>
+            ))}
+          </ul>
+          <AddForm placeholder="فئة خام جديدة" onAdd={(v) => !lists.rawCategories.includes(v) && setLists({ rawCategories: [...lists.rawCategories, v] })} />
+        </Card>
 
         <Card>
-          <CardHeader title="تعريف فئات أصناف البيع" />
-          <SaleCategories cats={saleCats} used={usedSale} />
+          <CardHeader title="تعريف فئات أصناف البيع" subtitle="لكل فئة مدى أكواد: بداية الكود وعدد الأصناف. الصنف الجديد ياخد أول كود فاضي في فئته" />
+          <SaleCategories cats={saleCats} used={usedSale} ranges={ranges.sale} onSave={(id, r) => saveRange("sale", id, r)} />
         </Card>
 
         <Card className="lg:col-span-2">
-          <CardHeader title="تعريف فئات الأصناف المصنعة" subtitle="الكود هو أول رقم في رقم التشغيلة"
+          <CardHeader title="تعريف فئات الأصناف المصنعة" subtitle="كود الفئة هو أول رقم في رقم التشغيلة. ولكل فئة مدى أكواد لمنتجاتها: بداية الكود وعدد الأصناف"
             action={<Button size="sm" variant="outline" icon={<Plus />} onClick={() => patch({ productCategories: [...cats, { id: uuid(), name: { ar: "فئة جديدة", en: "New category" }, code: Math.max(0, ...cats.map((c) => c.code)) + 1, burger: null }] })}>فئة جديدة</Button>} />
           <ul className="grid gap-2 px-5 pb-5">
             {cats.map((c) => (
-              <li key={c.id} className="grid items-end gap-2 rounded-xl border border-line p-3 sm:grid-cols-[minmax(0,1fr)_110px_auto]">
+              <li key={c.id} className="grid items-end gap-2 rounded-xl border border-line p-3 sm:grid-cols-[minmax(0,1fr)_110px_minmax(0,1.6fr)_auto]">
                 <Input label="اسم الفئة" defaultValue={c.name.ar} onBlur={(e) => e.target.value.trim() && e.target.value !== c.name.ar && setCat(c.id, { name: { ar: e.target.value.trim(), en: e.target.value.trim() } })} />
-                <Num label="الكود" value={c.code} onChange={(n) => setCat(c.id, { code: Math.max(0, Math.round(n)) })} />
+                <Num label="كود الفئة" value={c.code} onChange={(n) => setCat(c.id, { code: Math.max(0, Math.round(n)) })} />
+                <RangeInputs id={c.id} ranges={ranges.product} nameOf={(k) => cats.find((x) => x.id === k)?.name.ar ?? ""} onSave={(r) => saveRange("product", c.id, r)} />
                 <IconButton label={usedCats.has(c.id) ? "فيها منتجات، انقلها أولاً" : "حذف"} disabled={usedCats.has(c.id)} onClick={() => patch({ productCategories: cats.filter((x) => x.id !== c.id) })}><Trash2 /></IconButton>
               </li>
             ))}
@@ -169,23 +191,56 @@ function Chips({ title, subtitle, values, onChange, placeholder, used }: { title
   );
 }
 
-function SaleCategories({ cats, used }: { cats: { id: string; name: { ar: string; en: string } }[]; used: Set<string> }) {
+function SaleCategories({ cats, used, ranges, onSave }: { cats: { id: string; name: { ar: string; en: string } }[]; used: Set<string>; ranges: Record<string, CodeRange>; onSave: (id: string, r: CodeRange) => void }) {
   const db = useDb();
+  return (
+    <>
+      <ul className="grid gap-2 px-5 pb-3">
+        {cats.map((c) => (
+          <li key={c.id} className="grid items-end gap-2 rounded-xl border border-line p-3 grid-cols-[minmax(0,1fr)_auto]">
+            <div className="grid gap-2">
+              <span className="text-[14.5px] font-semibold">{c.name.ar}</span>
+              <RangeInputs id={c.id} ranges={ranges} nameOf={(k) => cats.find((x) => x.id === k)?.name.ar ?? ""} onSave={(r) => onSave(c.id, r)} />
+            </div>
+            <IconButton label={used.has(c.id) ? "فيها أصناف" : "حذف"} disabled={used.has(c.id)} onClick={() => void db.remove("menuCategories", c.id)}><Trash2 /></IconButton>
+          </li>
+        ))}
+      </ul>
+      <AddForm placeholder="فئة صنف بيع جديدة" onAdd={(v) => void db.insert("menuCategories", { name: { ar: v, en: v }, sort: cats.length + 1, color: "#F8BB18", icon: "utensils", stationId: null, active: true })} />
+    </>
+  );
+}
+
+function AddForm({ placeholder, onAdd }: { placeholder: string; onAdd: (v: string) => void }) {
   const [text, setText] = useState("");
   return (
-    <div className="grid gap-3 px-5 pb-5">
-      <div className="flex flex-wrap gap-1.5">
-        {cats.map((c) => (
-          <span key={c.id} className="inline-flex items-center gap-1 rounded-full border border-line bg-surface-2 py-1 ps-3 pe-1 text-[13.5px] font-semibold">
-            {c.name.ar}
-            <button type="button" disabled={used.has(c.id)} title={used.has(c.id) ? "فيها أصناف" : "حذف"} aria-label="حذف" className="grid size-6 place-items-center rounded-full text-muted hover:bg-surface-3 hover:text-ink disabled:opacity-30" onClick={() => void db.remove("menuCategories", c.id)}><X className="size-3.5" /></button>
-          </span>
-        ))}
-      </div>
-      <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); const v = text.trim(); if (v) void db.insert("menuCategories", { name: { ar: v, en: v }, sort: cats.length + 1, color: "#F8BB18", icon: "utensils", stationId: null, active: true }); setText(""); }}>
-        <Input wrapClassName="flex-1" placeholder="فئة صنف بيع جديدة" value={text} onChange={(e) => setText(e.target.value)} />
-        <Button type="submit" variant="outline" icon={<Plus />}>إضافة</Button>
-      </form>
+    <form className="flex gap-2 px-5 pb-5" onSubmit={(e) => { e.preventDefault(); const v = text.trim(); if (v) onAdd(v); setText(""); }}>
+      <Input wrapClassName="flex-1" placeholder={placeholder} value={text} onChange={(e) => setText(e.target.value)} />
+      <Button type="submit" variant="outline" icon={<Plus />}>إضافة</Button>
+    </form>
+  );
+}
+
+/** بداية الكود وعدد الأصناف for one category: refused when it crosses the range of another category. */
+function RangeInputs({ id, ranges, nameOf, onSave }: { id: string; ranges: Record<string, CodeRange>; nameOf: (key: string) => string; onSave: (r: CodeRange) => void }) {
+  const { toast } = useToast();
+  const [bump, setBump] = useState(0);
+  const r = ranges[id] ?? { from: 1, count: 100 };
+  const change = (from: number, count: number) => {
+    if (from === r.from && count === r.count) return;
+    const problem = rangeProblem(id, { from, count }, ranges, nameOf);
+    if (problem) {
+      toast({ tone: "error", title: "المدى غير مقبول", description: problem });
+      setBump((n) => n + 1); // put the typed numbers back
+      return;
+    }
+    onSave({ from, count });
+  };
+  return (
+    <div key={`${r.from}:${r.count}:${bump}`} className="grid items-end gap-2 grid-cols-2 sm:grid-cols-[110px_110px_minmax(0,1fr)]">
+      <Input label="بداية الكود" inputMode="numeric" dir="ltr" defaultValue={String(r.from)} onBlur={(e) => change(Number(e.target.value), r.count)} />
+      <Input label="عدد الأصناف" inputMode="numeric" dir="ltr" defaultValue={String(r.count)} onBlur={(e) => change(r.from, Number(e.target.value))} />
+      <p className="col-span-2 text-[13.5px] text-muted sm:col-span-1 sm:pb-2.5">الأكواد من <b className="num text-ink">{r.from}</b> إلى <b className="num text-ink">{r.from + r.count - 1}</b></p>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 /** User types: each has its own code range, ranges never overlap, a user takes the first free code of the range. */
 import { describe, expect, it } from "vitest";
-import { DEFAULT_LISTS, nextUserCode, overlapping, rangeOf, roleForScreens, screensOf, userTypesOf } from "./lib";
+import { codeRanges, nextCodeIn, rangeProblem, DEFAULT_LISTS, nextUserCode, overlapping, rangeOf, roleForScreens, screensOf, userTypesOf } from "./lib";
 import { screenAllowed, setAllowedScreens } from "../screens";
 
 describe("user type code ranges", () => {
@@ -47,5 +47,23 @@ describe("user type permissions checklist", () => {
     expect(screenAllowed("cc-stores")).toBe(false);
     setAllowedScreens(null);
     expect(screenAllowed("cc-stores")).toBe(true);
+  });
+});
+
+describe("category code ranges", () => {
+  it("gives each category its own hundred, and keeps a saved range", () => {
+    expect(codeRanges(undefined, ["a", "b", "c"])).toEqual({ a: { from: 1, count: 100 }, b: { from: 101, count: 100 }, c: { from: 201, count: 100 } });
+    expect(codeRanges({ b: { from: 500, count: 50 } }, ["a", "b"])).toEqual({ b: { from: 500, count: 50 }, a: { from: 601, count: 100 } });
+  });
+  it("keeps the thousand a category's codes already sit in", () => {
+    const r = codeRanges(undefined, ["dairy", "new"], (k) => (k === "dairy" ? { from: 10001, count: 999 } : null), 1000);
+    expect(r).toEqual({ dairy: { from: 10001, count: 999 }, new: { from: 11001, count: 1000 } });
+  });
+  it("gives the next free code of the category and refuses overlap", () => {
+    expect(nextCodeIn({ from: 101, count: 3 }, ["M101", "102", null])).toBe(103);
+    expect(nextCodeIn({ from: 101, count: 2 }, ["101", "102"])).toBe(0);
+    const all = { a: { from: 1, count: 100 }, b: { from: 101, count: 100 } };
+    expect(rangeProblem("b", { from: 100, count: 10 }, all, (k) => k)).toContain("متداخلة");
+    expect(rangeProblem("b", { from: 300, count: 10 }, all, (k) => k)).toBe("");
   });
 });

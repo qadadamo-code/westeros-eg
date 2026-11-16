@@ -10,6 +10,7 @@ import { LinesEditor } from "@/modules/production/ui";
 import { Button, Card, Dialog, EmptyState, Input, Select, Table, useToast, type Column } from "@/ui";
 import { ImageField } from "../ui";
 import { sheetNumber } from "../xlsx";
+import { codeRanges, nextCodeIn } from "../lib";
 import { useCc, type Cc } from "../useCc";
 import { ExcelImport } from "./Import";
 
@@ -90,7 +91,7 @@ function SaleDialog({ item, recipe, cats, items, cc, readOnly, onClose }: { item
   const db = useDb();
   const { toast } = useToast();
   const prod = cc.prod;
-  const [d, setD] = useState(() => ({ name: item?.name.ar ?? "", imageUrl: item?.imageUrl ?? null, sku: item?.sku ?? String(Math.max(0, ...items.map((i) => Number(i.sku) || 0)) + 1), categoryId: item?.categoryId ?? cats[0]?.id ?? "", price: item?.price ?? 0 }));
+  const [d, setD] = useState(() => ({ name: item?.name.ar ?? "", imageUrl: item?.imageUrl ?? null, sku: item ? item.sku ?? "" : (null as string | null), categoryId: item?.categoryId ?? cats[0]?.id ?? "", price: item?.price ?? 0 }));
   const [lines, setLines] = useState<MfgRecipeLine[]>(() => (recipe?.lines ?? []).map((l) => ({ itemId: l.itemId, qty: l.qty })));
   const [busy, setBusy] = useState(false);
   const set = (p: Partial<typeof d>) => setD((x) => ({ ...x, ...p }));
@@ -99,12 +100,15 @@ function SaleDialog({ item, recipe, cats, items, cc, readOnly, onClose }: { item
     const main = new Set(prod.products.filter((p) => p.active && p.recipeType === "main").map((p) => p.stockItemId));
     return prod.items.filter((i) => i.active && (i.kind === "raw" || main.has(i.id)));
   }, [prod.products, prod.items]);
-  const dupe = !!d.sku.trim() && items.some((i) => i.sku === d.sku.trim() && i.id !== item?.id);
+  // كود الصنف: the next free code of the category's range (ثوابت النظام), until the user types one
+  const auto = nextCodeIn(codeRanges(cc.lists.codeRanges?.sale, cats.map((c) => c.id))[d.categoryId], items.map((i) => i.sku));
+  const sku = d.sku ?? (auto ? String(auto) : "");
+  const dupe = !!sku.trim() && items.some((i) => i.sku === sku.trim() && i.id !== item?.id);
   const save = async () => {
     setBusy(true);
     try {
       const n = d.name.trim();
-      const fields = { name: { ar: n, en: item?.name.en && item.name.en !== item.name.ar ? item.name.en : n }, imageUrl: d.imageUrl, sku: d.sku.trim() || null, categoryId: d.categoryId, price: d.price };
+      const fields = { name: { ar: n, en: item?.name.en && item.name.en !== item.name.ar ? item.name.en : n }, imageUrl: d.imageUrl, sku: sku.trim() || null, categoryId: d.categoryId, price: d.price };
       const row = item ? await db.update("menuItems", item.id, fields) : await db.insert("menuItems", { ...blank(d.categoryId), ...fields, sort: items.length + 1 });
       const clean = lines.filter((l) => l.qty > 0);
       if (recipe) await db.update("recipes", recipe.id, { lines: clean, updatedBy: db.actorId });
@@ -123,7 +127,7 @@ function SaleDialog({ item, recipe, cats, items, cc, readOnly, onClose }: { item
       <fieldset disabled={readOnly} className="grid gap-4">
         <div className="grid gap-3 sm:grid-cols-2">
           <Input label="اسم الصنف" value={d.name} onChange={(e) => set({ name: e.target.value })} />
-          <Input label="كود الصنف" dir="ltr" className="num" value={d.sku} onChange={(e) => set({ sku: e.target.value })} error={dupe ? "الكود مستخدم لصنف آخر" : undefined} />
+          <Input label="كود الصنف" dir="ltr" className="num" value={sku} onChange={(e) => set({ sku: e.target.value })} error={dupe ? "الكود مستخدم لصنف آخر" : undefined} hint={!item && d.sku === null ? (auto ? "تلقائي حسب فئة الصنف" : "أكواد الفئة خلصت، زود عدد الأصناف من ثوابت النظام") : undefined} />
         </div>
         <ImageField value={d.imageUrl} onChange={(imageUrl) => set({ imageUrl })} />
         <div className="grid gap-3 sm:grid-cols-2">

@@ -2,7 +2,7 @@
  * Cost Control version — shared rules. Everything here follows the "Cost Control System" document:
  * constants (section 4), the raw material card and its two results (3.1), and the units a stock line is typed in.
  */
-import type { MfgLists, MfgSettings, MfgUnitDef, MfgUserType, RawSpec, StockItem, StorageLocation, Units } from "@/data/types";
+import type { CodeRange, MfgLists, MfgSettings, MfgUnitDef, MfgUserType, RawSpec, StockItem, StorageLocation, Units } from "@/data/types";
 
 export const DEFAULT_LISTS: MfgLists = {
   storageUnits: ["كيلو", "لتر", "قطعة", "كرتونة", "جالون", "بالة"],
@@ -169,4 +169,54 @@ export function nextUserCode(type: MfgUserType, codes: Record<string, number>, m
   const used = new Set(Object.entries(codes).filter(([id]) => id !== memberId).map(([, c]) => c));
   for (let c = from; c <= to; c++) if (!used.has(c)) return c;
   return 0;
+}
+
+/* ───────── أكواد الفئات: every category has a code range, and a new item takes the next free code of its category ───────── */
+
+export type CodeKind = "raw" | "sale" | "product";
+const digits = (code: string | null | undefined) => Number(String(code ?? "").replace(/\D/g, "")) || 0;
+const crosses = (a: CodeRange, b: CodeRange) => a.from <= b.from + b.count - 1 && b.from <= a.from + a.count - 1;
+/**
+ * The range of every category, in the order given. A saved range wins; else the block the category's existing codes
+ * already sit in (`seed`); else the next free block after all of those.
+ */
+export function codeRanges(saved: Record<string, CodeRange> | undefined, keys: string[], seed?: (key: string) => CodeRange | null, block = 100): Record<string, CodeRange> {
+  const out: Record<string, CodeRange> = {};
+  for (const k of keys) {
+    const r = saved?.[k];
+    if (r && r.from > 0 && r.count > 0) out[k] = r;
+  }
+  for (const k of keys) {
+    const r = out[k] ? null : seed?.(k);
+    if (r && !Object.values(out).some((x) => crosses(x, r))) out[k] = r;
+  }
+  for (const k of keys) {
+    if (out[k]) continue;
+    const top = Math.max(0, ...Object.values(out).map((x) => x.from + x.count - 1));
+    out[k] = { from: Math.ceil(top / block) * block + 1, count: block };
+  }
+  return out;
+}
+/** Raw materials: categories whose codes already sit in one thousand (10001, 10002 …) keep that thousand. */
+export function rawRanges(lists: MfgLists, raws: StockItem[]): Record<string, CodeRange> {
+  const min = new Map<string, number>();
+  for (const i of raws) {
+    const n = digits(i.sku), c = specOf(i, lists).category;
+    if (n > 0 && (!min.has(c) || n < min.get(c)!)) min.set(c, n);
+  }
+  const seed = (c: string) => (min.has(c) ? { from: Math.floor((min.get(c)! - 1) / 1000) * 1000 + 1, count: 999 } : null);
+  return codeRanges(lists.codeRanges?.raw, lists.rawCategories, seed, min.size ? 1000 : 100);
+}
+/** The first free code of the range, 0 when the range is full. */
+export function nextCodeIn(range: CodeRange | undefined, used: Iterable<string | null | undefined>): number {
+  if (!range) return 0;
+  const taken = new Set([...used].map(digits));
+  for (let c = range.from; c < range.from + range.count; c++) if (!taken.has(c)) return c;
+  return 0;
+}
+/** Why a typed range is refused, or "" when it is fine. */
+export function rangeProblem(key: string, next: CodeRange, all: Record<string, CodeRange>, nameOf: (key: string) => string): string {
+  if (!(Number.isInteger(next.from) && Number.isInteger(next.count) && next.from >= 1 && next.count >= 1)) return "اكتب رقم صحيح من 1 أو أكثر";
+  const clash = Object.entries(all).find(([k, r]) => k !== key && crosses(r, next));
+  return clash ? `الأكواد دي متداخلة مع "${nameOf(clash[0])}" (من ${clash[1].from} إلى ${clash[1].from + clash[1].count - 1})` : "";
 }

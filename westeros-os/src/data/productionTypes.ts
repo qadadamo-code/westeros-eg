@@ -234,6 +234,8 @@ export interface MfgLists {
   burgerTypes: { id: "beef" | "chicken"; name: string }[];
   /** اسماء الوصفات */
   recipeNames: { main: string; sub: string; marinade: string };
+  /** مدى أكواد كل فئة: raw by category name, sale and product by category id. Ranges of one kind never overlap. */
+  codeRanges?: { raw?: Record<string, CodeRange>; sale?: Record<string, CodeRange>; product?: Record<string, CodeRange> };
   /** أنواع المستخدمين (طبيعة المستخدم): the name the restaurant uses and the permissions it gives */
   userTypes?: MfgUserType[];
   /** membership id → user type id */
@@ -243,6 +245,8 @@ export interface MfgLists {
  * طبيعة المستخدم. Its users take their codes from one range: `from` … `from + count − 1`. Ranges of two types never overlap.
  * (`code` is the first shape of this, kept so rows saved with it still read.)
  */
+/** Codes `from` … `from + count − 1` */
+export interface CodeRange { from: number; count: number }
 export interface MfgUserType { id: string; name: string; from?: number; count?: number; code?: number; role: "admin" | "manager" | "chef" | "kitchen"; /** the screens its users may open (module ids); missing = what the role allows */ screens?: string[] }
 
 /* ───────── قوائم فتح وقفل الوردية (0016_checklists.sql; src/modules/checklists) ───────── */
