@@ -5,7 +5,7 @@
  */
 import { useMemo, useState, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Beef, Check, Layers, Scale, ShieldCheck, Shapes } from "lucide-react";
+import { Beef, Check, Layers, RefreshCw, Scale, Search, ShieldCheck, Shapes } from "lucide-react";
 import { useSession } from "@/auth/session";
 import { useDb } from "@/data/hooks";
 import type { MfgBatch, MfgCategoryDef, MfgMethod, MfgProduct, MfgRecipeLine } from "@/data/types";
@@ -15,6 +15,7 @@ import { formatMoney } from "@/lib/money";
 import { nowIso } from "@/lib/time";
 import { Badge, Button, Card, EmptyState, Input, Segmented, Select, Skeleton, Switch, useToast } from "@/ui";
 import { buildBatch, scaleLines, type BatchDraft, type BuildCtx } from "./build";
+import { categoryName } from "./defaults";
 import { LabelDialog } from "./LabelDialog";
 import { BatchError, saveBatch } from "./ops";
 import { ERROR_TEXT, LinesEditor, Num, ResultPanel } from "./ui";
@@ -33,10 +34,69 @@ export default function NewBatchPage() {
   if (!can("production.run")) return <EmptyState icon={<ShieldCheck />} title={L("تسجيل التشغيلات للشيف وفريق المطبخ", "Recording batches is for the kitchen team")} />;
   // opened from the daily plan with a product: wait for the products so the form starts on it
   if (wanted && !prod.products.length) return <Skeleton className="h-96" rounded="rounded-[20px]" />;
-  return <Forms key={wanted ?? ""} prod={prod} initial={wanted ? prod.productById.get(wanted) : undefined} />;
+  const initial = wanted ? prod.productById.get(wanted) : undefined;
+  return COST_CONTROL_ONLY ? <ByProduct key={wanted ?? ""} prod={prod} initial={initial} /> : <Forms key={wanted ?? ""} prod={prod} initial={initial} />;
 }
 
 const tabOf = (p: MfgProduct | undefined): Tab => p?.method ?? "weight";
+
+/**
+ * Cost Control version: the chef says WHAT is being made; the way it is made comes from the product itself
+ * (set once on the product in قائمة المنتجات), so the methods are never shown here.
+ */
+function ByProduct({ prod, initial }: { prod: Prod; initial: MfgProduct | undefined }) {
+  const { loc } = useT();
+  const [productId, setProductId] = useState(initial?.id ?? "");
+  const [run, setRun] = useState(0);
+  const [q, setQ] = useState("");
+  const p = prod.productById.get(productId);
+  const list = useMemo(() => {
+    const n = q.trim().toLowerCase();
+    return prod.products.filter((x) => x.active && (!n || x.name.ar.toLowerCase().includes(n) || x.code.toLowerCase().includes(n)));
+  }, [prod.products, q]);
+  // after a save: back to choosing the next product
+  const again = () => {
+    setProductId("");
+    setQ("");
+    setRun((n) => n + 1);
+  };
+  if (!p) {
+    return (
+      <Block title="إيه الصنف اللي هتصنعه؟" hint="اختار الصنف، وهتظهر لك الخانات المطلوبة ومكوناته">
+        <div className="grid gap-4">
+          <Input icon={<Search />} placeholder="ابحث باسم الصنف أو الكود" value={q} onChange={(e) => setQ(e.target.value)} />
+          {prod.products.some((x) => x.active) ? (
+            list.length ? <ProductChips products={list} cats={prod.categories} value="" onPick={setProductId} /> : <p className="text-[14px] text-muted">لا يوجد صنف بهذا الاسم.</p>
+          ) : (
+            <p className="text-[14px] text-muted">لا توجد منتجات مصنعة. أضفها من قائمة المنتجات والخامات.</p>
+          )}
+        </div>
+      </Block>
+    );
+  }
+  const key = `${p.id}-${run}`;
+  return (
+    <div className="grid gap-4">
+      <Card className="flex flex-wrap items-center justify-between gap-3 p-4">
+        <div className="min-w-0">
+          <p className="text-[12.5px] text-muted">الصنف اللي بيتصنع</p>
+          <p className="truncate font-sans text-[18px] font-bold">{loc(p.name)} <span className="num text-[13px] font-semibold text-muted">{p.code}</span></p>
+          <p className="text-[13px] text-muted">{loc(categoryName(prod.categories, p.category))}</p>
+        </div>
+        <Button variant="outline" icon={<RefreshCw />} onClick={() => setProductId("")}>تغيير الصنف</Button>
+      </Card>
+      {p.method === "weight" || p.method === "portion" ? (
+        <SimpleForm key={key} method={p.method} prod={prod} onDone={again} initial={p} chosen />
+      ) : p.method === "chicken" ? (
+        <ChickenForm key={key} prod={prod} onDone={again} initial={p} chosen />
+      ) : prod.categories.some((c) => c.id === p.category && c.burger) ? (
+        <BurgerForm key={key} kind={prod.categories.find((c) => c.id === p.category)?.burger ?? "beef"} categoryId={p.category} prod={prod} onDone={again} />
+      ) : (
+        <EmptyState title="فئة هذا الصنف غير محددة كنوع برجر" body="حدد فئته في ثوابت النظام تحت تعريف أنواع البرجر، أو غير طريقة تصنيعه من قائمة المنتجات." />
+      )}
+    </div>
+  );
+}
 
 function Forms({ prod, initial }: { prod: Prod; initial: MfgProduct | undefined }) {
   const { L } = useT();
@@ -211,7 +271,7 @@ function RecipeSwitch({ value, onChange, empty }: { value: boolean; onChange: (v
 
 /* ───────── 1 + 2 · by weight / by portion ───────── */
 
-function SimpleForm({ method, prod, onDone, initial }: { method: Extract<MfgMethod, "weight" | "portion">; prod: Prod; onDone: () => void; initial?: MfgProduct }) {
+function SimpleForm({ method, prod, onDone, initial, chosen }: { method: Extract<MfgMethod, "weight" | "portion">; prod: Prod; onDone: () => void; initial?: MfgProduct; /** the product was chosen before the form: no product step */ chosen?: boolean }) {
   const { L } = useT();
   const db = useDb();
   const ctx = useCtx(prod);
@@ -240,12 +300,14 @@ function SimpleForm({ method, prod, onDone, initial }: { method: Extract<MfgMeth
     <Layout
       side={<ResultPanel built={built} footer={<SaveBar prod={prod} draft={draft} ready={ready} onDone={onDone} afterSave={keep && p ? () => db.update("mfgProducts", p.id, { lines: clean(lines), packaging: clean(packaging) }) : undefined} />} />}
     >
-      <Block step={1} title={L("المنتج", "Product")} hint={method === "weight" ? L("صوصات وخلطات وتتبيلات تخزن بالوزن", "Sauces, mixes and marinades stored by weight") : L("منتجات تخزن بحصة محددة (بورشن)", "Products stored in fixed portions")}>
-        <ProductChips products={list} cats={prod.categories} value={productId} onPick={pick} />
-      </Block>
+      {chosen ? null : (
+        <Block step={1} title={L("المنتج", "Product")} hint={method === "weight" ? L("صوصات وخلطات وتتبيلات تخزن بالوزن", "Sauces, mixes and marinades stored by weight") : L("منتجات تخزن بحصة محددة (بورشن)", "Products stored in fixed portions")}>
+          <ProductChips products={list} cats={prod.categories} value={productId} onPick={pick} />
+        </Block>
+      )}
       {p ? (
         <>
-          <Block step={2} title={L("الكمية", "Quantity")}>
+          <Block step={chosen ? 1 : 2} title={L("الكمية", "Quantity")}>
             <div className="grid gap-3 sm:grid-cols-3">
               <Num big label={L("عدد الوجبات", "Number of meals")} value={meals} onChange={setMeals} hint={L("يضرب كميات الوصفة", "Multiplies the recipe")} />
               {method === "weight" ? (
@@ -255,7 +317,7 @@ function SimpleForm({ method, prod, onDone, initial }: { method: Extract<MfgMeth
               )}
             </div>
           </Block>
-          <Block step={3} title={L("المكونات", "Ingredients")} hint={L("الكميات الفعلية التي دخلت هذه التشغيلة", "What actually went into this batch")}>
+          <Block step={chosen ? 2 : 3} title={L("المكونات", "Ingredients")} hint={L("الكميات الفعلية التي دخلت هذه التشغيلة", "What actually went into this batch")}>
             <div className="grid gap-5">
               <LinesEditor title={L("الوصفة", "Recipe")} lines={lines} onChange={setLines} by={meals} items={prod.items} itemById={prod.itemById} unitCost={prod.unitCost} />
               <LinesEditor title={L("باكيج التخزين", "Storage packaging")} hint={L("يدخل في التكلفة فقط", "Costed only")} lines={packaging} onChange={setPackaging} by={meals} items={prod.items} itemById={prod.itemById} unitCost={prod.unitCost} />
@@ -278,7 +340,7 @@ interface ChickenRow {
   packaging: MfgRecipeLine[];
 }
 
-function ChickenForm({ prod, onDone, initial }: { prod: Prod; onDone: () => void; initial?: MfgProduct }) {
+function ChickenForm({ prod, onDone, initial, chosen }: { prod: Prod; onDone: () => void; initial?: MfgProduct; chosen?: boolean }) {
   const { L, lang, loc } = useT();
   const db = useDb();
   const ctx = useCtx(prod);
@@ -316,7 +378,7 @@ function ChickenForm({ prod, onDone, initial }: { prod: Prod; onDone: () => void
           <Num big label={L("الوزن قبل التجهيز", "Weight before prep")} suffix={L("كجم", "kg")} value={chickenKg} onChange={setChickenKg} />
         </div>
       </Block>
-      <Block step={2} title={L("المنتجات الناتجة", "Products made")} hint={L("اختر كل منتج خرج من نفس الكمية", "Pick every product made from this quantity")}>
+      <Block step={2} title={chosen ? "أصناف تانية من نفس الكمية (اختياري)" : L("المنتجات الناتجة", "Products made")} hint={chosen ? "لو نفس المادة الخام طلع منها أكتر من صنف، اختارهم هنا" : L("اختر كل منتج خرج من نفس الكمية", "Pick every product made from this quantity")}>
         <ProductChips products={list} cats={prod.categories} value={rows.map((r) => r.productId)} onPick={toggle} multi />
       </Block>
       {rows.map((r, i) => {

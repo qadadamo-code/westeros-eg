@@ -17,7 +17,7 @@ export default function MfgPage() {
       <RouteTabs
         label="التصنيع"
         items={[
-          { to: "/manufacturing", end: true, label: "طرق التصنيع", icon: <PlusCircle /> },
+          { to: "/manufacturing", end: true, label: "تصنيع صنف", icon: <PlusCircle /> },
           { to: "/manufacturing/recipes", label: "الوصفات", icon: <BookOpenCheck /> },
           { to: "/manufacturing/log", label: "سجل التشغيلات", icon: <ClipboardList /> },
         ]}
