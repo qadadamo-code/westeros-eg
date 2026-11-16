@@ -2,7 +2,7 @@
  * Cost Control version — shared rules. Everything here follows the "Cost Control System" document:
  * constants (section 4), the raw material card and its two results (3.1), and the units a stock line is typed in.
  */
-import type { MfgLists, MfgSettings, MfgUnitDef, RawSpec, StockItem, StorageLocation, Units } from "@/data/types";
+import type { MfgLists, MfgSettings, MfgUnitDef, MfgUserType, RawSpec, StockItem, StorageLocation, Units } from "@/data/types";
 
 export const DEFAULT_LISTS: MfgLists = {
   storageUnits: ["كيلو", "لتر", "قطعة", "كرتونة", "جالون", "بالة"],
@@ -102,3 +102,32 @@ export const nowLocal = () => {
 export const fromLocal = (s: string) => (s ? new Date(s).toISOString() : new Date().toISOString());
 export const fmtAt = (iso: string) => new Date(iso).toLocaleString("ar-EG-u-nu-latn", { timeZone: "Africa/Cairo", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 export const fmtDay = (d: string | null | undefined) => (d ? d.split("-").reverse().join("/") : "—");
+
+/* ───────── أنواع المستخدمين ───────── */
+
+export const DEFAULT_USER_TYPES: MfgUserType[] = [
+  { id: "chef", name: "شيف", code: 1, role: "chef" },
+  { id: "kitchen", name: "مساعد مطبخ", code: 2, role: "kitchen" },
+  { id: "manager", name: "مدير", code: 3, role: "manager" },
+  { id: "admin", name: "إداري", code: 4, role: "admin" },
+];
+export const USER_ROLE_LABEL: Record<MfgUserType["role"], string> = {
+  admin: "كل الصلاحيات",
+  manager: "المخازن والتصنيع والثوابت",
+  chef: "التصنيع والمخازن",
+  kitchen: "تسجيل التشغيلات فقط",
+};
+export const userTypesOf = (lists: MfgLists): MfgUserType[] => (lists.userTypes?.length ? lists.userTypes : DEFAULT_USER_TYPES);
+/** طبيعة المستخدم: the type chosen for the member, else the type that matches the member's permissions. */
+export function userTypeOf(member: { id: string; role: string }, lists: MfgLists): MfgUserType | null {
+  const types = userTypesOf(lists);
+  return types.find((t) => t.id === lists.userTypeOf?.[member.id]) ?? types.find((t) => t.role === member.role) ?? null;
+}
+/** كود المستخدم بناء على طبيعته: the type's code followed by the next serial of that type (type 1 → 101, 102 …). */
+export function nextUserCode(type: MfgUserType, codes: Record<string, number>, memberId?: string): number {
+  const base = type.code * 100;
+  const own = memberId ? codes[memberId] : undefined;
+  if (own && own > base && own < base + 100) return own; // already a code of this type
+  const used = Object.values(codes).filter((c) => c > base && c < base + 100);
+  return base + (used.length ? Math.max(...used) - base : 0) + 1;
+}

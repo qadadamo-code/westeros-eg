@@ -2,12 +2,12 @@
 import { useState, type ReactNode } from "react";
 import { Plus, Settings2, Trash2, X } from "lucide-react";
 import { useDb, useLive } from "@/data/hooks";
-import type { MfgCategoryDef, MfgLists, MfgMeatType, MfgSettings, MfgUnitDef } from "@/data/types";
+import type { MfgCategoryDef, MfgLists, MfgMeatType, MfgSettings, MfgUnitDef, MfgUserType } from "@/data/types";
 import { uuid } from "@/lib/id";
 import { PageHeader } from "@/shell/PageHeader";
 import { Num } from "@/modules/production/ui";
 import { Button, Card, CardHeader, EmptyState, IconButton, Input, Select } from "@/ui";
-import { specOf } from "../lib";
+import { nextUserCode, specOf, USER_ROLE_LABEL, userTypeOf, userTypesOf } from "../lib";
 import { useCc } from "../useCc";
 
 const BASE_LABEL: Record<MfgUnitDef["base"], string> = { g: "وزن (جرام)", ml: "حجم (مل)", pc: "عدد (قطعة)" };
@@ -41,7 +41,17 @@ export default function ConstantsPage() {
     if (id && cc.itemById.get(id)?.mfg === false) void db.update("stockItems", id, { mfg: true });
     return id || null;
   };
-  const kitchen = prod.staff.filter((m) => m.active && (m.role === "chef" || m.role === "kitchen" || s.chefCodes[m.id]));
+  const members = prod.staff.filter((m) => m.active);
+  const userTypes = userTypesOf(lists);
+  const setType = (id: string, p: Partial<MfgUserType>) => setLists({ userTypes: userTypes.map((t) => (t.id === id ? { ...t, ...p } : t)) });
+  // choosing the user's type gives the permissions of the type and a code built from the type's code
+  const setUserType = async (memberId: string, typeId: string) => {
+    const t = userTypes.find((x) => x.id === typeId);
+    const m = members.find((x) => x.id === memberId);
+    if (!t || !m) return;
+    await patch({ lists: { ...lists, userTypes, userTypeOf: { ...(lists.userTypeOf ?? {}), [memberId]: typeId } }, chefCodes: { ...s.chefCodes, [memberId]: nextUserCode(t, s.chefCodes, memberId) } });
+    if (m.role !== "owner" && m.role !== t.role) await db.update("memberships", memberId, { role: t.role });
+  };
   return (
     <div className="grid gap-5">
       <PageHeader icon={<Settings2 />} title="ثوابت النظام" />
@@ -144,15 +154,33 @@ export default function ConstantsPage() {
         <Chips title="طريقة التخزين" subtitle="القائمة المعرفة مسبقاً في بيانات المنتج المصنع" values={s.storageMethods} onChange={(storageMethods) => patch({ storageMethods })} placeholder="طريقة تخزين جديدة" />
 
         <Card>
-          <CardHeader title="كود الشيف" subtitle="الرقم بين القوسين في رقم التشغيلة، مثل 2-21102026#1(5)" />
+          <CardHeader title="تعريف أنواع المستخدمين" subtitle="طبيعة المستخدم وكودها وصلاحياتها. كود المستخدم يبدأ بكود نوعه"
+            action={<Button size="sm" variant="outline" icon={<Plus />} onClick={() => setLists({ userTypes: [...userTypes, { id: uuid(), name: "نوع جديد", code: Math.max(0, ...userTypes.map((t) => t.code)) + 1, role: "kitchen" }] })}>نوع جديد</Button>} />
           <ul className="grid gap-2 px-5 pb-5">
-            {kitchen.map((m) => (
-              <li key={m.id} className="flex items-center gap-3 rounded-xl border border-line px-3 py-2">
-                <span className="min-w-0 flex-1 truncate text-[14.5px] font-semibold">{m.name}</span>
-                <Num className="w-24" value={s.chefCodes[m.id] ?? 0} onChange={(n) => patch({ chefCodes: { ...s.chefCodes, [m.id]: Math.round(n) } })} />
+            {userTypes.map((t) => {
+              const inUse = members.some((m) => userTypeOf(m, lists)?.id === t.id);
+              return (
+                <li key={t.id} className="grid items-end gap-2 rounded-xl border border-line p-3 sm:grid-cols-[minmax(0,1fr)_90px_minmax(0,1.2fr)_auto]">
+                  <Input label="طبيعة المستخدم" defaultValue={t.name} onBlur={(e) => e.target.value.trim() && e.target.value !== t.name && setType(t.id, { name: e.target.value.trim() })} />
+                  <Num label="الكود" value={t.code} onChange={(n) => setType(t.id, { code: Math.max(0, Math.round(n)) })} />
+                  <Select label="الصلاحيات" value={t.role} onChange={(e) => setType(t.id, { role: e.target.value as MfgUserType["role"] })} options={(Object.keys(USER_ROLE_LABEL) as MfgUserType["role"][]).map((r) => ({ value: r, label: USER_ROLE_LABEL[r] }))} />
+                  <IconButton label={inUse ? "مستخدم مع مستخدمين" : "حذف"} disabled={inUse || userTypes.length <= 1} onClick={() => setLists({ userTypes: userTypes.filter((x) => x.id !== t.id) })}><Trash2 /></IconButton>
+                </li>
+              );
+            })}
+          </ul>
+        </Card>
+
+        <Card>
+          <CardHeader title="المستخدمين وأكوادهم" subtitle="كود المستخدم هو الرقم بين القوسين في رقم التشغيلة، مثل 2-21102026#1(101)" />
+          <ul className="grid gap-2 px-5 pb-5">
+            {members.map((m) => (
+              <li key={m.id} className="grid items-end gap-2 rounded-xl border border-line p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_100px]">
+                <span className="min-w-0 truncate pb-2.5 text-[14.5px] font-semibold">{m.name}</span>
+                <Select label="طبيعة المستخدم" value={userTypeOf(m, lists)?.id ?? ""} onChange={(e) => void setUserType(m.id, e.target.value)} options={[...(userTypeOf(m, lists) ? [] : [{ value: "", label: "—" }]), ...userTypes.map((t) => ({ value: t.id, label: t.name }))]} />
+                <Num label="الكود" value={s.chefCodes[m.id] ?? 0} onChange={(n) => patch({ chefCodes: { ...s.chefCodes, [m.id]: Math.round(n) } })} />
               </li>
             ))}
-            {kitchen.length ? null : <li className="text-[14px] text-muted">لا يوجد شيف بين المستخدمين.</li>}
           </ul>
         </Card>
       </div>

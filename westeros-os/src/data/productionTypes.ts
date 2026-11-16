@@ -234,7 +234,13 @@ export interface MfgLists {
   burgerTypes: { id: "beef" | "chicken"; name: string }[];
   /** اسماء الوصفات */
   recipeNames: { main: string; sub: string; marinade: string };
+  /** أنواع المستخدمين (طبيعة المستخدم): the name the restaurant uses and the permissions it gives */
+  userTypes?: MfgUserType[];
+  /** membership id → user type id */
+  userTypeOf?: Record<string, string>;
 }
+/** code: the first digit(s) of the code of every user of this type (type 1 → users 101, 102 …) */
+export interface MfgUserType { id: string; name: string; code: number; role: "admin" | "manager" | "chef" | "kitchen" }
 
 /* ───────── قوائم فتح وقفل الوردية (0016_checklists.sql; src/modules/checklists) ───────── */
 
