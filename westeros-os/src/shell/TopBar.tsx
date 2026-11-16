@@ -18,8 +18,8 @@ export function TopBar({ title }: { title?: string }) {
   const palette = useCommandPalette();
   const branch = useBranch();
   return (
-    <header className="sticky top-0 z-40 border-b border-line/70 bg-bg/80 backdrop-blur-xl">
-      <div className="flex h-16 items-center gap-2 px-4 md:px-6">
+    <header className="sticky top-0 z-40 px-3 pt-3 md:px-5">
+      <div className="sf-glass flex h-[60px] items-center gap-2 rounded-[22px] px-3 md:px-5">
         {/* phone: brand + branch */}
         <div className="flex min-w-0 items-center gap-2.5 md:hidden">
           <Mark className="size-8" />
@@ -33,7 +33,7 @@ export function TopBar({ title }: { title?: string }) {
         <button
           type="button"
           onClick={() => palette.setOpen(true)}
-          className="ms-4 hidden h-10 w-full max-w-sm items-center gap-2.5 rounded-xl border border-line bg-surface px-3 text-[14px] text-faint shadow-sf-sm transition-colors hover:border-line-strong hover:text-muted lg:flex"
+          className="ms-4 hidden h-10 w-full max-w-sm items-center gap-2.5 rounded-full border border-line bg-surface/60 px-4 text-[14px] text-faint transition-colors hover:border-line-strong hover:text-muted lg:flex"
         >
           <Search className="size-4" aria-hidden />
           <span className="flex-1 truncate text-start">{t("shell.search")}</span>

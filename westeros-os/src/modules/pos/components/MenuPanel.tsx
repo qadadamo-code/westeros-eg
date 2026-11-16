@@ -8,6 +8,7 @@ import { matches } from "@/lib/arabic";
 import { cn } from "@/lib/cn";
 import { formatMoney } from "@/lib/money";
 import { spring, useReduced } from "@/ui";
+import { menuPhoto } from "@/data/westeros/menuImages";
 import { catIcon, Chip } from "./bits";
 
 export interface MenuPanelProps {
@@ -102,6 +103,8 @@ function ItemTile({ item, cat, count, onPick, lang }: { item: MenuItem; cat?: Me
   const press = useRef<ReturnType<typeof setTimeout> | null>(null);
   const long = useRef(false);
   const off = !item.available;
+  const [broken, setBroken] = useState(false);
+  const photo = broken ? undefined : item.imageUrl ?? menuPhoto(item.name.ar);
   const start = () => {
     long.current = false;
     press.current = setTimeout(() => {
@@ -134,14 +137,17 @@ function ItemTile({ item, cat, count, onPick, lang }: { item: MenuItem; cat?: Me
           off && "opacity-55",
           count > 0 && "border-transparent ring-2",
         )}
-        style={{ ...(count > 0 ? { ["--tw-ring-color" as string]: color } : {}), backgroundImage: item.imageUrl ? undefined : `linear-gradient(160deg, color-mix(in srgb, ${color} 13%, transparent), transparent 62%)` }}
+        style={{ ...(count > 0 ? { ["--tw-ring-color" as string]: color } : {}), backgroundImage: `linear-gradient(160deg, color-mix(in srgb, ${color} 13%, transparent), transparent 62%)` }}
         aria-label={`${loc(item.name)} ${formatMoney(item.price, { lang })}${off ? ` — ${L("خلصان", "sold out")}` : ""}`}
       >
-        {item.imageUrl ? <img src={item.imageUrl} alt="" className="absolute inset-0 size-full object-cover opacity-25" /> : null}
         <span className="relative flex items-start justify-between gap-2">
-          <span className="grid size-8 place-items-center rounded-xl text-white shadow-sf-sm" style={{ background: color }}>
-            <Icon className="size-[17px]" aria-hidden />
-          </span>
+          {photo ? (
+            <img src={photo} alt="" loading="lazy" onError={() => setBroken(true)} className="size-12 rounded-full object-cover shadow-sf-sm ring-2 ring-brass/60" />
+          ) : (
+            <span className="grid size-8 place-items-center rounded-xl text-white shadow-sf-sm" style={{ background: color }}>
+              <Icon className="size-[17px]" aria-hidden />
+            </span>
+          )}
           <span className={cn("flex gap-1 text-brass transition-opacity [&_svg]:size-4", count > 0 && "opacity-0")}>
             {item.tags.includes("popular") ? <Star aria-label={L("الأكثر طلبًا", "Popular")} className="fill-current" /> : null}
             {item.tags.includes("chef") ? <Sparkles aria-label={L("اختيار الشيف", "Chef's pick")} /> : null}

@@ -19,9 +19,9 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
   return (
     <motion.aside
       initial={false}
-      animate={{ width: collapsed ? 84 : 272 }}
+      animate={{ width: collapsed ? 84 : 268 }}
       transition={reduced ? { duration: 0 } : spring.soft}
-      className="sticky top-0 hidden h-dvh shrink-0 flex-col border-e border-line bg-sidebar md:flex"
+      className="sf-glass sticky top-3 z-30 my-3 ms-3 hidden h-[calc(100dvh-24px)] shrink-0 flex-col overflow-hidden rounded-[28px] md:flex"
       aria-label={t("shell.menu")}
     >
       <div className={cn("flex h-16 shrink-0 items-center gap-2 px-4", collapsed && "justify-center px-0")}>
@@ -49,15 +49,15 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
                         cn(
                           "group relative flex h-11 items-center gap-3 rounded-xl px-3 text-[14.5px] font-semibold transition-colors",
                           collapsed && "justify-center px-0",
-                          isActive ? "text-primary" : "text-ink-2 hover:bg-surface-3 hover:text-ink",
+                          isActive ? "text-ink" : "text-ink-2 hover:bg-surface-3/70 hover:text-ink",
                         )
                       }
                     >
                       {({ isActive }) => (
                         <>
                           {isActive ? (
-                            <motion.span layoutId="nav-active" className="absolute inset-0 rounded-xl bg-primary-soft ring-1 ring-primary/15" transition={reduced ? { duration: 0 } : spring.layout}>
-                              <span className="absolute inset-y-2.5 -start-3 w-1 rounded-e-full bg-primary" />
+                            <motion.span layoutId="nav-active" className="absolute inset-0 rounded-xl bg-[linear-gradient(100deg,color-mix(in_srgb,var(--sf-brass)_26%,transparent),color-mix(in_srgb,var(--sf-brass)_8%,transparent))] ring-1 ring-brass/30" transition={reduced ? { duration: 0 } : spring.layout}>
+                              <span className="absolute inset-y-2.5 -start-3 w-1 rounded-e-full bg-brass shadow-[0_0_12px_var(--sf-brass)]" />
                             </motion.span>
                           ) : null}
                           <Icon className="relative size-5 shrink-0" strokeWidth={isActive ? 2.25 : 1.9} aria-hidden />

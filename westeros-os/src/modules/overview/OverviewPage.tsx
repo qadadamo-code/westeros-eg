@@ -13,6 +13,7 @@ import { cn } from "@/lib/cn";
 import { AnimatedMoney, AnimatedNumber, Badge, BarChart, Button, Card, CardHeader, EmptyState, Meter, Money, StatTile, useReduced, type Tone } from "@/ui";
 import { PageHeader } from "@/shell/PageHeader";
 import { OwnerMoney } from "@/modules/accounting/OwnerMoney";
+import { SalesPeak, SectionFolders } from "./Hero";
 
 const TABLE_TONE: Record<TableStatus, string> = {
   free: "border-line bg-surface text-muted",
@@ -32,9 +33,12 @@ export default function OverviewPage() {
   const db = useDb();
   const reduced = useReduced();
   const since = useMemo(() => startOfDay().toISOString(), []);
+  const monthAgo = useMemo(() => new Date(startOfDay().getTime() - 29 * 86_400_000).toISOString(), []);
   const bq = branch ? { branchId: branch.id } : {};
 
-  const payments = useLive("payments", { where: { ...bq, status: "captured" }, gte: { createdAt: since } }).data;
+  // the last 30 days feed the peak card; everything else on the page is about today
+  const payments30 = useLive("payments", { where: { ...bq, status: "captured" }, gte: { createdAt: monthAgo } }).data;
+  const payments = useMemo(() => payments30.filter((p) => p.createdAt >= since), [payments30, since]);
   const checks = useLive("checks", { where: { ...bq }, gte: { openedAt: since } }).data;
   const openChecks = useLive("checks", { where: { ...bq, status: ["open", "bill_requested"] } }).data;
   const tables = useLive("tables", { where: { ...bq, active: true }, orderBy: [{ field: "label" }] }).data;
@@ -102,15 +106,22 @@ export default function OverviewPage() {
         }
       />
 
-      <section className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4" aria-label={t("overview.sales")}>
-        <StatTile index={0} icon={<CircleDollarSign />} label={t("overview.sales")} value={<AnimatedMoney value={sales} whole />} sub={t("overview.paidChecks", { n: paidChecks.length })} spark={hours.map((h) => h.value)} />
-        <StatTile index={1} icon={<ReceiptText />} tone="brass" label={t("overview.openChecks")} value={<AnimatedNumber value={openChecks.length} />} sub={t("overview.openValue", { v: formatMoney(openValue, { lang, whole: true }) })} />
-        <StatTile index={2} icon={<Users />} tone="info" label={t("overview.covers")} value={<AnimatedNumber value={covers} />} sub={t("overview.tablesBusy", { busy: busy.length, total: tables.length })} />
-        <StatTile index={3} icon={<Wallet />} tone="ok" label={t("overview.avgCheck")} value={<AnimatedMoney value={avg} whole />} sub={t("overview.tips", { v: formatMoney(tips, { lang, whole: true }) })} />
-      </section>
+      {/* hero: the sales peak beside today's numbers and the owner's money */}
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="grid gap-4 max-lg:order-2">
+          <section className="grid grid-cols-2 gap-3 sm:gap-4" aria-label={t("overview.sales")}>
+            <StatTile index={0} icon={<CircleDollarSign />} label={t("overview.sales")} value={<AnimatedMoney value={sales} whole />} sub={t("overview.paidChecks", { n: paidChecks.length })} spark={hours.map((h) => h.value)} />
+            <StatTile index={1} icon={<ReceiptText />} tone="brass" label={t("overview.openChecks")} value={<AnimatedNumber value={openChecks.length} />} sub={t("overview.openValue", { v: formatMoney(openValue, { lang, whole: true }) })} />
+            <StatTile index={2} icon={<Users />} tone="info" label={t("overview.covers")} value={<AnimatedNumber value={covers} />} sub={t("overview.tablesBusy", { busy: busy.length, total: tables.length })} />
+            <StatTile index={3} icon={<Wallet />} tone="ok" label={t("overview.avgCheck")} value={<AnimatedMoney value={avg} whole />} sub={t("overview.tips", { v: formatMoney(tips, { lang, whole: true }) })} />
+          </section>
+          {/* money: today's profit estimate, cash on hand, upcoming obligations (accounting module) */}
+          {can("reports.financial") ? <OwnerMoney branchId={branch?.id ?? null} /> : null}
+        </div>
+        <SalesPeak payments={payments30} paidToday={paidChecks.length} />
+      </div>
 
-      {/* money: today's profit estimate, cash on hand, upcoming obligations (accounting module) */}
-      {can("reports.financial") ? <OwnerMoney branchId={branch?.id ?? null} /> : null}
+      <SectionFolders />
 
       <div className="grid gap-4 lg:grid-cols-3 lg:gap-5">
         {/* sales by hour */}

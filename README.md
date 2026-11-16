@@ -39,3 +39,10 @@ npm run typecheck && npm test && npm run build
 ```
 
 Sign-in on the local demo data: pick a name on the PIN screen (PINs are listed in `src/data/westeros/seed.ts`).
+
+## Interface (الواجهة)
+
+- `westeros-os/src/fx/` — visual components adapted to the Westeros identity (black and gold, Arabic RTL): opening
+  logo reveal (`Splash.tsx`), sales peak chart, glass section folders, liquid phone dock, and the menu showcase views.
+- `westeros-os/src/modules/showcase` — the full-screen menu page (`/showcase`): dishes, conveyor, flavours, drinks, offers.
+- `westeros-os/src/data/westeros/menuImages.ts` — item photos, loaded from the restaurant's current ordering page.

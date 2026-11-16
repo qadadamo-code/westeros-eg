@@ -104,7 +104,7 @@ export function AppShell() {
   }, [title, lang]);
 
   return (
-    <div className="flex min-h-dvh bg-bg">
+    <div className="sf-ambient flex min-h-dvh">
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:start-3 focus:top-3 focus:z-[100] focus:rounded-full focus:bg-surface focus:px-4 focus:py-2 focus:shadow-sf">
         {lang === "ar" ? "تخطّى للمحتوى" : "Skip to content"}
       </a>

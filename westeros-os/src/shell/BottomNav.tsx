@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
-import { motion } from "motion/react";
+import { matchPath, useLocation, useNavigate } from "react-router-dom";
 import { LayoutGrid } from "lucide-react";
 import { useT, type TKey } from "@/i18n/i18n";
-import { cn } from "@/lib/cn";
-import { Sheet, spring, useReduced } from "@/ui";
+import { LiquidNavbar } from "@/fx/LiquidNavbar";
+import { useTheme } from "@/theme/theme";
+import { Sheet } from "@/ui";
 import { NavBadge } from "./NavBadge";
 import { useNav } from "./nav";
 import { RestaurantSwitcher } from "./Switchers";
@@ -13,40 +13,42 @@ import { RestaurantSwitcher } from "./Switchers";
 export function BottomNav() {
   const { t, loc } = useT();
   const { mobile, grouped } = useNav();
-  const reduced = useReduced();
+  const theme = useTheme();
   const [more, setMore] = useState(false);
   const nav = useNavigate();
+  const { pathname } = useLocation();
+  // the drop rests on the open screen, or on "More" for a screen that is not on the bar
+  const at = mobile.findIndex((m) => matchPath({ path: `${m.nav!.path}/*` }, pathname) || (m.nav!.path === "/" && pathname === "/"));
+  const current = more || at < 0 ? mobile.length : at;
   return (
     <>
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden" aria-label={t("shell.menu")}>
-        <ul className="mx-auto flex max-w-lg">
-          {mobile.map((m) => {
-            const Icon = m.icon;
-            return (
-              <li key={m.id} className="flex-1">
-                <NavLink to={m.nav!.path} className={({ isActive }) => cn("relative flex h-16 flex-col items-center justify-center gap-1 text-[11.5px] font-semibold", isActive ? "text-primary" : "text-muted")}>
-                  {({ isActive }) => (
-                    <>
-                      {isActive ? <motion.span layoutId="bottom-active" className="absolute top-1.5 h-8 w-14 rounded-full bg-primary-soft" transition={reduced ? { duration: 0 } : spring.layout} /> : null}
-                      <span className="relative">
-                        <Icon className="size-[22px]" strokeWidth={isActive ? 2.3 : 1.9} aria-hidden />
-                        <NavBadge module={m} className="absolute -top-1.5 -end-3" />
-                      </span>
-                      <span className="relative max-w-full truncate px-1">{loc(m.title)}</span>
-                    </>
-                  )}
-                </NavLink>
-              </li>
-            );
-          })}
-          <li className="flex-1">
-            <button type="button" onClick={() => setMore(true)} className="flex h-16 w-full flex-col items-center justify-center gap-1 text-[11.5px] font-semibold text-muted">
-              <LayoutGrid className="size-[22px]" aria-hidden />
-              {t("shell.more")}
-            </button>
-          </li>
-        </ul>
-      </nav>
+      {/* the liquid dock: a pill of gold water whose drop runs to the screen you pick (src/fx/LiquidNavbar) */}
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-3 pb-[max(10px,env(safe-area-inset-bottom))] md:hidden">
+        <LiquidNavbar
+          className="wst-dock pointer-events-auto"
+          label={t("shell.menu")}
+          tone={theme.dark ? "dark" : "light"}
+          compact={false}
+          active={current}
+          onChange={(i) => (i < mobile.length ? nav(mobile[i].nav!.path) : setMore(true))}
+          items={[
+            ...mobile.map((m) => {
+              const Icon = m.icon;
+              return {
+                label: loc(m.title),
+                fx: "pop" as const,
+                icon: (
+                  <span className="relative">
+                    <Icon className="size-[21px]" aria-hidden />
+                    <NavBadge module={m} className="absolute -top-1.5 -end-3" />
+                  </span>
+                ),
+              };
+            }),
+            { label: t("shell.more"), fx: "spin" as const, icon: <LayoutGrid className="size-[21px]" aria-hidden /> },
+          ]}
+        />
+      </div>
       <Sheet open={more} onClose={() => setMore(false)} title={t("shell.more")}>
         <div className="grid gap-5 pb-2">
           <RestaurantSwitcher />

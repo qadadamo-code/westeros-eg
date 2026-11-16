@@ -100,6 +100,18 @@
   --color-info: var(--sf-info);
   --color-info-soft: var(--sf-info-soft);
   --color-sidebar: var(--sf-sidebar);
+  /* names the 21st.dev components expect (src/fx) */
+  --color-background: var(--sf-bg);
+  --color-foreground: var(--sf-ink);
+  --color-card: var(--sf-surface);
+  --color-card-foreground: var(--sf-ink);
+  --color-muted-foreground: var(--sf-muted);
+  --color-border: var(--sf-line);
+  --color-chart-1: #f8bb18;
+  --color-chart-2: #e5664f;
+  --color-chart-3: #4cc683;
+  --color-chart-4: #7db7e3;
+  --color-chart-5: #c08adf;
 
   --radius-sm: calc(var(--radius) - 6px);
   --radius-md: calc(var(--radius) - 3px);
@@ -131,6 +143,13 @@
 }
 
 @layer base {
+  /* the same names as real custom properties: the ported 21st.dev components read them with var() */
+  :root {
+    --color-background: var(--sf-bg); --color-foreground: var(--sf-ink); --color-card: var(--sf-surface); --color-card-foreground: var(--sf-ink);
+    --color-popover: var(--sf-surface); --color-popover-foreground: var(--sf-ink); --color-muted-foreground: var(--sf-muted); --color-border: var(--sf-line);
+    --color-input: var(--sf-line-strong); --color-secondary: var(--sf-surface-2); --color-secondary-foreground: var(--sf-ink);
+    --color-primary: var(--sf-primary); --color-primary-foreground: var(--sf-primary-ink);
+  }
   * { border-color: var(--sf-line); }
   html { -webkit-text-size-adjust: 100%; overflow-x: clip; -webkit-tap-highlight-color: transparent; }
   body {
@@ -188,3 +207,44 @@
     padding-bottom: calc(9.5rem + env(safe-area-inset-bottom));
   }
 }
+
+/* the phone dock (liquid navbar): icon over label, spread across the pill */
+.wst-dock.nimbus-nav { display: flex; width: min(100%, 460px); padding: 5px; }
+.wst-dock .nimbus-item { flex: 1 1 0; min-width: 0; flex-direction: column; gap: 4px; height: 54px; padding: 0 4px; font-size: 10.5px; }
+.wst-dock .nimbus-label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.3; }
+
+/* ── Glass workspace (after the 21st.dev "Adjustable glass dashboard"): a lit wall behind frosted panels ── */
+.sf-ambient { position: relative; isolation: isolate; }
+.sf-ambient::before {
+  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(46vmax 34vmax at 100% -6%, color-mix(in srgb, var(--sf-brass) 20%, transparent), transparent 70%),
+    radial-gradient(40vmax 30vmax at -8% 34%, color-mix(in srgb, var(--sf-brass) 9%, transparent), transparent 72%),
+    radial-gradient(52vmax 36vmax at 62% 112%, color-mix(in srgb, var(--sf-brass) 12%, transparent), transparent 70%),
+    var(--sf-bg);
+}
+.sf-ambient::after {
+  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: 0.5;
+  background-image: radial-gradient(color-mix(in srgb, var(--sf-ink) 7%, transparent) 1px, transparent 1.2px);
+  background-size: 22px 22px;
+  mask-image: linear-gradient(180deg, #000, transparent 70%);
+}
+.sf-glass {
+  background: color-mix(in srgb, var(--sf-surface) 66%, transparent);
+  -webkit-backdrop-filter: blur(22px) saturate(1.35);
+  backdrop-filter: blur(22px) saturate(1.35);
+  border: 1px solid color-mix(in srgb, var(--sf-ink) 9%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 16%, transparent), var(--sf-shadow);
+}
+/* every card: a lit top edge and a faint sheen, without a blur per card (lists hold dozens) */
+.sf-card {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--sf-surface) 92%, var(--sf-brass) 0%), var(--sf-surface)) padding-box;
+  background-color: color-mix(in srgb, var(--sf-surface) 88%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 9%, transparent), var(--sf-shadow-sm);
+}
+.sf-tile { position: relative; overflow: hidden; }
+.sf-tile::before {
+  content: ""; position: absolute; inset-inline-end: -30%; top: -60%; width: 80%; aspect-ratio: 1; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--sf-brass) 22%, transparent), transparent);
+}
+.sf-gold-text { background: linear-gradient(100deg, var(--sf-ink) 20%, var(--sf-brass-text) 60%, var(--sf-brass)); -webkit-background-clip: text; background-clip: text; color: transparent; }

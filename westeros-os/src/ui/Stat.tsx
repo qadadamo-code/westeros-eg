@@ -22,13 +22,13 @@ export function StatTile({ label, value, sub, icon, tone = "primary", spark, cla
       initial={reduced ? false : { opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: reduced ? 0 : index * 0.05, type: "spring", stiffness: 300, damping: 30 }}
-      className={cn("relative overflow-hidden rounded-[20px] border border-line bg-surface p-4 shadow-sf-sm sm:p-5", className)}
+      className={cn("sf-card sf-tile rounded-[22px] border border-line p-4 sm:p-5", className)}
     >
-      <div className="flex items-center gap-2.5">
+      <div className="relative flex items-center gap-2.5">
         {icon ? <span className={cn("grid size-9 shrink-0 place-items-center rounded-xl [&_svg]:size-[18px]", ICON_TONE[tone])}>{icon}</span> : null}
         <p className="min-w-0 truncate text-[13.5px] font-semibold text-muted">{label}</p>
       </div>
-      <div className="mt-3 truncate font-display text-[23px] font-semibold leading-none tracking-tight sm:text-[30px]">{value}</div>
+      <div className="relative mt-3 truncate font-display text-[23px] font-semibold leading-none tracking-tight sm:text-[30px]">{value}</div>
       {spark && spark.length > 1 ? <Sparkline values={spark} className="absolute bottom-0 end-0 h-12 w-1/2 opacity-50" /> : null}
       {sub ? <div className="relative mt-2 truncate text-[12.5px] text-muted">{sub}</div> : null}
     </motion.div>
