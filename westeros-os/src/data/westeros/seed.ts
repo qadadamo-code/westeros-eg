@@ -118,7 +118,11 @@ export function buildWesterosSeed(now: Date = new Date()): Seed {
   data.staffCompensation = WESTEROS_STAFF.filter((s) => s.role !== "owner").map((s): StaffCompensation => ({ ...base(`comp:${s.key}`), membershipId: staffId(s.key), monthlySalary: 0, hourlyRate: 0 }));
 
   /* ── structure kept from the base seed, with no transactions ── */
-  for (const c of ["zones", "floorDecor", "printers", "glAccounts", "costCentres", "cashAccounts", "storageLocations", "opsSettings", "loyaltyPrograms", "shiftTemplates", "deliveryZones"] as const) keep(c);
+  for (const c of ["zones", "floorDecor", "printers", "glAccounts", "cashAccounts", "storageLocations", "shiftTemplates", "deliveryZones"] as const) keep(c);
+  // names and phone numbers of the base seed do not belong to Westeros
+  data.costCentres = mine(demo.data.costCentres).map((x) => (x.code === "ZM" ? { ...x, name: L("فرع مدينة نصر", "Nasr City branch") } : x));
+  data.loyaltyPrograms = mine(demo.data.loyaltyPrograms).map((x) => ({ ...x, name: L("نادي وستروس", "Westeros Club") }));
+  data.opsSettings = mine(demo.data.opsSettings).map((x) => ({ ...x, hotlinePhone: "", whatsappPhone: "" }));
   data.tables = mine(demo.data.tables).map((t) => ({ ...t, code: t.code.replace("ZM", "WS"), status: "free" as const, statusSince: null }));
   const stationNames: Record<string, Localized> = { grill: L("الجريل", "Grill"), hot: L("القلاية والساخن", "Fryer & hot"), cold: L("البارد والسلطات", "Cold & salads"), pastry: L("الحلويات", "Desserts"), bar: L("البار", "Drinks bar") };
   data.kitchenStations = mine(demo.data.kitchenStations).map((s) => {

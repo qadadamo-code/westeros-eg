@@ -22,7 +22,7 @@ import { Badge, Button, Card, CardHeader, Input, Select, Switch, Textarea, useTo
 import { SettingsNav } from "../settings/SettingsNav";
 import { useMessagingSettings } from "./useMessaging";
 
-const WEBHOOK_URL = "https://sufra-planet-crm.vercel.app/api/whatsapp-webhook";
+const WEBHOOK_URL = "https://westeros-os-planet-crm.vercel.app/api/whatsapp-webhook";
 
 const MODES: { v: MessagingMode; icon: ReactNode; ar: string; en: string; dAr: string; dEn: string; tag?: { ar: string; en: string } }[] = [
   { v: "off", icon: <CircleOff />, ar: "مقفول", en: "Off", dAr: "مفيش رسايل للزباين خالص", dEn: "No customer messages at all" },

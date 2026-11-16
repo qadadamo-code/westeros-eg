@@ -1,4 +1,4 @@
-/** Sample check for live previews (invoice designer, tax settings). Prices from the demo menu. */
+/** Sample check for live previews (invoice designer, tax settings). Items and prices from the Westeros menu. */
 import { major } from "@/lib/money";
 import { priceItems } from "@/data/pricing";
 import { freezeBill } from "@/lib/receipt/bill";
@@ -12,10 +12,10 @@ const line = (ar: string, en: string, price: number, qty: number, station: strin
 });
 
 export const SAMPLE_ITEMS: OrderItem[] = [
-  line("كفتة مشوية", "Grilled kofta", 345, 2, "grill", [["نص كيلو", "½ kg", 330], ["بطاطس محمرة", "Fries", 0]]),
-  line("حمص", "Hummus", 95, 1, "cold"),
-  line("ملوخية بالفراخ", "Molokhia with chicken", 340, 1, "hot", [], "الطشة زيادة"),
-  line("ليمون بالنعناع", "Lemon & mint", 75, 3, "bar", [["كبير", "Large", 30]]),
+  line("كلاسيك بيف برجر", "Classic beef burger", 195, 2, "grill"),
+  line("تشيز فرايز", "Cheese fries", 85, 1, "hot"),
+  line("كولونيل", "Colonel", 185, 1, "hot", [], "بدون مخلل"),
+  line("في7 كولا دايت", "V7 Cola diet", 30, 3, "bar"),
 ];
 
 export function sampleBill(tax: TaxSettings, mode: OrderMode = "dine_in", deliveryFee = 0) {

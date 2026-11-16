@@ -81,7 +81,7 @@ function Overview() {
   const recent = reds.filter((r) => r.at >= since);
   const camp30 = campaigns.filter((c) => (c.sentAt ?? "") >= since);
   const rating = feedback.length ? feedback.reduce((a, f) => a + f.stars, 0) / feedback.length : 0;
-  const slug = restaurant?.slug ?? "sufra-zamalek";
+  const slug = restaurant?.slug ?? "westeros";
   return (
     <div className="grid gap-5">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

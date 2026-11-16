@@ -245,7 +245,7 @@ function DevicesSection() {
   const devices = useLive("attendanceDevices").data;
   const [open, setOpen] = useState(false);
   const [secret, setSecret] = useState<{ serial: string; secret: string } | null>(null);
-  const server = typeof location !== "undefined" ? location.host : "sufra-planet-crm.vercel.app";
+  const server = typeof location !== "undefined" ? location.host : "westeros-os-planet-crm.vercel.app";
   return (
     <Section title={L("أجهزة البصمة", "Fingerprint terminals")} icon={<Router />} subtitle={L("ZKTeco (ADMS) بيبعت البصمات أول بأول", "ZKTeco (ADMS) pushes punches in real time")} action={<Button size="sm" icon={<Plus />} onClick={() => setOpen(true)}>{L("جهاز", "Terminal")}</Button>}>
       {devices.length ? (

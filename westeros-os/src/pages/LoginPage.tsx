@@ -172,9 +172,9 @@ function TicketPreview() {
   const { L } = useT();
   const reduced = useReduced();
   const lines = [
-    [L("٢× كفتة مشوية", "2× Grilled kofta"), L("جاهز", "Ready"), "ok"],
-    [L("١× ملوخية بالفراخ", "1× Molokhia"), L("بيتعمل", "Preparing"), "warn"],
-    [L("٣× ليمون نعناع", "3× Lemon mint"), L("اتقدّم", "Served"), "muted"],
+    [L("٢× ستارك بيف برجر", "2× Stark beef burger"), L("جاهز", "Ready"), "ok"],
+    [L("١× ساندويش كولونيل", "1× Colonel sandwich"), L("بيتعمل", "Preparing"), "warn"],
+    [L("٣× تشيز فرايز", "3× Cheese fries"), L("اتقدّم", "Served"), "muted"],
   ] as const;
   return (
     <motion.div
