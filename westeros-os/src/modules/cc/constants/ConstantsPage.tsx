@@ -36,7 +36,8 @@ export default function ConstantsPage() {
   const meatCat = lists.meatCategory ?? lists.rawCategories.find((c) => c.includes("لحوم")) ?? "";
   const meatOptions = (chosen: string | null) => [{ value: "", label: "—" }, ...cc.raws.filter((i) => i.active && (!meatCat || specOf(i, lists).category === meatCat || i.id === chosen)).map((i) => ({ value: i.id, label: `${i.name.ar} · ${i.sku}` }))];
   // دجاج الفرم: the meat category's raw materials, plus the manufactured products of the chicken category
-  const chickenCats = new Set(prod.categories.filter((c) => !c.burger && (c.id === "chicken" || c.name.ar.includes("دجاج"))).map((c) => c.id));
+  const chickenCat = lists.chickenProductCategory ?? prod.categories.find((c) => !c.burger && (c.id === "chicken" || c.name.ar.includes("دجاج")))?.id ?? "";
+  const chickenCats = new Set(chickenCat ? [chickenCat] : []);
   const mincedOptions = [...meatOptions(s.mincedChickenItemId), ...prod.products.filter((x) => x.active && chickenCats.has(x.category) && cc.itemById.has(x.stockItemId)).map((x) => ({ value: x.stockItemId, label: `${x.name.ar} · ${x.code} (منتج مصنع)` }))];
   const pick = (id: string) => {
     if (id && cc.itemById.get(id)?.mfg === false) void db.update("stockItems", id, { mfg: true });
@@ -111,8 +112,9 @@ export default function ConstantsPage() {
         <Card className="lg:col-span-2">
           <CardHeader title="تعريف اللحوم" subtitle="نوع قطعية اللحم، ربط بمادة خام محددة، وزن الدهن"
             action={<Button size="sm" variant="outline" icon={<Plus />} onClick={() => patch({ meatTypes: [...s.meatTypes, { id: uuid(), name: { ar: "قطعية جديدة", en: "New cut" }, stockItemId: null, fatGramsPerKg: 200 }] })}>قطعية جديدة</Button>} />
-          <div className="px-5 pb-3 sm:max-w-sm">
+          <div className="grid gap-3 px-5 pb-3 sm:grid-cols-2">
             <Select label="فئة الخام للحوم" hint="قوائم اللحوم والدهن ودجاج الفرم تعرض خامات هذه الفئة فقط" value={meatCat} onChange={(e) => setLists({ meatCategory: e.target.value })} options={[{ value: "", label: "كل الفئات" }, ...lists.rawCategories.map((c) => ({ value: c, label: c }))]} />
+            <Select label="فئة المصنعات للدجاج" hint="منتجات هذه الفئة المصنعة تظهر في قائمة دجاج الفرم" value={chickenCat} onChange={(e) => setLists({ chickenProductCategory: e.target.value })} options={[{ value: "", label: "بدون" }, ...cats.map((c) => ({ value: c.id, label: c.name.ar }))]} />
           </div>
           <ul className="grid gap-2 px-5 pb-3">
             {s.meatTypes.map((m) => (
