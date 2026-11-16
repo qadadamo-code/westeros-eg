@@ -23,6 +23,14 @@ psql "$DATABASE_URL" -f supabase/seed.sql      # or: supabase db reset (local) w
 The seed creates four email users (`owner@ / admin@ / manager@ / accountant@sufra.demo`, password `sufra2026`) directly in
 `auth.users`, plus PIN hashes (bcrypt) for all twelve staff — PINs in `../README.md`. Don't load it into a production project.
 
+## Automatic (Westeros OS)
+
+`.github/workflows/database.yml` runs `supabase/apply.sh` on every push that touches `supabase/migrations/`: each new
+file is applied once, in order, in its own transaction, and recorded in `westeros_ops.applied`. To change the schema,
+add the next numbered file; never edit a file that was already applied. Repository secrets: `SUPABASE_DB_URL` (the
+project's Session pooler connection string) and, optionally, `WESTEROS_PASSWORD` (loads the restaurant's data once and
+becomes the password of the four email logins).
+
 ## Model
 
 - **Money** — every money column is `bigint` in units of **0.00001 of the currency** (EGP: 1 EGP = 100 000 units, 1 piastre = 1 000).

@@ -1,0 +1,54 @@
+name: Database
+
+# Applies new files in westeros-os/supabase/migrations to the Westeros OS Supabase project.
+# Repository secrets: SUPABASE_DB_URL (required), WESTEROS_PASSWORD (optional, loads the restaurant's data once).
+
+on:
+  push:
+    branches: [main, claude/project-thread-erj3kt]
+    paths:
+      - westeros-os/supabase/migrations/**
+      - westeros-os/supabase/apply.sh
+      - .github/workflows/database.yml
+  workflow_dispatch:
+
+concurrency:
+  group: database
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      WESTEROS_PASSWORD: ${{ secrets.WESTEROS_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check secrets
+        id: ready
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "::notice::SUPABASE_DB_URL is not set yet. Nothing was applied."
+          else
+            echo "db=true" >> "$GITHUB_OUTPUT"
+            if [ -n "$WESTEROS_PASSWORD" ]; then echo "seed=true" >> "$GITHUB_OUTPUT"; fi
+          fi
+      - uses: actions/setup-node@v4
+        if: steps.ready.outputs.seed == 'true'
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: westeros-os/package-lock.json
+      - name: Build the restaurant data
+        if: steps.ready.outputs.seed == 'true'
+        working-directory: westeros-os
+        run: |
+          npm ci --ignore-scripts
+          npx tsx scripts/gen-westeros-seed.ts "$RUNNER_TEMP/seed.sql"
+          echo "SEED_FILE=$RUNNER_TEMP/seed.sql" >> "$GITHUB_ENV"
+      - name: Apply migrations
+        if: steps.ready.outputs.db == 'true'
+        run: westeros-os/supabase/apply.sh
