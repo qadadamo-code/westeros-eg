@@ -27,8 +27,13 @@ export default function ConstantsPage() {
   const usedCats = new Set(prod.products.map((x) => x.category));
   const usedSale = new Set(menuItems.map((i) => i.categoryId));
   const setMeat = (id: string, p: Partial<MfgMeatType>) => patch({ meatTypes: s.meatTypes.map((m) => (m.id === id ? { ...m, ...p } : m)) });
-  const rawOptions = [{ value: "", label: "—" }, ...prod.items.filter((i) => i.active && i.kind === "raw").map((i) => ({ value: i.id, label: `${i.name.ar} · ${i.sku}` }))];
-  const anyOptions = [{ value: "", label: "—" }, ...prod.items.filter((i) => i.active).map((i) => ({ value: i.id, label: `${i.name.ar} · ${i.sku}` }))];
+  // every raw material of the list is offered, also the warehouse-only ones: choosing one here brings it into manufacturing
+  const rawOptions = [{ value: "", label: "—" }, ...cc.raws.filter((i) => i.active).map((i) => ({ value: i.id, label: `${i.name.ar} · ${i.sku}` }))];
+  const anyOptions = [...rawOptions, ...cc.made.filter((i) => i.active).map((i) => ({ value: i.id, label: `${i.name.ar} · ${i.sku}` }))];
+  const pick = (id: string) => {
+    if (id && cc.itemById.get(id)?.mfg === false) void db.update("stockItems", id, { mfg: true });
+    return id || null;
+  };
   const kitchen = prod.staff.filter((m) => m.active && (m.role === "chef" || m.role === "kitchen" || s.chefCodes[m.id]));
   return (
     <div className="grid gap-5">
@@ -102,7 +107,7 @@ export default function ConstantsPage() {
             {s.meatTypes.map((m) => (
               <li key={m.id} className="grid items-end gap-2 rounded-xl border border-line p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_170px_auto]">
                 <Input label="نوع قطعية اللحم" defaultValue={m.name.ar} onBlur={(e) => e.target.value.trim() && e.target.value !== m.name.ar && setMeat(m.id, { name: { ar: e.target.value.trim(), en: e.target.value.trim() } })} />
-                <Select label="مادة الخام" value={m.stockItemId ?? ""} onChange={(e) => setMeat(m.id, { stockItemId: e.target.value || null })} options={rawOptions} />
+                <Select label="مادة الخام" value={m.stockItemId ?? ""} onChange={(e) => setMeat(m.id, { stockItemId: pick(e.target.value) })} options={rawOptions} />
                 <Num label="وزن الدهن لكل كيلو لحم" suffix="جم" value={m.fatGramsPerKg} onChange={(n) => setMeat(m.id, { fatGramsPerKg: Math.round(n) })} />
                 <IconButton label="حذف" onClick={() => patch({ meatTypes: s.meatTypes.filter((x) => x.id !== m.id) })}><Trash2 /></IconButton>
               </li>
@@ -110,9 +115,9 @@ export default function ConstantsPage() {
             {s.meatTypes.length ? null : <li className="text-[14px] text-muted">أضف أول قطعية لحم.</li>}
           </ul>
           <div className="grid gap-3 px-5 pb-5 sm:grid-cols-3">
-            <Select label="مادة خام الدهن" value={s.rawFatItemId ?? ""} onChange={(e) => patch({ rawFatItemId: e.target.value || null })} options={rawOptions} />
-            <Select label="دجاج الفرم لبرجر الدجاج" value={s.mincedChickenItemId ?? ""} onChange={(e) => patch({ mincedChickenItemId: e.target.value || null })} options={anyOptions} />
-            <Select label="مادة الخام الواحدة (الدجاج)" value={s.chickenItemId ?? ""} onChange={(e) => patch({ chickenItemId: e.target.value || null })} options={rawOptions} />
+            <Select label="مادة خام الدهن" value={s.rawFatItemId ?? ""} onChange={(e) => patch({ rawFatItemId: pick(e.target.value) })} options={rawOptions} />
+            <Select label="دجاج الفرم لبرجر الدجاج" value={s.mincedChickenItemId ?? ""} onChange={(e) => patch({ mincedChickenItemId: pick(e.target.value) })} options={anyOptions} />
+            <Select label="مادة الخام الواحدة (الدجاج)" value={s.chickenItemId ?? ""} onChange={(e) => patch({ chickenItemId: pick(e.target.value) })} options={rawOptions} />
           </div>
         </Card>
 
