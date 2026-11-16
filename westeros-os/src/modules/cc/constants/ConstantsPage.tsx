@@ -35,6 +35,9 @@ export default function ConstantsPage() {
   // تعريف اللحوم: only the raw materials of the meat category
   const meatCat = lists.meatCategory ?? lists.rawCategories.find((c) => c.includes("لحوم")) ?? "";
   const meatOptions = (chosen: string | null) => [{ value: "", label: "—" }, ...cc.raws.filter((i) => i.active && (!meatCat || specOf(i, lists).category === meatCat || i.id === chosen)).map((i) => ({ value: i.id, label: `${i.name.ar} · ${i.sku}` }))];
+  // دجاج الفرم: the meat category's raw materials, plus the manufactured products of the chicken category
+  const chickenCats = new Set(prod.categories.filter((c) => !c.burger && (c.id === "chicken" || c.name.ar.includes("دجاج"))).map((c) => c.id));
+  const mincedOptions = [...meatOptions(s.mincedChickenItemId), ...prod.products.filter((x) => x.active && chickenCats.has(x.category) && cc.itemById.has(x.stockItemId)).map((x) => ({ value: x.stockItemId, label: `${x.name.ar} · ${x.code} (منتج مصنع)` }))];
   const pick = (id: string) => {
     if (id && cc.itemById.get(id)?.mfg === false) void db.update("stockItems", id, { mfg: true });
     return id || null;
@@ -124,7 +127,7 @@ export default function ConstantsPage() {
           </ul>
           <div className="grid gap-3 px-5 pb-5 sm:grid-cols-3">
             <Select label="مادة خام الدهن" value={s.rawFatItemId ?? ""} onChange={(e) => patch({ rawFatItemId: pick(e.target.value) })} options={meatOptions(s.rawFatItemId)} />
-            <Select label="دجاج الفرم لبرجر الدجاج" value={s.mincedChickenItemId ?? ""} onChange={(e) => patch({ mincedChickenItemId: pick(e.target.value) })} options={meatOptions(s.mincedChickenItemId)} />
+            <Select label="دجاج الفرم لبرجر الدجاج" value={s.mincedChickenItemId ?? ""} onChange={(e) => patch({ mincedChickenItemId: pick(e.target.value) })} options={mincedOptions} hint="خامات فئة اللحوم ومنتجات فئة الدجاج المصنعة" />
             <Select label="مادة الخام الواحدة (الدجاج)" value={s.chickenItemId ?? ""} onChange={(e) => patch({ chickenItemId: pick(e.target.value) })} options={rawOptions} />
           </div>
         </Card>
