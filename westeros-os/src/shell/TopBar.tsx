@@ -4,6 +4,7 @@ import { useTheme } from "@/theme/theme";
 import { IconButton, Kbd, MOD_LABEL, useCommandPalette } from "@/ui";
 import { Mark } from "./Logo";
 import { NotificationsBell } from "./Notifications";
+import { FULL_SYSTEM } from "@/costControl";
 import { SyncIndicator } from "./SyncIndicator";
 import { UserMenu } from "./UserMenu";
 import { InstallApp } from "./InstallApp";
@@ -56,7 +57,7 @@ export function TopBar({ title }: { title?: string }) {
             {theme.dark ? <Sun /> : <Moon />}
           </IconButton>
           <InstallApp />
-          <NotificationsBell />
+          {FULL_SYSTEM && <NotificationsBell />}
           <div className="ms-1 md:hidden">
             <UserMenu />
           </div>

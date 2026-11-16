@@ -20,7 +20,7 @@ import type {
   Advance, AttendanceDevice, AttendancePunch, LeaveBalance, LeaveRequest, PayrollAdjustment, PayrollRun, Payslip, RotaShift, ShiftSwap, ShiftTemplate, StaffProfile,
 } from "./hrTypes";
 import type {
-  AvailabilityWindow, ComboComponent, GoodsReceipt, InventorySettings, PurchaseOrder, Recipe, SalesChannel, StockBatch, StockCount, StockItem, StockLevel, StockMove, StockTransfer,
+  AvailabilityWindow, ComboComponent, GoodsReceipt, InventorySettings, PurchaseOrder, Recipe, SalesChannel, StockBatch, StockCount, StockItem, StockLevel, StockMove, StockRequest, StockTransfer,
   StorageLocation, Supplier, SupplierInvoice, SupplierItem, SupplierPayment,
 } from "./inventoryTypes";
 import type { Camera, PeopleCount, RadioClip, SupportTicket, OpsSettings, OpsAck } from "@/modules/ops/types";
@@ -1101,6 +1101,8 @@ export interface Collections {
   /* Shift checklists (0016_checklists.sql) */
   checklistTemplates: ChecklistTemplate;
   checklistRuns: ChecklistRun;
+  /* Cost Control requests (0022_cost_control.sql) */
+  stockRequests: StockRequest;
 }
 export type CollectionName = keyof Collections;
 export type RowOf<C extends CollectionName> = Collections[C];
@@ -1208,5 +1210,6 @@ export const TABLE_NAMES: { [C in CollectionName]: string } = {
   mfgSettings: "mfg_settings",
   checklistTemplates: "checklist_templates",
   checklistRuns: "checklist_runs",
+  stockRequests: "stock_requests",
 };
 export const COLLECTIONS = Object.keys(TABLE_NAMES) as CollectionName[];

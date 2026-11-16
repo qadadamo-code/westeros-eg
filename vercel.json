@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "cd westeros-os && npm ci",
-  "buildCommand": "cd westeros-os && npm run build && rm -rf ../site && mkdir -p ../site && cp -r dist ../site/app",
+  "buildCommand": "cd westeros-os && npm run build && rm -rf ../site && mkdir -p ../site && cp -r dist ../site/app && VITE_FULL=1 npx vite build --outDir dist-full && cp -r dist-full ../site/full",
   "outputDirectory": "site",
   "rewrites": [
     {
@@ -15,6 +15,10 @@
     {
       "source": "/app/((?!assets/).*)",
       "destination": "/app/index.html"
+    },
+    {
+      "source": "/full/((?!assets/).*)",
+      "destination": "/full/index.html"
     }
   ],
   "headers": [
@@ -46,6 +50,15 @@
         {
           "key": "Content-Type",
           "value": "application/manifest+json"
+        }
+      ]
+    },
+    {
+      "source": "/full/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
         }
       ]
     }

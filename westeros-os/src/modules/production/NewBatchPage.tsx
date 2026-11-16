@@ -19,6 +19,7 @@ import { LabelDialog } from "./LabelDialog";
 import { BatchError, saveBatch } from "./ops";
 import { ERROR_TEXT, LinesEditor, Num, ResultPanel } from "./ui";
 import { useProduction, type Prod } from "./useProduction";
+import { COST_CONTROL_ONLY } from "@/costControl";
 
 type Tab = MfgMethod;
 const clean = (l: MfgRecipeLine[]) => l.filter((x) => x.qty > 0).map((x) => ({ itemId: x.itemId, qty: Math.round(x.qty * 10_000) / 10_000 }));
@@ -52,10 +53,10 @@ function Forms({ prod, initial }: { prod: Prod; initial: MfgProduct | undefined 
         value={tab}
         onChange={setTab}
         options={[
-          { value: "weight", label: L("بالوزن", "By weight"), icon: <Scale /> },
-          { value: "portion", label: L("بالحصة", "By portion"), icon: <Shapes /> },
-          { value: "chicken", label: L("من مادة خام واحدة", "One raw material"), icon: <Layers /> },
-          { value: "burger", label: L("البرجر", "Burger"), icon: <Beef /> },
+          { value: "weight", label: COST_CONTROL_ONLY ? "1. يخزن بالوزن" : L("بالوزن", "By weight"), icon: <Scale /> },
+          { value: "portion", label: COST_CONTROL_ONLY ? "2. يخزن بحصة محددة (بورشن)" : L("بالحصة", "By portion"), icon: <Shapes /> },
+          { value: "chicken", label: COST_CONTROL_ONLY ? "3. من مادة خام واحدة" : L("من مادة خام واحدة", "One raw material"), icon: <Layers /> },
+          { value: "burger", label: COST_CONTROL_ONLY ? "4. البرجر (لحم / دجاج)" : L("البرجر", "Burger"), icon: <Beef /> },
         ]}
       />
       {tab === "weight" || tab === "portion" ? (
@@ -126,7 +127,7 @@ function SaveBar({ prod, draft, ready, onDone, afterSave }: { prod: Prod; draft:
         justSaved
         onClose={() => {
           setSaved(null);
-          toast({ tone: "success", title: L("التشغيلة في السجل والمخزن اتحدث", "Batch logged and stock updated"), action: { label: L("فتح السجل", "Open log"), onClick: () => navigate("/production/batches") } });
+          toast({ tone: "success", title: L("التشغيلة في السجل والمخزن اتحدث", "Batch logged and stock updated"), action: { label: L("فتح السجل", "Open log"), onClick: () => navigate(COST_CONTROL_ONLY ? "/manufacturing/log" : "/production/batches") } });
           onDone();
         }}
       />

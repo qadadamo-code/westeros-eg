@@ -20,11 +20,16 @@
 import type { ModuleDef } from "./types";
 import { ROLE_HOME, type Role } from "@/auth/roles";
 import { can } from "@/auth/permissions";
+import { COST_CONTROL_ONLY } from "@/costControl";
 
 // ops/* holds several modules (cameras, radio, support, alerts) under one folder
-const found = import.meta.glob<{ default: ModuleDef }>(["./*/module.tsx", "./ops/*/module.tsx"], { eager: true });
+const found = import.meta.glob<{ default: ModuleDef }>(["./*/module.tsx", "./ops/*/module.tsx", "./cc/*/module.tsx"], { eager: true });
+
+// the Cost Control version shows only its own modules; the full system (the backup) shows everything else
+const inVersion = (file: string) => file.startsWith("./cc/") === COST_CONTROL_ONLY;
 
 export const modules: ModuleDef[] = Object.entries(found)
+  .filter(([file]) => inVersion(file))
   .map(([file, m]) => {
     if (!m.default?.id) throw new Error(`${file} must default-export defineModule({...})`);
     return m.default;
@@ -53,7 +58,7 @@ export function homeFor(role: Role | null): string {
   const fallback = ROLE_HOME[role];
   const target = modules.find((m) => m.nav?.path === fallback);
   if (target && (!target.permission || can(role, target.permission))) return fallback;
-  return visibleModules(role)[0]?.nav?.path ?? "/overview";
+  return visibleModules(role)[0]?.nav?.path ?? (COST_CONTROL_ONLY ? "/summary" : "/overview");
 }
 
 export type { ModuleDef };

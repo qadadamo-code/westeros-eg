@@ -75,6 +75,49 @@ export interface StockItem extends Row {
   marketKey?: string | null;
   /** false = warehouse and purchasing only: hidden from recipes and from every manufacturing screen */
   mfg?: boolean;
+  /** raw material card as the Cost Control document defines it (3.1) */
+  spec?: RawSpec | null;
+}
+
+/** مواد الخام (Cost Control 3.1): what the user types; packs / baseUnit / lastCost are derived from it. */
+export interface RawSpec {
+  image: string | null;
+  /** فئة الخام, from the constants */
+  category: string;
+  /** وحدة التخزين, from the constants (كيلو، كرتونة …) */
+  storageUnit: string;
+  /** وحدة التصنيع, from the constants (كيلو، جرام، لتر، قطعة) */
+  mfgUnit: string;
+  /** الكمية في وحدة التخزين: manufacturing units in one storage unit */
+  perStorage: number;
+  /** اخر سعر شراء, for one storage unit */
+  lastPrice: Units;
+  lastPurchaseDate: string | null;
+  expiryDate: string | null;
+}
+
+/** طلب شراء / طلب توريد للفرع (Cost Control 2.4, 2.5). */
+export type StockRequestStatus = "in_progress" | "done" | "rejected" | "postponed";
+export interface StockRequestLine {
+  itemId: string;
+  name: Loc;
+  /** in the unit shown on the request (storage unit for raw materials, kilo or piece for products) */
+  qty: number;
+  unit: string;
+}
+export interface StockRequest extends Row {
+  kind: "purchase" | "supply";
+  number: number;
+  at: string;
+  /** موعد التوريد "YYYY-MM-DD" */
+  dueDate: string | null;
+  /** supply requests: the branch warehouse that asks */
+  branchLocationId: string | null;
+  lines: StockRequestLine[];
+  keeperId: string | null;
+  keeperName: string;
+  status: StockRequestStatus;
+  note: string;
 }
 
 export type LocationKind = "store" | "kitchen" | "bar" | "fridge" | "freezer" | "central";
@@ -84,6 +127,14 @@ export interface StorageLocation extends Row {
   kind: LocationKind;
   sort: number;
   active: boolean;
+  /* المخازن (Cost Control 2.1) — optional so older rows stay valid */
+  code?: number | null;
+  address?: string;
+  mapUrl?: string;
+  /** نوع المخزن: id of a warehouse type from the constants */
+  type?: string | null;
+  /** امين المخزن: membership id */
+  keeperId?: string | null;
 }
 
 /** On hand per item per location. id = stable per (item, location) — see levelId(). */

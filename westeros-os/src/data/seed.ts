@@ -589,7 +589,7 @@ export function buildSeed(now: Date = new Date()): Seed {
       ...ops.audit,
     ],
     shifts: [], cashMovements: [], receipts: [],
-    mfgProducts: [], mfgBatches: [], mfgSettings: [], checklistTemplates: [], checklistRuns: [],
+    mfgProducts: [], mfgBatches: [], mfgSettings: [], checklistTemplates: [], checklistRuns: [], stockRequests: [],
     zatcaEgsUnits: [], zatcaInvoices: [],
     ...demoAccountingRows({ restaurantId: R, branchId: B, now, id, staffId: S, staffCompensation }),
     ...delivery,

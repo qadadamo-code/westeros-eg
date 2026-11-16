@@ -90,6 +90,12 @@ export interface MfgProduct extends Row {
   packaging: MfgRecipeLine[];
   /** the stock item this product is held as (kind "prep") */
   stockItemId: string;
+  /* Cost Control 3.2 — optional so older rows stay valid */
+  imageUrl?: string | null;
+  /** وحدة التصنيع, from the constants */
+  mfgUnit?: string;
+  /** كمية وحدة التخزين: how much of the product one storage unit holds */
+  storageQty?: number | null;
   active: boolean;
   sort: number;
 }
@@ -206,6 +212,24 @@ export interface MfgSettings extends Row {
   mincedChickenItemId: string | null;
   /** where finished products are stored */
   productLocationId: string | null;
+  /** the remaining constants of the Cost Control document (section 4) */
+  lists?: MfgLists | null;
+}
+
+export interface MfgUnitDef { name: string; base: "g" | "ml" | "pc"; factor: number }
+export interface MfgLists {
+  /** وحدة التخزين لمواد الخام */
+  storageUnits: string[];
+  /** وحدة التصنيع لمواد الخام */
+  mfgUnits: MfgUnitDef[];
+  /** فئات مواد الخام */
+  rawCategories: string[];
+  /** أنواع المخازن */
+  warehouseTypes: { id: string; name: string; holds: "raw" | "products" | "branch" }[];
+  /** أنواع البرجر */
+  burgerTypes: { id: "beef" | "chicken"; name: string }[];
+  /** اسماء الوصفات */
+  recipeNames: { main: string; sub: string; marinade: string };
 }
 
 /* ───────── قوائم فتح وقفل الوردية (0016_checklists.sql; src/modules/checklists) ───────── */

@@ -9,7 +9,8 @@ const root = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   // Served under the existing Vercel site at /app/ (see README → Deploy).
-  base: "/app/",
+  // The full system (the backup version) is built a second time with VITE_FULL=1 and served at /full/.
+  base: process.env.VITE_FULL === "1" ? "/full/" : "/app/",
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
@@ -22,6 +23,8 @@ export default defineConfig({
   test: {
     include: ["src/**/*.test.{ts,tsx}"],
     environment: "node",
+    // the test suite covers the full system; the Cost Control version has its own tests under src/modules/cc
+    env: { VITE_FULL: "1" },
     setupFiles: ["src/test/setup.ts"],
     // the demo seed (3 months of books, inventory moves, HR punches) takes a few seconds to write into fake-indexeddb
     testTimeout: 60_000,

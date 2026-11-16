@@ -29,7 +29,7 @@ export function initPwa() {
     deferred = null;
     emit();
   });
-  if ("serviceWorker" in navigator && import.meta.env.PROD) {
+  if ("serviceWorker" in navigator && import.meta.env.PROD && import.meta.env.BASE_URL === "/app/") {
     window.addEventListener("load", () => {
       navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`, { scope: import.meta.env.BASE_URL }).catch(() => {});
     });
