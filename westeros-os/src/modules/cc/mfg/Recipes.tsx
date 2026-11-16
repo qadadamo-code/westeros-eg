@@ -108,7 +108,7 @@ function RecipeDialog({ product, cc, readOnly, onClose }: { product: MfgProduct 
               <Info k="طريقة التصنيع" v={methodLabel(p)} />
             </div>
             <LinesEditor readOnly={readOnly} title="المكونات" hint={per} lines={lines} onChange={setLines} items={recipeItems(prod, type, p.stockItemId)} itemById={prod.itemById} unitCost={prod.unitCost} />
-            <LinesEditor readOnly={readOnly} title="باكيج التخزين" hint="من خامات فئة التغليف. يدخل في التكلفة فقط ولا يدخل في وزن المنتج" lines={packaging} onChange={setPackaging} items={packagingItems(prod, p.stockItemId)} itemById={prod.itemById} unitCost={prod.unitCost} />
+            <LinesEditor readOnly={readOnly} title="باكيج التخزين" hint={`من خامات فئة التغليف. ${p.method === "portion" ? "العيارات لوجبة واحدة" : "العيارات لكل كيلو صافي"}. يدخل في التكلفة فقط`} lines={packaging} onChange={setPackaging} items={packagingItems(prod, p.stockItemId)} itemById={prod.itemById} unitCost={prod.unitCost} />
           </>
         ) : null}
       </fieldset>
