@@ -1,6 +1,6 @@
 /** 5.2 الوصفات: every defined recipe in one list; a recipe is defined for a product chosen from the manufactured products. */
 import { useMemo, useState } from "react";
-import { BookOpenCheck, Plus, Search } from "lucide-react";
+import { BookOpenCheck, Pencil, Plus, Search } from "lucide-react";
 import { useSession } from "@/auth/session";
 import { useDb } from "@/data/hooks";
 import type { MfgProduct, MfgRecipeLine } from "@/data/types";
@@ -33,6 +33,9 @@ export default function Recipes() {
     { key: "cat", header: "فئة المنتج", hideOnMobile: true, cell: (p) => categoryName(prod.categories, p.category).ar },
     { key: "type", header: "نوع الوصفة", cell: (p) => <Badge tone={p.recipeType === "main" ? "primary" : "brass"} size="sm">{names[p.recipeType]}</Badge> },
     { key: "n", header: "المكونات", align: "end", cell: (p) => <span className="num">{p.lines.length}</span> },
+    ...(manage
+      ? [{ key: "edit", header: "", align: "end" as const, cell: (p: MfgProduct) => <Button size="sm" variant="outline" icon={<Pencil className="size-4" />} onClick={(e) => { e.stopPropagation(); setOpen(p); }}>تعديل</Button> }]
+      : []),
   ];
   return (
     <div className="grid gap-4">
@@ -87,7 +90,7 @@ function RecipeDialog({ product, cc, readOnly, onClose }: { product: MfgProduct 
     }
   };
   return (
-    <Dialog open onClose={onClose} size="xl" title={product ? `وصفة ${product.name.ar}` : "تعريف وصفة"}
+    <Dialog open onClose={onClose} size="xl" title={product ? (readOnly ? `وصفة ${product.name.ar}` : `تعديل وصفة ${product.name.ar}`) : "تعريف وصفة"}
       footer={<div className="flex justify-end gap-2"><Button variant="ghost" onClick={onClose}>{readOnly ? "إغلاق" : "إلغاء"}</Button>{readOnly ? null : <Button loading={busy} disabled={!p || !clean(lines).length} onClick={save}>حفظ</Button>}</div>}>
       <fieldset disabled={readOnly} className="grid gap-4">
         <div className="grid gap-3 sm:grid-cols-3">
