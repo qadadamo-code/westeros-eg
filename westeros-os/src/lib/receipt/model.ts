@@ -2,6 +2,7 @@
  * Receipt model: everything a printed receipt / invoice shows, computed once from a frozen bill and the restaurant's
  * settings. The renderer (ReceiptView) only lays it out, so 58 mm, 80 mm and A4 always say the same thing.
  */
+import { BRAND_LOGO } from "./brandLogo";
 import type { Currency, InvoiceDesign, InvoiceTemplate, Localized, OrderMode, PaymentMethod, ReceiptBill, TaxSettings, Units } from "@/data/types";
 import { resolveDesign } from "./design";
 
@@ -185,7 +186,7 @@ export function buildReceiptModel(src: ReceiptSource): ReceiptModel {
     brand: {
       name: src.restaurant.name,
       header: src.invoice.header,
-      logo: src.invoice.showLogo ? design.logoDataUrl : null,
+      logo: src.invoice.showLogo ? (design.logoDataUrl ?? BRAND_LOGO) : null,
       branch: f.branch && src.branch ? src.branch.name : null,
       address: f.address && src.branch ? src.branch.address : null,
       phone: f.phone ? (src.branch?.phone ?? src.restaurant.phone) : null,

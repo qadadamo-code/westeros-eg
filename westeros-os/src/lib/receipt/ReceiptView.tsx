@@ -25,7 +25,7 @@ const CSS = `
 .sfr .row>:first-child{min-width:0}
 .sfr .brand{font-weight:700;font-size:1.32em;line-height:1.2}
 .sfr .title{margin:2mm 0 1mm;padding:1mm 0;border-top:1px solid #000;border-bottom:1px solid #000;font-weight:700;text-align:center}
-.sfr .logo{display:block;margin:0 auto 1.5mm;max-height:18mm;max-width:70%;object-fit:contain;filter:grayscale(1) contrast(1.2)}
+.sfr .logo{display:block;margin:0 auto 2mm;height:24mm;max-width:70%;object-fit:contain;filter:grayscale(1) contrast(1.2)}
 .sfr .item{margin:0 0 1.4mm}
 .sfr .item .nm{font-weight:600}
 .sfr .item .sub{padding-inline-start:3mm;font-size:.88em;color:#222}
@@ -80,7 +80,8 @@ export function ReceiptView({ model, className, style }: { model: ReceiptModel; 
   const a4 = design.paper === "a4";
   const width = PAPER_MM[design.paper];
   const fs = a4 ? Math.round(design.fontSize * 1.05) : design.fontSize;
-  const pad = design.paper === "58" ? "2.5mm 2mm" : "3.5mm 4mm";
+  // blank strip above the logo, so the cutter and the tear bar never touch the header
+  const pad = design.paper === "58" ? "10mm 2mm 2.5mm" : "12mm 4mm 3.5mm";
 
   const brand = (
     <div className={a4 ? "" : "c"}>
