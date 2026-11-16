@@ -73,6 +73,8 @@ export interface StockItem extends Row {
   note: string;
   /** matching product key in the Westeros supplier marketplace (compare prices / order online), e.g. "tomato" */
   marketKey?: string | null;
+  /** false = warehouse and purchasing only: hidden from recipes and from every manufacturing screen */
+  mfg?: boolean;
 }
 
 export type LocationKind = "store" | "kitchen" | "bar" | "fridge" | "freezer" | "central";

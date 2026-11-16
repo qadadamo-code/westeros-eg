@@ -20,7 +20,9 @@ export function useProduction() {
   const products = useLive("mfgProducts", { orderBy: [{ field: "sort" }] }).data;
   const batchesLive = useLive("mfgBatches", { orderBy: [{ field: "madeAt", dir: "desc" }] });
   const [settings] = useLive("mfgSettings").data;
-  const items = useLive("stockItems").data;
+  const allItems = useLive("stockItems").data;
+  // warehouse-only items never reach the manufacturing screens
+  const items = useMemo(() => allItems.filter((i) => i.mfg !== false), [allItems]);
   const staff = useLive("memberships").data;
   const branch = branchId ?? branches.find((b) => b.isDefault)?.id ?? branches[0]?.id ?? null;
   return useMemo(() => {

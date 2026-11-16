@@ -33,7 +33,7 @@ export function RecipeEditor({ ownerType, ownerId, scopeItemId = null, price, on
   const perPortion = ownerType === "prep" ? Math.round(total / Math.max(1, yieldQty)) : total;
   const m = price ? margin(perPortion, price) : null;
   const prepItem = ownerType === "prep" ? inv.itemById.get(ownerId) : null;
-  const options = useMemo(() => inv.items.filter((i) => i.active && i.id !== ownerId).sort((a, b) => (a.kind === b.kind ? a.name[lang].localeCompare(b.name[lang], lang) : a.kind === "prep" ? -1 : 1)), [inv.items, ownerId, lang]);
+  const options = useMemo(() => inv.items.filter((i) => i.active && i.mfg !== false && i.id !== ownerId).sort((a, b) => (a.kind === b.kind ? a.name[lang].localeCompare(b.name[lang], lang) : a.kind === "prep" ? -1 : 1)), [inv.items, ownerId, lang]);
   const save = async () => {
     setBusy(true);
     try {

@@ -19,6 +19,7 @@ import { seedId } from "@/lib/id";
 import { COLLECTIONS } from "../types";
 import { WESTEROS_MENU } from "./menu";
 import { WESTEROS_ORIGIN, WESTEROS_ZONES } from "./delivery";
+import { warehouseItems } from "./warehouse";
 import { DEFAULT_CATEGORIES, DEFAULT_STORAGE_METHODS } from "@/modules/production/defaults";
 
 export const WESTEROS_SLUG = "westeros";
@@ -124,6 +125,8 @@ export function buildWesterosSeed(now: Date = new Date()): Seed {
 
   /* ── manufacturing: no items, only the constants ── */
   const locId = (k: string) => seedId(`sufra-zamalek:location:${k}`);
+  // warehouse and purchasing items only: not usable in recipes or manufacturing
+  data.stockItems = warehouseItems(base, locId);
   const chefs = WESTEROS_STAFF.filter((s) => s.role === "chef");
   const settings: MfgSettings = {
     ...base("mfg-settings"), id: R,

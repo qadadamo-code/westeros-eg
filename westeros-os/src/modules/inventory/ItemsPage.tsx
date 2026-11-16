@@ -41,7 +41,7 @@ export default function ItemsPage() {
       key: "name", header: L("الخامة", "Item"), cell: (r) => (
         <div className="min-w-0">
           <p className="truncate font-semibold">{loc(r.item.name)}</p>
-          <p className="truncate text-[12px] text-muted">{CATEGORY_LABEL[r.item.category][lang]}{r.item.kind === "prep" ? ` · ${L("تحضير", "prep")}` : ""}{r.item.trackBatches ? ` · ${L("بالتشغيلة", "batch-tracked")}` : ""}</p>
+          <p className="truncate text-[12px] text-muted">{CATEGORY_LABEL[r.item.category][lang]}{r.item.kind === "prep" ? ` · ${L("تحضير", "prep")}` : ""}{r.item.trackBatches ? ` · ${L("بالتشغيلة", "batch-tracked")}` : ""}{r.item.mfg === false ? ` · ${L("مخزن ومشتريات فقط", "warehouse only")}` : ""}</p>
         </div>
       ),
     },
@@ -188,6 +188,7 @@ export function ItemSheet({ item, onClose }: { item: StockItem | null; onClose: 
               <Input label={L("نسبة الصافي بعد التنضيف ٪", "Usable yield %")} hint={L("فرخة كاملة ← ٧٢٪ لحم صافي: الوصفة بتكتب الصافي والتكلفة بتتحسب على الكل", "Whole chicken → 72% meat: recipes state the trimmed weight, cost is grossed up")} type="number" className="num" min={1} max={100} value={d.yieldBp / 100} onChange={(e) => setD({ ...d, yieldBp: Math.min(10_000, Math.max(100, Math.round(Number(e.target.value) * 100) || 10_000)) })} />
               <MoneyInput label={L("آخر سعر شراء لكل وحدة أساسية", "Last cost per base unit")} value={d.lastCost} onChange={(lastCost) => setD({ ...d, lastCost })} hint={`${L("لكل", "per")} ${BASE_NAME[d.baseUnit][lang]}`} />
             </div>
+            <Switch checked={d.mfg !== false} onChange={(mfg) => setD({ ...d, mfg })} label={L("يدخل في الريسبي والتصنيع", "Used in recipes & manufacturing")} description={L("لو مقفول: الصنف للمخزن والمشتريات فقط ومش بيظهر في الريسبي ولا في التصنيع", "Off: warehouse and purchasing only, hidden from recipes and manufacturing")} />
             <Switch checked={d.trackBatches} onChange={(trackBatches) => setD({ ...d, trackBatches, shelfLifeDays: trackBatches ? (d.shelfLifeDays ?? 5) : null })} label={L("تتبع التشغيلة والصلاحية", "Track batches & expiry")} description={L("للألبان واللحوم: كل استلام بتشغيلة وتاريخ انتهاء", "For dairy and meat: every receipt gets a lot and an expiry date")} />
             {d.trackBatches ? <Input label={L("مدة الصلاحية (يوم)", "Shelf life (days)")} type="number" className="num" value={d.shelfLifeDays ?? 0} onChange={(e) => setD({ ...d, shelfLifeDays: Math.max(0, Number(e.target.value) || 0) })} /> : null}
             <Input label={L("مسببات الحساسية (مفصولة بفاصلة)", "Allergens (comma separated)")} value={d.allergens.join(", ")} onChange={(e) => setD({ ...d, allergens: e.target.value.split(/[,،]/).map((x) => x.trim()).filter(Boolean) })} />

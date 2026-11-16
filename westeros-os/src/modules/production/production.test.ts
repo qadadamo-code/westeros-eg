@@ -30,8 +30,10 @@ describe("Westeros seed", () => {
     expect(seed.data.menuItems.find((m) => m.name.ar === "كلاسيك بيف برجر")?.price).toBe(major(195));
     expect(new Set(seed.data.menuItems.map((m) => m.id)).size).toBe(seed.data.menuItems.length);
   });
-  it("starts with no raw materials, products or meat cuts: only the constants", () => {
-    expect(seed.data.stockItems).toHaveLength(0);
+  it("starts with warehouse-only items, no products or meat cuts: only the constants", () => {
+    expect(seed.data.stockItems).toHaveLength(282);
+    // warehouse and purchasing only: no price, never offered to recipes or manufacturing
+    expect(seed.data.stockItems.every((i) => i.mfg === false && i.lastCost === 0 && i.kind === "raw")).toBe(true);
     expect(seed.data.mfgProducts).toHaveLength(0);
     const s = seed.data.mfgSettings[0];
     expect(s.meatTypes).toHaveLength(0);
