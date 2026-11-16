@@ -111,12 +111,34 @@ export const DEFAULT_USER_TYPES: MfgUserType[] = [
   { id: "manager", name: "مدير", from: 201, count: 100, role: "manager" },
   { id: "admin", name: "إداري", from: 301, count: 100, role: "admin" },
 ];
-export const USER_ROLE_LABEL: Record<MfgUserType["role"], string> = {
-  admin: "كل الصلاحيات",
-  manager: "المخازن والتصنيع والثوابت",
-  chef: "التصنيع والمخازن",
-  kitchen: "تسجيل التشغيلات فقط",
+/** الصلاحيات: the screens of the system, in the order of the menu. A user type ticks the ones its users may open. */
+export const SCREENS: { id: string; label: string }[] = [
+  { id: "cc-summary", label: "الملخص" },
+  { id: "cc-stores", label: "المخازن" },
+  { id: "cc-catalog", label: "قائمة المنتجات والخامات" },
+  { id: "cc-constants", label: "ثوابت النظام" },
+  { id: "cc-mfg", label: "التصنيع" },
+  { id: "cc-users", label: "المستخدمين" },
+];
+const ROLE_SCREENS: Record<MfgUserType["role"], string[]> = {
+  kitchen: ["cc-summary", "cc-stores", "cc-catalog", "cc-mfg"],
+  chef: ["cc-summary", "cc-stores", "cc-catalog", "cc-constants", "cc-mfg"],
+  manager: ["cc-summary", "cc-stores", "cc-catalog", "cc-constants", "cc-mfg"],
+  admin: SCREENS.map((x) => x.id),
 };
+/** The screens a type's users may open: its checklist, else what its permissions level allowed before checklists. */
+export const screensOf = (t: MfgUserType): string[] => t.screens ?? ROLE_SCREENS[t.role];
+const LEVELS: MfgUserType["role"][] = ["kitchen", "chef", "manager", "admin"];
+/**
+ * The database level a checklist needs, so saving works on every ticked screen:
+ * المستخدمين needs the admin level; المخازن، المنتجات والخامات، الثوابت need at least the chef level.
+ */
+export function roleForScreens(screens: string[], current: MfgUserType["role"]): MfgUserType["role"] {
+  if (screens.includes("cc-users")) return "admin";
+  const min: MfgUserType["role"] = screens.some((x) => x === "cc-stores" || x === "cc-catalog" || x === "cc-constants") ? "chef" : "kitchen";
+  const cur = current === "admin" ? "manager" : current;
+  return LEVELS.indexOf(cur) >= LEVELS.indexOf(min) ? cur : min;
+}
 /** The types with their code ranges filled in: a type saved without a range gets the next free hundred. */
 export function userTypesOf(lists: MfgLists): MfgUserType[] {
   const types = lists.userTypes?.length ? lists.userTypes : DEFAULT_USER_TYPES;

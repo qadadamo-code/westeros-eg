@@ -2,12 +2,14 @@ import { useMemo } from "react";
 import { useSession } from "@/auth/session";
 import { homeFor, visibleModules } from "@/modules/registry";
 import type { ModuleDef } from "@/modules/types";
+import { useScreenAccess } from "./useScreenAccess";
 
 export const GROUPS = ["service", "manage", "admin"] as const;
 
 /** Nav items for the current role; the role's home first in the mobile bar. */
 export function useNav() {
   const { role } = useSession();
+  const access = useScreenAccess();
   return useMemo(() => {
     const items = visibleModules(role);
     const home = homeFor(role);
@@ -15,5 +17,5 @@ export function useNav() {
     const mobilePool = items.filter((m) => m.nav!.mobile || m.nav!.path === home);
     const mobile: ModuleDef[] = [...mobilePool.filter((m) => m.nav!.path === home), ...mobilePool.filter((m) => m.nav!.path !== home)].slice(0, 4);
     return { items, grouped, mobile, home };
-  }, [role]);
+  }, [role, access]); // eslint-disable-line react-hooks/exhaustive-deps
 }

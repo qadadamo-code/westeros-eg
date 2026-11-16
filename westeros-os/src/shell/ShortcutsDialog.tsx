@@ -1,8 +1,7 @@
 import { useT } from "@/i18n/i18n";
 import { Combo, Dialog } from "@/ui";
-import { modules } from "@/modules/registry";
+import { allowed, modules } from "@/modules/registry";
 import { useSession } from "@/auth/session";
-import { can } from "@/auth/permissions";
 
 export function ShortcutsDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t, loc, L } = useT();
@@ -12,7 +11,7 @@ export function ShortcutsDialog({ open, onClose }: { open: boolean; onClose: () 
     { combo: "/", label: L("دوّر", "Search") },
     { combo: "?", label: t("shell.shortcuts") },
     { combo: "[", label: L("صغّر/كبّر القائمة", "Toggle sidebar") },
-    ...modules.filter((m) => m.shortcut && (!m.permission || can(role, m.permission))).map((m) => ({ combo: m.shortcut!, label: loc(m.title) })),
+    ...modules.filter((m) => m.shortcut && allowed(m, role)).map((m) => ({ combo: m.shortcut!, label: loc(m.title) })),
   ];
   return (
     <Dialog open={open} onClose={onClose} title={t("shell.shortcuts")} size="sm">

@@ -7,6 +7,8 @@ import type { Permission } from "@/auth/permissions";
 import { useT } from "@/i18n/i18n";
 import { EmptyState, LinkButton } from "@/ui";
 import { homeFor } from "@/modules/registry";
+import { screenAllowed } from "@/modules/screens";
+import { useScreenAccess } from "@/shell/useScreenAccess";
 import { Mark } from "@/shell/Logo";
 
 export function BootScreen() {
@@ -28,10 +30,11 @@ export function RequireStaff({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-export function RequirePermission({ permission, children }: { permission?: Permission; children: ReactNode }) {
+export function RequirePermission({ permission, screen, children }: { permission?: Permission; /** module id, for the user type's screens checklist */ screen?: string; children: ReactNode }) {
   const s = useSession();
   const { t, loc } = useT();
-  if (!permission || s.can(permission)) return <>{children}</>;
+  useScreenAccess();
+  if ((!permission || s.can(permission)) && (!screen || screenAllowed(screen))) return <>{children}</>;
   return (
     <EmptyState
       icon={<ShieldOff />}
@@ -44,5 +47,6 @@ export function RequirePermission({ permission, children }: { permission?: Permi
 
 export function RoleHome() {
   const { role } = useSession();
+  useScreenAccess();
   return <Navigate to={homeFor(role)} replace />;
 }

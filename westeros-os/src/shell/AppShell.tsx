@@ -2,11 +2,11 @@ import { Suspense, useEffect, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import { useSession } from "@/auth/session";
-import { can } from "@/auth/permissions";
 import { useLive } from "@/data/hooks";
 import { useT } from "@/i18n/i18n";
 import { loadRaw, saveRaw } from "@/lib/storage";
-import { modules } from "@/modules/registry";
+import { allowed, modules } from "@/modules/registry";
+import { useScreenAccess } from "./useScreenAccess";
 import { Skeleton, useCommands, useHotkeys, useReduced, useToast } from "@/ui";
 import { Languages, Lock, Moon } from "lucide-react";
 import { useTheme } from "@/theme/theme";
@@ -65,7 +65,8 @@ function ShellCommands() {
   const nav = useNavigate();
   const { toggleLang } = useT();
   const theme = useTheme();
-  const visible = modules.filter((m) => m.nav && (!m.permission || can(role, m.permission)));
+  const access = useScreenAccess();
+  const visible = modules.filter((m) => m.nav && allowed(m, role));
   useCommands(
     [
       ...visible.map((m) => {
@@ -76,7 +77,7 @@ function ShellCommands() {
       { id: "theme", group: "actions", title: { ar: "غيّر المظهر (فاتح/غامق)", en: "Toggle light/dark" }, keywords: ["theme", "dark"], icon: <Moon />, perform: theme.toggle },
       ...(deviceRestaurantId ? [{ id: "lock", group: "actions", title: { ar: "اقفل الشاشة", en: "Lock screen" }, icon: <Lock />, perform: lock }] : []),
     ],
-    [role, theme.dark, deviceRestaurantId],
+    [role, access, theme.dark, deviceRestaurantId],
   );
   // module shortcuts ("g p" …)
   const keys: Record<string, () => void> = {};

@@ -243,7 +243,7 @@ export interface MfgLists {
  * طبيعة المستخدم. Its users take their codes from one range: `from` … `from + count − 1`. Ranges of two types never overlap.
  * (`code` is the first shape of this, kept so rows saved with it still read.)
  */
-export interface MfgUserType { id: string; name: string; from?: number; count?: number; code?: number; role: "admin" | "manager" | "chef" | "kitchen" }
+export interface MfgUserType { id: string; name: string; from?: number; count?: number; code?: number; role: "admin" | "manager" | "chef" | "kitchen"; /** the screens its users may open (module ids); missing = what the role allows */ screens?: string[] }
 
 /* ───────── قوائم فتح وقفل الوردية (0016_checklists.sql; src/modules/checklists) ───────── */
 
