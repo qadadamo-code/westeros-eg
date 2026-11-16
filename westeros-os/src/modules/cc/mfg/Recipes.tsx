@@ -4,7 +4,7 @@ import { BookOpenCheck, Plus, Search } from "lucide-react";
 import { useSession } from "@/auth/session";
 import { useDb } from "@/data/hooks";
 import type { MfgProduct, MfgRecipeLine } from "@/data/types";
-import { recipeItems } from "@/modules/production/ProductsPage";
+import { packagingItems, recipeItems } from "@/modules/production/ProductsPage";
 import { LinesEditor } from "@/modules/production/ui";
 import { categoryName } from "@/modules/production/useProduction";
 import { Badge, Button, Card, Dialog, EmptyState, Input, Select, Table, useToast, type Column } from "@/ui";
@@ -108,7 +108,7 @@ function RecipeDialog({ product, cc, readOnly, onClose }: { product: MfgProduct 
               <Info k="طريقة التصنيع" v={methodLabel(p)} />
             </div>
             <LinesEditor readOnly={readOnly} title="المكونات" hint={per} lines={lines} onChange={setLines} items={recipeItems(prod, type, p.stockItemId)} itemById={prod.itemById} unitCost={prod.unitCost} />
-            <LinesEditor readOnly={readOnly} title="باكيج التخزين" hint="يدخل في التكلفة فقط ولا يدخل في وزن المنتج" lines={packaging} onChange={setPackaging} items={prod.items.filter((i) => i.id !== p.stockItemId && i.kind === "raw")} itemById={prod.itemById} unitCost={prod.unitCost} />
+            <LinesEditor readOnly={readOnly} title="باكيج التخزين" hint="من خامات فئة التغليف. يدخل في التكلفة فقط ولا يدخل في وزن المنتج" lines={packaging} onChange={setPackaging} items={packagingItems(prod, p.stockItemId)} itemById={prod.itemById} unitCost={prod.unitCost} />
           </>
         ) : null}
       </fieldset>

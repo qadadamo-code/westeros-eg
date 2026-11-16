@@ -33,7 +33,7 @@ describe("Westeros seed", () => {
   it("starts with warehouse-only items, no products or meat cuts: only the constants", () => {
     expect(seed.data.stockItems).toHaveLength(282);
     // warehouse and purchasing only: never offered to recipes or manufacturing; last purchase price and date where known
-    expect(seed.data.stockItems.every((i) => i.mfg === false && i.kind === "raw")).toBe(true);
+    expect(seed.data.stockItems.every((i) => i.mfg === true && i.kind === "raw")).toBe(true);
     const cheddar = seed.data.stockItems.find((i) => i.sku === "10001")!;
     expect(cheddar.spec).toMatchObject({ lastPrice: major(829.56), lastPurchaseDate: "2026-10-24", perStorage: 200 });
     expect(cheddar.lastCost).toBe(Math.round(major(829.56) / 200));

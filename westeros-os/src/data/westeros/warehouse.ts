@@ -1,6 +1,6 @@
 /**
  * Warehouse and purchasing items: names, purchase units and categories only, so a purchase request has its items ready.
- * They are warehouse-only (`mfg: false`): no quantity, and hidden from recipes and manufacturing until a manager
+ * They start with no quantity. They enter recipes and manufacturing (`mfg: true`, the restaurant asked on 2026-11-16) until a manager
  * switches an item on. Each carries the restaurant's last purchase price and last purchase date where it has one.
  */
 import type { BaseUnit, StockAccount, StockCategory, StockItem } from "../types";
@@ -42,7 +42,7 @@ export function warehouseItems(base: (key: string) => RowBase, locId: (k: string
       packs: [{ id: "buy", name: { ar: r.buyUnit, en: r.buyUnit }, factor }], countUnit: "buy", account: c.acc,
       levels: { min: 0, par: 0, max: 0 }, branchLevels: {}, supplierIds: [], preferredSupplierId: null, lastCost: Math.round(lastPrice / factor),
       defaultLocationIds: [locId(c.loc)], trackBatches: false, shelfLifeDays: null, vatBp: c.vat, yieldBp: 10_000, allergens: [], active: true,
-      note: c.label, marketKey: null, mfg: false,
+      note: c.label, marketKey: null, mfg: true,
       spec: priced ? { image: null, category: c.label, storageUnit: r.buyUnit, mfgUnit: r.mfgUnit, perStorage: r.perUnit || 1, lastPrice, lastPurchaseDate: r.date, expiryDate: null } : null,
     };
   });

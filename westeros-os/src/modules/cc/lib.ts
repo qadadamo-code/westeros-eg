@@ -204,7 +204,13 @@ export function rawRanges(lists: MfgLists, raws: StockItem[]): Record<string, Co
     const n = digits(i.sku), c = specOf(i, lists).category;
     if (n > 0 && (!min.has(c) || n < min.get(c)!)) min.set(c, n);
   }
-  const seed = (c: string) => (min.has(c) ? { from: Math.floor((min.get(c)! - 1) / 1000) * 1000 + 1, count: 999 } : null);
+  // the thousand the first code sits in: 10001 gives 10001 … 10999, 24000 gives 24000 … 24999
+  const seed = (c: string) => {
+    const m = min.get(c);
+    if (!m) return null;
+    const from = m % 1000 === 0 ? m : Math.floor((m - 1) / 1000) * 1000 + 1;
+    return { from, count: (Math.floor(from / 1000) + 1) * 1000 - from };
+  };
   return codeRanges(lists.codeRanges?.raw, lists.rawCategories, seed, min.size ? 1000 : 100);
 }
 /** The first free code of the range, 0 when the range is full. */

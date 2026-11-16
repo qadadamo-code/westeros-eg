@@ -226,6 +226,8 @@ export interface MfgLists {
   rawCategories: string[];
   /** فئة الخام that holds the meats: تعريف اللحوم offers only its raw materials. Unset = the category named لحوم. */
   meatCategory?: string;
+  /** فئة الخام that holds storage packaging: باكيج التخزين offers only its raw materials. Unset = the category named تغليف. */
+  packagingCategory?: string;
   /** فئة الأصناف المصنعة whose products دجاج الفرم may pick (id of a product category). Unset = the category named دجاج. */
   chickenProductCategory?: string;
   /** أنواع المخازن */

@@ -17,7 +17,7 @@ import { Badge, Button, Card, EmptyState, Input, Segmented, Select, Skeleton, Sw
 import { buildBatch, scaleLines, type BatchDraft, type BuildCtx } from "./build";
 import { categoryName } from "./defaults";
 import { LabelDialog } from "./LabelDialog";
-import { recipeItems } from "./ProductsPage";
+import { packagingItems, recipeItems } from "./ProductsPage";
 import { BatchError, saveBatch } from "./ops";
 import { ERROR_TEXT, LinesEditor, Num, ResultPanel } from "./ui";
 import { useProduction, type Prod } from "./useProduction";
@@ -321,7 +321,7 @@ function SimpleForm({ method, prod, onDone, initial, chosen }: { method: Extract
           <Block step={chosen ? 2 : 3} title={L("المكونات", "Ingredients")} hint={L("الكميات الفعلية التي دخلت هذه التشغيلة", "What actually went into this batch")}>
             <div className="grid gap-5">
               <LinesEditor title={L("الوصفة", "Recipe")} lines={lines} onChange={setLines} by={meals} items={recipeItems(prod, p.recipeType, p.stockItemId)} itemById={prod.itemById} unitCost={prod.unitCost} />
-              <LinesEditor title={L("باكيج التخزين", "Storage packaging")} hint={L("يدخل في التكلفة فقط", "Costed only")} lines={packaging} onChange={setPackaging} by={meals} items={prod.items} itemById={prod.itemById} unitCost={prod.unitCost} />
+              <LinesEditor title={L("باكيج التخزين", "Storage packaging")} hint={L("يدخل في التكلفة فقط", "Costed only")} lines={packaging} onChange={setPackaging} by={meals} items={packagingItems(prod)} itemById={prod.itemById} unitCost={prod.unitCost} />
               <RecipeSwitch value={keep} onChange={setKeep} empty={!p.lines.length} />
             </div>
           </Block>
@@ -394,7 +394,7 @@ function ChickenForm({ prod, onDone, initial, chosen }: { prod: Prod; onDone: ()
                 {mode !== "weight" ? <Num big label={L("العدد الناتج", "Count")} suffix={L("قطعة", "pcs")} value={r.count} onChange={(v) => set(r.productId, { count: v })} /> : null}
               </div>
               <LinesEditor title={L("التتبيلة والمكونات", "Marinade & ingredients")} hint={L("لكامل وزن هذا المنتج", "For this product's whole weight")} lines={r.lines} onChange={(l) => set(r.productId, { lines: l })} by={r.weightKg} items={recipeItems(prod, p.recipeType, p.stockItemId)} itemById={prod.itemById} unitCost={prod.unitCost} />
-              <LinesEditor title={L("باكيج التخزين", "Storage packaging")} lines={r.packaging} onChange={(l) => set(r.productId, { packaging: l })} by={r.weightKg} items={prod.items} itemById={prod.itemById} unitCost={prod.unitCost} />
+              <LinesEditor title={L("باكيج التخزين", "Storage packaging")} lines={r.packaging} onChange={(l) => set(r.productId, { packaging: l })} by={r.weightKg} items={packagingItems(prod)} itemById={prod.itemById} unitCost={prod.unitCost} />
             </div>
           </Block>
         );
@@ -500,7 +500,7 @@ function BurgerForm({ kind, categoryId, prod, onDone }: { kind: "beef" | "chicke
       <Block step={2} title={L("الخلطة", "Mix")} hint={L("كميات هذه التشغيلة", "Quantities of this batch")}>
         <div className="grid gap-5">
           <LinesEditor title={L("مكونات الوصفة", "Recipe")} lines={lines} onChange={setLines} by={netKg} items={recipeItems(prod, first?.recipeType ?? "main", first?.stockItemId)} itemById={prod.itemById} unitCost={prod.unitCost} />
-          <LinesEditor title={L("باكيج التخزين", "Storage packaging")} hint={L("يدخل في التكلفة فقط", "Costed only")} lines={packaging} onChange={setPackaging} by={netKg} items={prod.items} itemById={prod.itemById} unitCost={prod.unitCost} />
+          <LinesEditor title={L("باكيج التخزين", "Storage packaging")} hint={L("يدخل في التكلفة فقط", "Costed only")} lines={packaging} onChange={setPackaging} by={netKg} items={packagingItems(prod)} itemById={prod.itemById} unitCost={prod.unitCost} />
           <RecipeSwitch value={keep} onChange={setKeep} empty={!first?.lines.length} />
         </div>
       </Block>

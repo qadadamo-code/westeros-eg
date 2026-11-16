@@ -139,11 +139,18 @@ function ProductDialog({ product, prod, readOnly, onClose }: { product: MfgProdu
         </div>
         <Textarea label={L("شرح مبسط للمكونات", "Short ingredients description")} rows={2} value={d.ingredientsText} onChange={(e) => set({ ingredientsText: e.target.value })} />
         <LinesEditor readOnly={readOnly} title={L("الوصفة", "Recipe")} hint={per} lines={d.lines} onChange={(lines) => set({ lines })} items={recipeItems(prod, d.recipeType, product?.stockItemId)} itemById={prod.itemById} unitCost={prod.unitCost} />
-        <LinesEditor readOnly={readOnly} title={L("باكيج التخزين", "Storage packaging")} hint={per} lines={d.packaging} onChange={(packaging) => set({ packaging })} items={prod.items.filter((i) => i.id !== product?.stockItemId)} itemById={prod.itemById} unitCost={prod.unitCost} />
+        <LinesEditor readOnly={readOnly} title={L("باكيج التخزين", "Storage packaging")} hint={per} lines={d.packaging} onChange={(packaging) => set({ packaging })} items={packagingItems(prod, product?.stockItemId)} itemById={prod.itemById} unitCost={prod.unitCost} />
         <Switch checked={d.active} onChange={(active) => set({ active })} label={L("المنتج شغال", "Active")} description={L("المنتج الموقوف لا يظهر في التشغيلات الجديدة", "Inactive products are hidden from new batches")} />
       </fieldset>
     </Dialog>
   );
+}
+
+/** باكيج التخزين: the raw materials of the packaging category (فئة التغليف) only; every raw material when there is no such category. */
+export function packagingItems(prod: Pick<Prod, "items" | "settings">, selfStockId?: string): StockItem[] {
+  const l = prod.settings?.lists;
+  const cat = l?.packagingCategory ?? l?.rawCategories?.find((c) => c.includes("تغليف")) ?? "";
+  return prod.items.filter((i) => i.kind === "raw" && i.id !== selfStockId && (!cat || (i.spec?.category ?? i.note) === cat));
 }
 
 /**
