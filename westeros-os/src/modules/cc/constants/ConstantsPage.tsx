@@ -32,7 +32,9 @@ export default function ConstantsPage() {
   const setMeat = (id: string, p: Partial<MfgMeatType>) => patch({ meatTypes: s.meatTypes.map((m) => (m.id === id ? { ...m, ...p } : m)) });
   // every raw material of the list is offered, also the warehouse-only ones: choosing one here brings it into manufacturing
   const rawOptions = [{ value: "", label: "—" }, ...cc.raws.filter((i) => i.active).map((i) => ({ value: i.id, label: `${i.name.ar} · ${i.sku}` }))];
-  const anyOptions = [...rawOptions, ...cc.made.filter((i) => i.active).map((i) => ({ value: i.id, label: `${i.name.ar} · ${i.sku}` }))];
+  // تعريف اللحوم: only the raw materials of the meat category
+  const meatCat = lists.meatCategory ?? lists.rawCategories.find((c) => c.includes("لحوم")) ?? "";
+  const meatOptions = (chosen: string | null) => [{ value: "", label: "—" }, ...cc.raws.filter((i) => i.active && (!meatCat || specOf(i, lists).category === meatCat || i.id === chosen)).map((i) => ({ value: i.id, label: `${i.name.ar} · ${i.sku}` }))];
   const pick = (id: string) => {
     if (id && cc.itemById.get(id)?.mfg === false) void db.update("stockItems", id, { mfg: true });
     return id || null;
@@ -106,11 +108,14 @@ export default function ConstantsPage() {
         <Card className="lg:col-span-2">
           <CardHeader title="تعريف اللحوم" subtitle="نوع قطعية اللحم، ربط بمادة خام محددة، وزن الدهن"
             action={<Button size="sm" variant="outline" icon={<Plus />} onClick={() => patch({ meatTypes: [...s.meatTypes, { id: uuid(), name: { ar: "قطعية جديدة", en: "New cut" }, stockItemId: null, fatGramsPerKg: 200 }] })}>قطعية جديدة</Button>} />
+          <div className="px-5 pb-3 sm:max-w-sm">
+            <Select label="فئة الخام للحوم" hint="قوائم اللحوم والدهن ودجاج الفرم تعرض خامات هذه الفئة فقط" value={meatCat} onChange={(e) => setLists({ meatCategory: e.target.value })} options={[{ value: "", label: "كل الفئات" }, ...lists.rawCategories.map((c) => ({ value: c, label: c }))]} />
+          </div>
           <ul className="grid gap-2 px-5 pb-3">
             {s.meatTypes.map((m) => (
               <li key={m.id} className="grid items-end gap-2 rounded-xl border border-line p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_170px_auto]">
                 <Input label="نوع قطعية اللحم" defaultValue={m.name.ar} onBlur={(e) => e.target.value.trim() && e.target.value !== m.name.ar && setMeat(m.id, { name: { ar: e.target.value.trim(), en: e.target.value.trim() } })} />
-                <Select label="مادة الخام" value={m.stockItemId ?? ""} onChange={(e) => setMeat(m.id, { stockItemId: pick(e.target.value) })} options={rawOptions} />
+                <Select label="مادة الخام" value={m.stockItemId ?? ""} onChange={(e) => setMeat(m.id, { stockItemId: pick(e.target.value) })} options={meatOptions(m.stockItemId)} />
                 <Num label="وزن الدهن لكل كيلو لحم" suffix="جم" value={m.fatGramsPerKg} onChange={(n) => setMeat(m.id, { fatGramsPerKg: Math.round(n) })} />
                 <IconButton label="حذف" onClick={() => patch({ meatTypes: s.meatTypes.filter((x) => x.id !== m.id) })}><Trash2 /></IconButton>
               </li>
@@ -118,8 +123,8 @@ export default function ConstantsPage() {
             {s.meatTypes.length ? null : <li className="text-[14px] text-muted">أضف أول قطعية لحم.</li>}
           </ul>
           <div className="grid gap-3 px-5 pb-5 sm:grid-cols-3">
-            <Select label="مادة خام الدهن" value={s.rawFatItemId ?? ""} onChange={(e) => patch({ rawFatItemId: pick(e.target.value) })} options={rawOptions} />
-            <Select label="دجاج الفرم لبرجر الدجاج" value={s.mincedChickenItemId ?? ""} onChange={(e) => patch({ mincedChickenItemId: pick(e.target.value) })} options={anyOptions} />
+            <Select label="مادة خام الدهن" value={s.rawFatItemId ?? ""} onChange={(e) => patch({ rawFatItemId: pick(e.target.value) })} options={meatOptions(s.rawFatItemId)} />
+            <Select label="دجاج الفرم لبرجر الدجاج" value={s.mincedChickenItemId ?? ""} onChange={(e) => patch({ mincedChickenItemId: pick(e.target.value) })} options={meatOptions(s.mincedChickenItemId)} />
             <Select label="مادة الخام الواحدة (الدجاج)" value={s.chickenItemId ?? ""} onChange={(e) => patch({ chickenItemId: pick(e.target.value) })} options={rawOptions} />
           </div>
         </Card>

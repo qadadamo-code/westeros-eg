@@ -224,6 +224,8 @@ export interface MfgLists {
   mfgUnits: MfgUnitDef[];
   /** فئات مواد الخام */
   rawCategories: string[];
+  /** فئة الخام that holds the meats: تعريف اللحوم offers only its raw materials. Unset = the category named لحوم. */
+  meatCategory?: string;
   /** أنواع المخازن */
   warehouseTypes: { id: string; name: string; holds: "raw" | "products" | "branch" }[];
   /** أنواع البرجر */
