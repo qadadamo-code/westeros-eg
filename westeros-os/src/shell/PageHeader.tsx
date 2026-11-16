@@ -4,7 +4,7 @@ import { cn } from "@/lib/cn";
 export function PageHeader({ title, subtitle, icon, actions, className, kicker }: { title: ReactNode; subtitle?: ReactNode; icon?: ReactNode; actions?: ReactNode; className?: string; kicker?: ReactNode }) {
   return (
     <header className={cn("flex flex-wrap items-end gap-x-6 gap-y-3", className)}>
-      <div className="flex min-w-0 flex-1 items-center gap-3.5">
+      <div className="flex min-w-[min(100%,18rem)] flex-1 items-center gap-3.5">
         {icon ? <span className="grid size-12 shrink-0 place-items-center rounded-2xl border border-brass/40 bg-[linear-gradient(140deg,color-mix(in_srgb,var(--sf-brass)_30%,var(--sf-surface)),var(--sf-surface))] text-brass-text shadow-sf [&_svg]:size-6">{icon}</span> : null}
         <div className="min-w-0">
           {kicker ? <div className="mb-0.5 text-[12.5px] font-semibold text-brass">{kicker}</div> : null}

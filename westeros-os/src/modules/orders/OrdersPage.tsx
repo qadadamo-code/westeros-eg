@@ -5,7 +5,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
-import { Bike, ClipboardList, Globe, Printer, QrCode, ReceiptText, RotateCcw, Search, ShoppingBag, Store, Utensils, Wallet } from "lucide-react";
+import { Bike, ClipboardList, Globe, Printer, QrCode, ReceiptText, RotateCcw, Search, ShoppingBag, Store, Trash2, Utensils, Wallet } from "lucide-react";
 import { useApproval } from "@/auth/approval";
 import { useSession } from "@/auth/session";
 import { useDb, useLive } from "@/data/hooks";
@@ -165,7 +165,7 @@ function OrderDrawer({ orderId, onClose }: { orderId: string | null; onClose: ()
   const db = useDb();
   const approve = useApproval();
   const { toast } = useToast();
-  const { can } = useSession();
+  const { can, role } = useSession();
   const names = useStaffNames();
   const { device, shift } = useShift();
   const builder = useReceiptSourceBuilder();
@@ -183,6 +183,34 @@ function OrderDrawer({ orderId, onClose }: { orderId: string | null; onClose: ()
   const returns = receipts.filter((r) => r.kind === "RC");
   const open = !!orderId && !!order;
   const mine = items.filter((i) => order && i.orderId === order.id);
+  // A cancelled order (voided, or every item voided) that never took money can be removed by a manager.
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const cancelled = !!order && (order.status === "void" || mine.every((i) => i.status === "void"));
+  const untouchedMoney = payments.length === 0 && receipts.length === 0;
+  const canDelete = cancelled && untouchedMoney && (role === "owner" || role === "admin" || role === "manager");
+  const deleteOrder = async () => {
+    if (!order || !canDelete) return;
+    setDeleting(true);
+    try {
+      await db.audit("order.delete", "orders", order.id, { number: order.number, items: mine.map((i) => ({ name: i.name, qty: i.qty, reason: i.voidReason ?? null })) });
+      for (const i of mine) await db.remove("orderItems", i.id);
+      await db.remove("orders", order.id);
+      // the bill goes too when this was its only order (owners and admins), otherwise it is closed as void
+      if (check && orders.every((o) => o.id === order.id)) {
+        // the order is already gone: a bill that cannot be removed is closed as void instead
+        const removed = role === "owner" || role === "admin" ? await db.remove("checks", check.id).then(() => true, () => false) : false;
+        if (!removed) await db.update("checks", check.id, { status: "void" }).catch(() => undefined);
+      }
+      toast({ title: L(`اتحذف طلب #${order.number}`, `Order #${order.number} deleted`), tone: "success" });
+      setConfirmDelete(false);
+      onClose();
+    } catch {
+      toast({ title: L("ماقدرناش نحذف الطلب، جرّب تاني", "Could not delete the order, try again"), tone: "error" });
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const reprint = (r: Receipt | null) => {
     if (!builder || !check) return;
@@ -202,6 +230,11 @@ function OrderDrawer({ orderId, onClose }: { orderId: string | null; onClose: ()
                   onClick={() => nav(`/pos?check=${check.id}${check.tableIds[0] ? `&table=${check.tableIds[0]}` : ""}`)}
                 >
                   {L("افتح في الكاشير", "Open in POS")}
+                </Button>
+              ) : null}
+              {canDelete ? (
+                <Button variant="danger-soft" icon={<Trash2 className="size-4" />} onClick={() => setConfirmDelete(true)}>
+                  {L("حذف الطلب", "Delete order")}
                 </Button>
               ) : null}
               <div className="flex-1" />
@@ -308,6 +341,23 @@ function OrderDrawer({ orderId, onClose }: { orderId: string | null; onClose: ()
           </div>
         ) : null}
       </Sheet>
+      <Dialog
+        open={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        size="sm"
+        title={L(`حذف طلب #${order?.number ?? ""}؟`, `Delete order #${order?.number ?? ""}?`)}
+        description={L("الطلب الملغي هيتشال من القائمة نهائيًا ومش هيرجع. الحذف بيتسجل باسمك في سجل المراجعة.", "The cancelled order is removed for good. The deletion is recorded under your name in the audit log.")}
+        footer={
+          <div className="flex w-full justify-end gap-2">
+            <Button variant="soft" onClick={() => setConfirmDelete(false)}>
+              {L("رجوع", "Back")}
+            </Button>
+            <Button variant="danger" loading={deleting} icon={<Trash2 className="size-4" />} onClick={() => void deleteOrder()}>
+              {L("احذف", "Delete")}
+            </Button>
+          </div>
+        }
+      />
       <ReceiptDialog open={!!view} onClose={() => setView(null)} model={view?.model ?? null} title={view?.title} />
       {sale && check ? (
         <RefundDialog

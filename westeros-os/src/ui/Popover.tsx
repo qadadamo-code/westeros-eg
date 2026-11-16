@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { cn } from "@/lib/cn";
 import { HotkeyScope, useHotkeys } from "./hotkeys";
@@ -29,6 +29,23 @@ export function Popover({ trigger, children, align = "start", side = "bottom", c
     return () => document.removeEventListener("pointerdown", on);
   }, [open]);
   const close = () => setOpen(false);
+  // Keep the panel on screen: an anchored panel near a screen edge (phones) is nudged back inside.
+  const panel = useRef<HTMLDivElement>(null);
+  const [shift, setShift] = useState(0);
+  useLayoutEffect(() => {
+    if (!open) return setShift(0);
+    const fit = () => {
+      const el = panel.current;
+      if (!el) return;
+      const left = el.offsetLeft + (root.current?.getBoundingClientRect().left ?? 0);
+      const right = left + el.offsetWidth;
+      const max = document.documentElement.clientWidth - 12;
+      setShift(right > max ? max - right : left < 12 ? 12 - left : 0);
+    };
+    fit();
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, [open]);
   return (
     <div ref={root} className="relative">
       {trigger({ open, props: { "aria-expanded": open, "aria-haspopup": "menu", "aria-controls": id, onClick: () => setOpen((v) => !v) } })}
@@ -38,11 +55,12 @@ export function Popover({ trigger, children, align = "start", side = "bottom", c
             <PopEsc onClose={close} />
             <motion.div
               id={id}
+              ref={panel}
               initial={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.96, y: side === "bottom" ? -6 : 6 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.97, transition: { duration: 0.12 } }}
               transition={spring.snappy}
-              style={{ transformOrigin: side === "bottom" ? "top" : "bottom" }}
+              style={{ transformOrigin: side === "bottom" ? "top" : "bottom", translate: shift ? `${shift}px 0` : undefined }}
               className={cn(
                 "absolute z-[70] max-w-[calc(100vw-24px)] overflow-hidden rounded-2xl border border-line bg-surface p-1.5 shadow-sf-lg",
                 width,
