@@ -18,7 +18,7 @@ const JSONB = new Set(["name", "description", "address", "openingHours", "modifi
   // accounting (0011_accounting.sql)
   "closeHistory", "denominations",
   // manufacturing (0015_production.sql)
-  "packaging", "inputs", "outputs", "chefCodes", "meatTypes", "storageMethods",
+  "packaging", "inputs", "outputs", "chefCodes", "meatTypes", "storageMethods", "productCategories",
   // shift checklists (0016_checklists.sql)
   "roles", "templateName",
   // HR & payroll (0010_hr.sql)

@@ -93,7 +93,7 @@ function ZonesEditor() {
     [zones.data, draft, editing, loc],
   );
 
-  const valid = !!draft && !!draft.name.ar.trim() && !!draft.slug.trim() && !!draft.geometry && (draft.geometry.kind === "ring" ? draft.geometry.radiusKm > 0 : draft.geometry.points.length >= 3) && draft.etaMax >= draft.etaMin;
+  const valid = !!draft && !!draft.name.ar.trim() && !!draft.slug.trim() && (!draft.geometry || (draft.geometry.kind === "ring" ? draft.geometry.radiusKm > 0 : draft.geometry.points.length >= 3)) && draft.etaMax >= draft.etaMin;
   const save = async () => {
     if (!draft || !valid) return;
     setBusy(true);

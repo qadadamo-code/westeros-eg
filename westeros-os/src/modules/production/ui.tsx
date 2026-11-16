@@ -59,7 +59,7 @@ export function Num({ value, onChange, label, suffix, hint, className, autoFocus
 
 const norm = (s: string) => s.toLowerCase().replace(/[أإآ]/g, "ا").replace(/ة/g, "ه").replace(/ى/g, "ي").trim();
 
-/** Search box over the stock items (282 raw materials + the manufactured ones). */
+/** Search box over the stock items (raw materials and the manufactured ones). */
 export function ItemPicker({ items, onPick, placeholder, exclude }: { items: StockItem[]; onPick: (item: StockItem) => void; placeholder?: string; exclude?: Set<string> }) {
   const { L, loc } = useT();
   const [q, setQ] = useState("");
@@ -214,7 +214,7 @@ function Row({ label, value, strong, tone }: { label: ReactNode; value: ReactNod
   );
 }
 
-/** The figures of the Cost Control sheet for the batch being typed — updates on every keystroke. */
+/** The figures of the Cost Control document for the batch being typed — updates on every keystroke. */
 export function ResultPanel({ built, footer }: { built: BuiltBatch; footer?: ReactNode }) {
   const { L, lang, loc } = useT();
   const any = built.totalCost > 0 || built.outputs.some((o) => (o.weightKg ?? 0) > 0 || (o.count ?? 0) > 0);
@@ -246,7 +246,7 @@ export function ResultPanel({ built, footer }: { built: BuiltBatch; footer?: Rea
           {built.netWeightKg != null ? <Row label={L("الوزن الصافي", "Net weight")} value={fmtKg(built.netWeightKg, lang)} /> : null}
           {built.expectedCount != null ? <Row label={L("العدد المتوقع", "Expected count")} value={built.expectedCount} /> : null}
           {built.waste != null ? (
-            <Row label={L("الهدر", "Waste")} value={built.method === "portion" ? `${built.waste} ${L("قطعة", "pcs")}` : fmtG(built.waste, lang)} tone={built.waste < 0 ? "danger" : built.waste > 0 ? "warn" : undefined} />
+            <Row label={L("الهدر", "Waste")} value={built.method === "portion" ? `${built.waste} ${L("قطعة", "pcs")}` : fmtG(built.waste, lang)} tone={built.waste > 0 ? "danger" : built.waste < 0 ? "warn" : undefined} />
           ) : null}
           {built.debrisKg != null ? <Row label={L("الدوبريه", "Trimmings")} value={`${fmtKg(built.debrisKg, lang)} · ${fmtPct(built.debrisBp)}`} tone={built.debrisKg < 0 ? "danger" : undefined} /> : null}
           {built.suggestedFatKg != null ? <Row label={L("وزن الدهن المقترح", "Suggested fat")} value={fmtKg(built.suggestedFatKg, lang)} /> : null}

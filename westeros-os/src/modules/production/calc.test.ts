@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { major } from "@/lib/money";
-import { batchNumber, calcBurger, calcChicken, calcFat, calcPortion, calcWeight, cairoDay, expiryOf } from "./calc";
+import { batchNumber, calcBurger, calcChicken, calcPortion, calcWeight, cairoDay, expiryOf } from "./calc";
 
 const EGP = (n: number) => major(n);
 const line = (weightG: number, egp: number) => ({ weightG, cost: EGP(egp) });
@@ -9,7 +9,7 @@ describe("Cost Control: تصنيع يخزن بالوزن", () => {
   // the document's example: 8 ingredients = 4,452 g, net 4.45 kg, total 622 EGP → 140 EGP/kg
   const r = calcWeight({ lines: [line(2000, 300), line(850, 100), line(1250, 150), line(120, 30), line(110, 20), line(10, 5), line(2, 1), line(110, 10)], packaging: [{ weightG: 0, cost: EGP(6) }], netKg: 4.45 });
   it("gross weight is the sum of the recipe, packaging adds no weight", () => expect(r.grossKg).toBe(4.452));
-  it("waste = gross − net, in grams", () => expect(r.wasteG).toBe(2));
+  it("waste = net − gross, in grams: negative when weight was lost", () => expect(r.wasteG).toBe(-2));
   it("total includes the storage packaging", () => expect(r.total).toBe(EGP(622)));
   it("price per kilo = total ÷ net weight", () => expect(Math.round(r.perKg / EGP(1))).toBe(140));
 });
@@ -20,7 +20,7 @@ describe("Cost Control: تصنيع بالحصة", () => {
   it("expected count = ingredient weight ÷ portion", () => expect(r.expected).toBe(14));
   it("waste in pieces", () => expect(r.wastePcs).toBe(0));
   it("price per piece = total ÷ net count", () => expect(r.perPc).toBe(EGP(8)));
-  it("a short batch shows the missing pieces", () => expect(calcPortion({ lines: [line(2800, 100)], packaging: [], portionG: 200, netCount: 12 }).wastePcs).toBe(2));
+  it("a short batch shows the missing pieces", () => expect(calcPortion({ lines: [line(2800, 100)], packaging: [], portionG: 200, netCount: 12 }).wastePcs).toBe(-2));
 });
 
 describe("Cost Control: منتجات الدجاج", () => {
@@ -82,15 +82,6 @@ describe("Cost Control: تصنيع البرجر", () => {
     expect(c.debrisKg).toBe(0);
     expect(c.scaleDiffG).toBe(68 * 150 - 10000 - 300);
     expect(c.total).toBe(EGP(2400) + EGP(30));
-  });
-});
-
-describe("Cost Control: تجهيز الدهن", () => {
-  it("ready fat carries the cost of what was trimmed off", () => {
-    const r = calcFat({ fatKg: 10, readyKg: 8, fatPerKg: EGP(120) });
-    expect(r.debrisKg).toBe(2);
-    expect(r.debrisBp).toBe(2000);
-    expect(r.perKg).toBe(EGP(150));
   });
 });
 

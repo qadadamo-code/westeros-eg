@@ -13,11 +13,11 @@ Built on the Sufra OS codebase (Vite + React + TypeScript + Tailwind; data in th
 
 `westeros-os/src/modules/production` turns the "Cost Control" document into the system:
 
-- `calc.ts` — the formulas of the four manufacturing methods (by weight, by portion, chicken, burger) + fat preparation.
+- `calc.ts` — the formulas of the four manufacturing methods (by weight, by portion, from one raw material, burger). Waste is net minus gross, so a loss shows as a negative number.
 - `build.ts`, `ops.ts` — a batch (تشغيلة): costed from last purchase prices, signed by the chef, numbered
   `<category>-<DDMMYYYY>#<run>(<chef code>)`, moved through stock, with a lot and expiry per product.
 - `Label.tsx` — the batch sticker (product, batch number, production and expiry dates, chef, quantity, QR).
-- `src/data/westeros/` — the restaurant's own data: 282 raw materials, 93 menu items, 37 manufactured products, staff.
+- `src/data/westeros/` — the restaurant's own data: the published menu, staff placeholders, delivery areas. Raw materials, manufactured products and recipes start empty and are entered in the app (the only reference for manufacturing is the "Cost Control System" document; categories, meat cuts and storage methods are constants the restaurant edits).
 - `supabase/migrations/0015_production.sql` — tables and row-level security.
 - `plan.ts`, `PlanPage.tsx` — today's production plan (خطة اليوم): what to make and how much, from the daily
   minimum (the stock item's `levels.par`), the same weekday's usage over the last four weeks, stock on hand and

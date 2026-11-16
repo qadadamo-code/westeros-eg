@@ -11,7 +11,7 @@ import { Badge, Button, Card, Dialog, EmptyState, Input, Select, Table, Textarea
 import { LabelDialog } from "./LabelDialog";
 import { voidBatch } from "./ops";
 import { ExpiryBadge, fmtDateTime, fmtG, fmtKg, fmtPct, outQtyText } from "./ui";
-import { CATEGORY_LABEL, CATEGORY_ORDER, METHOD_LABEL, useProduction, type Prod } from "./useProduction";
+import { categoryName, METHOD_LABEL, useProduction, type Prod } from "./useProduction";
 
 export default function BatchesPage() {
   const { L, lang, loc } = useT();
@@ -42,7 +42,7 @@ export default function BatchesPage() {
       <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_200px_200px]">
         <Input icon={<Search />} placeholder={L("ابحث برقم الباتش أو المنتج أو الشيف", "Search by batch number, product or chef")} value={q} onChange={(e) => setQ(e.target.value)} />
         <Select value={chef} onChange={(e) => setChef(e.target.value)} options={[{ value: "", label: L("كل الشيفات", "All chefs") }, ...chefs.map(([id, name]) => ({ value: id, label: name }))]} />
-        <Select value={cat} onChange={(e) => setCat(e.target.value)} options={[{ value: "", label: L("كل الأقسام", "All categories") }, ...CATEGORY_ORDER.map((c) => ({ value: c, label: loc(CATEGORY_LABEL[c]) }))]} />
+        <Select value={cat} onChange={(e) => setCat(e.target.value)} options={[{ value: "", label: L("كل الأقسام", "All categories") }, ...prod.categories.map((c) => ({ value: c.id, label: loc(c.name) }))]} />
       </div>
       <Card className="overflow-hidden">
         <Table columns={columns} rows={rows} rowKey={(b) => b.id} onRowClick={(b) => setOpenId(b.id)} loading={prod.loading} empty={<EmptyState compact icon={<ClipboardList />} title={prod.batches.length ? L("لا توجد نتيجة", "Nothing matches") : L("لا توجد تشغيلات بعد", "No batches yet")} />} />
@@ -94,7 +94,7 @@ function BatchDialog({ batch, prod, onClose }: { batch: MfgBatch | null; prod: P
         onClose={onClose}
         size="xl"
         title={<span className="flex flex-wrap items-center gap-2"><span className="num" dir="ltr">{b.number}</span>{b.status === "void" ? <Badge tone="danger">{L("ملغاة", "Void")}</Badge> : <Badge tone="ok">{loc(METHOD_LABEL[b.method])}</Badge>}</span>}
-        description={`${b.outputs.map((o) => loc(o.name)).join("، ")} · ${loc(CATEGORY_LABEL[b.category])}`}
+        description={`${b.outputs.map((o) => loc(o.name)).join("، ")} · ${loc(categoryName(prod.categories, b.category))}`}
         footer={
           <div className="flex flex-wrap items-center justify-between gap-2">
             {b.status === "done" && can("production.manage") ? <Button variant="danger-soft" icon={<Ban />} onClick={() => setVoiding(true)}>{L("إلغاء التشغيلة", "Void batch")}</Button> : <span />}

@@ -8,7 +8,7 @@ import { useT } from "@/i18n/i18n";
 import { Badge, Button, Card, Dialog, EmptyState, Input, LinkButton, Skeleton, StatTile, Table, useToast, type Column } from "@/ui";
 import { buildPlan, SAFETY, type PlanRow } from "./plan";
 import { Num } from "./ui";
-import { CATEGORY_LABEL, useProduction } from "./useProduction";
+import { categoryName, useProduction } from "./useProduction";
 
 const SINCE = 35 * 86_400_000;
 
@@ -40,7 +40,7 @@ export default function PlanPage() {
     { key: "p", header: L("المنتج", "Product"), cell: (r) => (
       <span className="grid">
         <span className="font-semibold">{loc(r.product.name)}</span>
-        <span className="text-[12px] text-muted">{loc(CATEGORY_LABEL[r.product.category])}</span>
+        <span className="text-[12px] text-muted">{loc(categoryName(prod.categories, r.product.category))}</span>
       </span>
     ) },
     { key: "h", header: L("الموجود", "On hand"), align: "end", cell: (r) => (

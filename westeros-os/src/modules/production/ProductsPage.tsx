@@ -3,15 +3,15 @@ import { useMemo, useState } from "react";
 import { BookOpenCheck, Plus, Search } from "lucide-react";
 import { useSession } from "@/auth/session";
 import { useDb } from "@/data/hooks";
-import type { MfgCategory, MfgChickenMode, MfgMethod, MfgProduct, MfgRecipeLine, MfgStorageTemp } from "@/data/types";
+import type { MfgChickenMode, MfgMethod, MfgProduct, MfgRecipeLine, MfgStorageTemp, StockItem } from "@/data/types";
 import { useT } from "@/i18n/i18n";
 import { formatMoney } from "@/lib/money";
 import { Badge, Button, Card, Dialog, EmptyState, Input, Select, Switch, Table, Textarea, useToast, type Column } from "@/ui";
 import { LinesEditor, Num } from "./ui";
-import { CATEGORY_LABEL, CATEGORY_ORDER, METHOD_LABEL, useProduction, type Prod } from "./useProduction";
+import { categoryName, METHOD_LABEL, useProduction, type Prod } from "./useProduction";
 
-const METHODS: MfgMethod[] = ["weight", "portion", "chicken", "burger", "fat"];
-const unitOf = (method: MfgMethod, mode: MfgChickenMode | null): "kg" | "pc" => (method === "weight" || method === "fat" || (method === "chicken" && (mode ?? "weight") === "weight") ? "kg" : "pc");
+const METHODS: MfgMethod[] = ["weight", "portion", "chicken", "burger"];
+const unitOf = (method: MfgMethod, mode: MfgChickenMode | null): "kg" | "pc" => (method === "weight" || (method === "chicken" && (mode ?? "weight") === "weight") ? "kg" : "pc");
 const clean = (l: MfgRecipeLine[]) => l.filter((x) => x.qty > 0);
 
 type Draft = Pick<MfgProduct, "name" | "category" | "categoryCode" | "method" | "chickenMode" | "recipeType" | "portionGrams" | "storageMethod" | "storageTemp" | "shelfLifeDays" | "ingredientsText" | "lines" | "packaging" | "active">;
@@ -28,14 +28,14 @@ export default function ProductsPage() {
     const n = q.trim().toLowerCase();
     return prod.products.filter((p) => (!cat || p.category === cat) && (!n || p.name.ar.includes(n) || p.name.en.toLowerCase().includes(n) || p.code.toLowerCase().includes(n)));
   }, [prod.products, q, cat]);
-  const noRecipe = prod.products.filter((p) => p.active && p.method !== "fat" && !p.lines.length).length;
+  const noRecipe = prod.products.filter((p) => p.active && !p.lines.length).length;
   const columns: Column<MfgProduct>[] = [
     { key: "c", header: L("الكود", "Code"), hideOnMobile: true, cell: (p) => <span className="num text-[13px] text-muted">{p.code}</span> },
     { key: "n", header: L("المنتج", "Product"), cell: (p) => <span className="font-semibold">{loc(p.name)}{p.active ? null : <Badge tone="neutral" size="sm" className="ms-2">{L("موقوف", "Inactive")}</Badge>}</span> },
-    { key: "cat", header: L("القسم", "Category"), hideOnMobile: true, cell: (p) => <span className="text-muted">{loc(CATEGORY_LABEL[p.category])}</span> },
+    { key: "cat", header: L("القسم", "Category"), hideOnMobile: true, cell: (p) => <span className="text-muted">{loc(categoryName(prod.categories, p.category))}</span> },
     { key: "m", header: L("طريقة التصنيع", "Method"), hideOnMobile: true, cell: (p) => loc(METHOD_LABEL[p.method]) },
     { key: "por", header: L("الحصة", "Portion"), align: "end", hideOnMobile: true, cell: (p) => (p.portionGrams ? <span className="num">{p.portionGrams} {L("جم", "g")}</span> : p.method === "portion" ? <Badge tone="warn" size="sm">{L("ناقصة", "Missing")}</Badge> : <span className="text-faint">—</span>) },
-    { key: "r", header: L("الوصفة", "Recipe"), cell: (p) => (p.lines.length ? <Badge tone="ok" size="sm">{L(`${p.lines.length} مكون`, `${p.lines.length} items`)}</Badge> : p.method === "fat" ? <span className="text-faint">—</span> : <Badge tone="warn" size="sm">{L("فاضية", "Empty")}</Badge>) },
+    { key: "r", header: L("الوصفة", "Recipe"), cell: (p) => (p.lines.length ? <Badge tone="ok" size="sm">{L(`${p.lines.length} مكون`, `${p.lines.length} items`)}</Badge> : <Badge tone="warn" size="sm">{L("فاضية", "Empty")}</Badge>) },
     { key: "s", header: L("الصلاحية", "Shelf life"), align: "end", hideOnMobile: true, cell: (p) => <span className="num">{p.shelfLifeDays} {L("يوم", "d")}</span> },
     { key: "cost", header: L("آخر سعر إنتاج", "Last cost"), align: "end", cell: (p) => { const u = prod.unitCost(p.stockItemId); return u > 0 ? <span className="num font-semibold">{formatMoney(p.unit === "kg" ? u * 1000 : u, { lang })} <span className="text-[11.5px] font-normal text-muted">/ {p.unit === "kg" ? L("كجم", "kg") : L("قطعة", "pc")}</span></span> : <span className="text-faint">—</span>; } },
   ];
@@ -48,7 +48,7 @@ export default function ProductsPage() {
       ) : null}
       <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_220px_auto]">
         <Input icon={<Search />} placeholder={L("ابحث عن منتج", "Search products")} value={q} onChange={(e) => setQ(e.target.value)} />
-        <Select value={cat} onChange={(e) => setCat(e.target.value)} options={[{ value: "", label: L("كل الأقسام", "All categories") }, ...CATEGORY_ORDER.map((c) => ({ value: c, label: loc(CATEGORY_LABEL[c]) }))]} />
+        <Select value={cat} onChange={(e) => setCat(e.target.value)} options={[{ value: "", label: L("كل الأقسام", "All categories") }, ...prod.categories.map((c) => ({ value: c.id, label: loc(c.name) }))]} />
         {manage ? <Button icon={<Plus />} onClick={() => setEdit("new")}>{L("منتج جديد", "New product")}</Button> : null}
       </div>
       <Card className="overflow-hidden">
@@ -66,7 +66,7 @@ function ProductDialog({ product, prod, readOnly, onClose }: { product: MfgProdu
   const [d, setD] = useState<Draft>(() =>
     product
       ? { name: product.name, category: product.category, categoryCode: product.categoryCode, method: product.method, chickenMode: product.chickenMode, recipeType: product.recipeType, portionGrams: product.portionGrams, storageMethod: product.storageMethod, storageTemp: product.storageTemp, shelfLifeDays: product.shelfLifeDays, ingredientsText: product.ingredientsText, lines: product.lines, packaging: product.packaging, active: product.active }
-      : { name: { ar: "", en: "" }, category: "cold_sauce", categoryCode: codeOf(prod, "cold_sauce"), method: "weight", chickenMode: null, recipeType: "main", portionGrams: null, storageMethod: "", storageTemp: "chilled", shelfLifeDays: 3, ingredientsText: "", lines: [], packaging: [], active: true },
+      : { name: { ar: "", en: "" }, category: prod.categories[0]?.id ?? "", categoryCode: prod.categories[0]?.code ?? 0, method: "weight", chickenMode: null, recipeType: "main", portionGrams: null, storageMethod: "", storageTemp: "chilled", shelfLifeDays: 0, ingredientsText: "", lines: [], packaging: [], active: true },
   );
   const [busy, setBusy] = useState(false);
   // الحد اليومي lives on the product's stock item (par level), in the product's unit here
@@ -75,7 +75,7 @@ function ProductDialog({ product, prod, readOnly, onClose }: { product: MfgProdu
   // the way a product is made decides how it is stocked (kilos or pieces); fixed once it has batches
   const locked = !!product && prod.batches.some((b) => b.outputs.some((o) => o.productId === product.id));
   const unit = unitOf(d.method, d.chickenMode);
-  const per = d.method === "weight" || d.method === "portion" ? L("لوجبة واحدة", "for one meal") : d.method === "fat" ? L("لكل كيلو جاهز", "per kilo ready") : L("لكل كيلو صافي", "per net kilo");
+  const per = d.method === "weight" || d.method === "portion" ? L("لوجبة واحدة", "for one meal") : L("لكل كيلو صافي", "per net kilo");
   const save = async () => {
     if (!d.name.ar.trim()) return;
     setBusy(true);
@@ -123,7 +123,7 @@ function ProductDialog({ product, prod, readOnly, onClose }: { product: MfgProdu
         <div className="grid gap-3 sm:grid-cols-2">
           <Input label={L("الاسم بالعربي", "Arabic name")} value={d.name.ar} onChange={(e) => set({ name: { ...d.name, ar: e.target.value } })} />
           <Input label={L("الاسم بالإنجليزي", "English name")} dir="ltr" value={d.name.en} onChange={(e) => set({ name: { ...d.name, en: e.target.value } })} />
-          <Select label={L("القسم", "Category")} value={d.category} onChange={(e) => { const c = e.target.value as MfgCategory; set({ category: c, categoryCode: codeOf(prod, c) }); }} options={CATEGORY_ORDER.map((c) => ({ value: c, label: loc(CATEGORY_LABEL[c]) }))} />
+          <Select label={L("القسم", "Category")} value={d.category} onChange={(e) => set({ category: e.target.value, categoryCode: prod.categories.find((c) => c.id === e.target.value)?.code ?? d.categoryCode })} options={[...(prod.categories.some((c) => c.id === d.category) ? [] : [{ value: d.category, label: L("بدون فئة", "No category") }]), ...prod.categories.map((c) => ({ value: c.id, label: loc(c.name) }))]} />
           <Num label={L("كود القسم في رقم الباتش", "Category code in the batch number")} value={d.categoryCode} onChange={(n) => set({ categoryCode: Math.round(n) })} />
           <Select label={L("طريقة التصنيع", "Manufacturing method")} disabled={locked} hint={locked ? L("لا تتغير بعد تسجيل تشغيلات", "Fixed once batches exist") : undefined} value={d.method} onChange={(e) => set({ method: e.target.value as MfgMethod })} options={METHODS.map((m) => ({ value: m, label: loc(METHOD_LABEL[m]) }))} />
           {d.method === "chicken" ? (
@@ -138,7 +138,7 @@ function ProductDialog({ product, prod, readOnly, onClose }: { product: MfgProdu
           <Select label={L("طريقة التخزين", "Storage method")} value={d.storageMethod} onChange={(e) => set({ storageMethod: e.target.value })} options={[{ value: "", label: "—" }, ...[...new Set([...(prod.settings?.storageMethods ?? []), d.storageMethod].filter(Boolean))].map((s) => ({ value: s, label: s }))]} />
         </div>
         <Textarea label={L("شرح مبسط للمكونات", "Short ingredients description")} rows={2} value={d.ingredientsText} onChange={(e) => set({ ingredientsText: e.target.value })} />
-        {d.method === "fat" ? null : <LinesEditor readOnly={readOnly} title={L("الوصفة", "Recipe")} hint={per} lines={d.lines} onChange={(lines) => set({ lines })} items={prod.items.filter((i) => i.id !== product?.stockItemId)} itemById={prod.itemById} unitCost={prod.unitCost} />}
+        <LinesEditor readOnly={readOnly} title={L("الوصفة", "Recipe")} hint={per} lines={d.lines} onChange={(lines) => set({ lines })} items={recipeItems(prod, d.recipeType, product?.stockItemId)} itemById={prod.itemById} unitCost={prod.unitCost} />
         <LinesEditor readOnly={readOnly} title={L("باكيج التخزين", "Storage packaging")} hint={per} lines={d.packaging} onChange={(packaging) => set({ packaging })} items={prod.items.filter((i) => i.id !== product?.stockItemId)} itemById={prod.itemById} unitCost={prod.unitCost} />
         <Switch checked={d.active} onChange={(active) => set({ active })} label={L("المنتج شغال", "Active")} description={L("المنتج الموقوف لا يظهر في التشغيلات الجديدة", "Inactive products are hidden from new batches")} />
       </fieldset>
@@ -146,4 +146,15 @@ function ProductDialog({ product, prod, readOnly, onClose }: { product: MfgProdu
   );
 }
 
-const codeOf = (prod: Prod, c: MfgCategory) => prod.products.find((p) => p.category === c)?.categoryCode ?? Math.max(0, ...prod.products.map((p) => p.categoryCode)) + 1;
+/**
+ * What a recipe may contain, by its type (Cost Control document, 5.2): a main recipe takes raw materials, sub-recipes
+ * and marinades; a sub-recipe takes raw materials and marinades; a marinade takes raw materials only. The raw meat,
+ * the single raw material and the fat never appear in a recipe: the methods weigh them on their own.
+ */
+export function recipeItems(prod: Pick<Prod, "items" | "products" | "settings">, type: MfgProduct["recipeType"], selfStockId?: string): StockItem[] {
+  const s = prod.settings;
+  const hidden = new Set<string>([s?.chickenItemId, s?.rawFatItemId, ...(s?.meatTypes ?? []).map((m) => m.stockItemId), selfStockId].filter((x): x is string => !!x));
+  const typeOf = new Map(prod.products.map((p) => [p.stockItemId, p.recipeType]));
+  const allowed = type === "main" ? ["sub", "marinade"] : type === "sub" ? ["marinade"] : [];
+  return prod.items.filter((i) => !hidden.has(i.id) && (i.kind !== "prep" || allowed.includes(typeOf.get(i.id) ?? "main")));
+}

@@ -1,14 +1,14 @@
 /**
  * تشغيلة جديدة — the four manufacturing methods of the Cost Control document (+ fat preparation). The chef picks the
- * method, types what went in and what came out, and sees the sheet's figures live; saving signs the batch with the
+ * method, types what went in and what came out, and sees the figures of the document live; saving signs the batch with the
  * chef, moves the stock and opens the sticker.
  */
 import { useMemo, useState, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Beef, Check, CookingPot, Drumstick, Droplets, Scale, ShieldCheck, Shapes } from "lucide-react";
+import { Beef, Check, Layers, Scale, ShieldCheck, Shapes } from "lucide-react";
 import { useSession } from "@/auth/session";
 import { useDb } from "@/data/hooks";
-import type { MfgBatch, MfgMethod, MfgProduct, MfgRecipeLine } from "@/data/types";
+import type { MfgBatch, MfgCategoryDef, MfgMethod, MfgProduct, MfgRecipeLine } from "@/data/types";
 import { useT } from "@/i18n/i18n";
 import { cn } from "@/lib/cn";
 import { formatMoney } from "@/lib/money";
@@ -18,9 +18,9 @@ import { buildBatch, scaleLines, type BatchDraft, type BuildCtx } from "./build"
 import { LabelDialog } from "./LabelDialog";
 import { BatchError, saveBatch } from "./ops";
 import { ERROR_TEXT, LinesEditor, Num, ResultPanel } from "./ui";
-import { CATEGORY_LABEL, CATEGORY_ORDER, useProduction, type Prod } from "./useProduction";
+import { useProduction, type Prod } from "./useProduction";
 
-type Tab = "weight" | "portion" | "chicken" | "beef" | "chicken_burger" | "fat";
+type Tab = MfgMethod;
 const clean = (l: MfgRecipeLine[]) => l.filter((x) => x.qty > 0).map((x) => ({ itemId: x.itemId, qty: Math.round(x.qty * 10_000) / 10_000 }));
 
 export default function NewBatchPage() {
@@ -35,7 +35,7 @@ export default function NewBatchPage() {
   return <Forms key={wanted ?? ""} prod={prod} initial={wanted ? prod.productById.get(wanted) : undefined} />;
 }
 
-const tabOf = (p: MfgProduct | undefined): Tab => (!p ? "weight" : p.method === "burger" ? (p.category === "chicken_burger" ? "chicken_burger" : "beef") : p.method);
+const tabOf = (p: MfgProduct | undefined): Tab => p?.method ?? "weight";
 
 function Forms({ prod, initial }: { prod: Prod; initial: MfgProduct | undefined }) {
   const { L } = useT();
@@ -54,20 +54,16 @@ function Forms({ prod, initial }: { prod: Prod; initial: MfgProduct | undefined 
         options={[
           { value: "weight", label: L("بالوزن", "By weight"), icon: <Scale /> },
           { value: "portion", label: L("بالحصة", "By portion"), icon: <Shapes /> },
-          { value: "chicken", label: L("الدجاج", "Chicken"), icon: <Drumstick /> },
-          { value: "beef", label: L("برجر لحم", "Beef burger"), icon: <Beef /> },
-          { value: "chicken_burger", label: L("برجر دجاج", "Chicken burger"), icon: <CookingPot /> },
-          { value: "fat", label: L("الدهن", "Fat"), icon: <Droplets /> },
+          { value: "chicken", label: L("من مادة خام واحدة", "One raw material"), icon: <Layers /> },
+          { value: "burger", label: L("البرجر", "Burger"), icon: <Beef /> },
         ]}
       />
       {tab === "weight" || tab === "portion" ? (
         <SimpleForm key={key} method={tab} prod={prod} onDone={again} initial={first} />
       ) : tab === "chicken" ? (
         <ChickenForm key={key} prod={prod} onDone={again} initial={first} />
-      ) : tab === "fat" ? (
-        <FatForm key={key} prod={prod} onDone={again} initial={first} />
       ) : (
-        <BurgerForm key={key} kind={tab === "beef" ? "beef" : "chicken"} prod={prod} onDone={again} />
+        <BurgerTab key={key} prod={prod} onDone={again} initial={first} />
       )}
     </div>
   );
@@ -162,16 +158,18 @@ function Block({ title, hint, children, step }: { title: ReactNode; hint?: React
   );
 }
 
-function ProductChips({ products, value, onPick, multi }: { products: MfgProduct[]; value: string | string[]; onPick: (id: string) => void; multi?: boolean }) {
+function ProductChips({ products, cats, value, onPick, multi }: { products: MfgProduct[]; cats: MfgCategoryDef[]; value: string | string[]; onPick: (id: string) => void; multi?: boolean }) {
   const { L, loc } = useT();
   const on = (id: string) => (Array.isArray(value) ? value.includes(id) : value === id);
-  const groups = CATEGORY_ORDER.map((c) => ({ c, list: products.filter((p) => p.category === c) })).filter((g) => g.list.length);
+  // categories in the order of the constants, then anything whose category was removed
+  const known = new Set(cats.map((c) => c.id));
+  const groups = [...cats.map((c) => ({ c: c.id, name: c.name, list: products.filter((p) => p.category === c.id) })), { c: "", name: { ar: "بدون فئة", en: "No category" }, list: products.filter((p) => !known.has(p.category)) }].filter((g) => g.list.length);
   if (!products.length) return <p className="text-[14px] text-muted">{L("لا توجد منتجات بهذه الطريقة. أضفها من صفحة المنتجات.", "No products use this method yet. Add them in Products.")}</p>;
   return (
     <div className="grid gap-3">
       {groups.map((g) => (
         <div key={g.c} className="grid gap-1.5">
-          {groups.length > 1 ? <span className="text-[12px] font-semibold text-muted">{loc(CATEGORY_LABEL[g.c])}</span> : null}
+          {groups.length > 1 ? <span className="text-[12px] font-semibold text-muted">{loc(g.name)}</span> : null}
           <div className="flex flex-wrap gap-1.5">
             {g.list.map((p) => (
               <button
@@ -242,7 +240,7 @@ function SimpleForm({ method, prod, onDone, initial }: { method: Extract<MfgMeth
       side={<ResultPanel built={built} footer={<SaveBar prod={prod} draft={draft} ready={ready} onDone={onDone} afterSave={keep && p ? () => db.update("mfgProducts", p.id, { lines: clean(lines), packaging: clean(packaging) }) : undefined} />} />}
     >
       <Block step={1} title={L("المنتج", "Product")} hint={method === "weight" ? L("صوصات وخلطات وتتبيلات تخزن بالوزن", "Sauces, mixes and marinades stored by weight") : L("منتجات تخزن بحصة محددة (بورشن)", "Products stored in fixed portions")}>
-        <ProductChips products={list} value={productId} onPick={pick} />
+        <ProductChips products={list} cats={prod.categories} value={productId} onPick={pick} />
       </Block>
       {p ? (
         <>
@@ -287,7 +285,10 @@ function ChickenForm({ prod, onDone, initial }: { prod: Prod; onDone: () => void
   const [chickenKg, setChickenKg] = useState(0);
   const [rows, setRows] = useState<ChickenRow[]>(() => (initial ? [{ productId: initial.id, weightKg: 0, count: 0, lines: initial.lines, packaging: initial.packaging }] : []));
   const [keep, setKeep] = useState(!!initial && !initial.lines.length);
-  const chicken = prod.settings?.chickenItemId ? prod.itemById.get(prod.settings.chickenItemId) : undefined;
+  // the raw material this batch is cut from: any raw item, starting on the one named in the constants
+  const raws = useMemo(() => prod.items.filter((i) => i.active && i.kind === "raw"), [prod.items]);
+  const [rawId, setRawId] = useState<string>(() => prod.settings?.chickenItemId ?? "");
+  const chicken = rawId ? prod.itemById.get(rawId) : undefined;
   const toggle = (id: string) =>
     setRows((r) => {
       if (r.some((x) => x.productId === id)) return r.filter((x) => x.productId !== id);
@@ -296,7 +297,7 @@ function ChickenForm({ prod, onDone, initial }: { prod: Prod; onDone: () => void
       return [...r, { productId: id, weightKg: 0, count: 0, lines: p?.lines ?? [], packaging: p?.packaging ?? [] }];
     });
   const set = (id: string, patch: Partial<ChickenRow>) => setRows((r) => r.map((x) => (x.productId === id ? { ...x, ...patch } : x)));
-  const draft: BatchDraft = { method: "chicken", chickenKg, outputs: rows.map((r) => ({ productId: r.productId, weightKg: r.weightKg, count: Math.round(r.count), lines: scaleLines(r.lines, r.weightKg), packaging: scaleLines(r.packaging, r.weightKg) })) };
+  const draft: BatchDraft = { method: "chicken", itemId: rawId || null, chickenKg, outputs: rows.map((r) => ({ productId: r.productId, weightKg: r.weightKg, count: Math.round(r.count), lines: scaleLines(r.lines, r.weightKg), packaging: scaleLines(r.packaging, r.weightKg) })) };
   const built = useMemo(() => buildBatch(draft, ctx), [JSON.stringify(draft), ctx]); // eslint-disable-line react-hooks/exhaustive-deps
   const MODE = { weight: L("بالوزن", "By weight"), pre_count: L("متبل قبل العد", "Marinated before counting"), post_count: L("متبل بعد العد", "Marinated after counting") };
   return (
@@ -308,11 +309,14 @@ function ChickenForm({ prod, onDone, initial }: { prod: Prod; onDone: () => void
         />
       }
     >
-      <Block step={1} title={L("وزن الدجاج", "Chicken weight")} hint={chicken ? `${loc(chicken.name)} · ${formatMoney(prod.unitCost(chicken.id) * 1000, { lang })} / ${L("كجم", "kg")}` : L("حدد خامة صدور الدجاج من الثوابت", "Set the chicken raw material in Constants")}>
-        <Num big className="max-w-56" label={L("وزن صدور الدجاج قبل التجهيز", "Chicken breast before prep")} suffix={L("كجم", "kg")} value={chickenKg} onChange={setChickenKg} />
+      <Block step={1} title={L("المادة الخام ووزنها", "Raw material & weight")} hint={chicken ? `${formatMoney(prod.unitCost(chicken.id) * 1000, { lang })} / ${L("كجم", "kg")}` : L("اختر المادة الخام التي ستُقطّع", "Pick the raw material being cut")}>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Select label={L("المادة الخام", "Raw material")} value={rawId} onChange={(e) => setRawId(e.target.value)} options={[{ value: "", label: L("اختر", "Choose") }, ...raws.map((i) => ({ value: i.id, label: loc(i.name) }))]} />
+          <Num big label={L("الوزن قبل التجهيز", "Weight before prep")} suffix={L("كجم", "kg")} value={chickenKg} onChange={setChickenKg} />
+        </div>
       </Block>
-      <Block step={2} title={L("المنتجات الناتجة", "Products made")} hint={L("اختر كل منتج خرج من نفس كمية الدجاج", "Pick every product made from this chicken")}>
-        <ProductChips products={list} value={rows.map((r) => r.productId)} onPick={toggle} multi />
+      <Block step={2} title={L("المنتجات الناتجة", "Products made")} hint={L("اختر كل منتج خرج من نفس الكمية", "Pick every product made from this quantity")}>
+        <ProductChips products={list} cats={prod.categories} value={rows.map((r) => r.productId)} onPick={toggle} multi />
       </Block>
       {rows.map((r, i) => {
         const p = prod.productById.get(r.productId);
@@ -338,12 +342,27 @@ function ChickenForm({ prod, onDone, initial }: { prod: Prod; onDone: () => void
 
 /* ───────── 4 · burger ───────── */
 
-function BurgerForm({ kind, prod, onDone }: { kind: "beef" | "chicken"; prod: Prod; onDone: () => void }) {
+/** نوع البرجر: the categories marked as burger in the constants. */
+function BurgerTab({ prod, onDone, initial }: { prod: Prod; onDone: () => void; initial?: MfgProduct }) {
+  const { L, loc } = useT();
+  const types = prod.categories.filter((c) => c.burger);
+  const [catId, setCatId] = useState(() => (initial && types.some((c) => c.id === initial.category) ? initial.category : (types[0]?.id ?? "")));
+  const cat = types.find((c) => c.id === catId) ?? types[0];
+  if (!cat) return <EmptyState title={L("لا يوجد نوع برجر معرّف. حدده على فئة من الثوابت.", "No burger type is defined. Mark a category as burger in Constants.")} />;
+  return (
+    <div className="grid gap-4">
+      {types.length > 1 ? <Segmented label={L("نوع البرجر", "Burger type")} value={cat.id} onChange={setCatId} options={types.map((c) => ({ value: c.id, label: loc(c.name) }))} /> : null}
+      <BurgerForm key={cat.id} kind={cat.burger ?? "beef"} categoryId={cat.id} prod={prod} onDone={onDone} />
+    </div>
+  );
+}
+
+function BurgerForm({ kind, categoryId, prod, onDone }: { kind: "beef" | "chicken"; categoryId: string; prod: Prod; onDone: () => void }) {
   const { L, lang, loc } = useT();
   const db = useDb();
   const ctx = useCtx(prod);
   const beef = kind === "beef";
-  const list = useMemo(() => prod.products.filter((p) => p.active && p.method === "burger" && p.category === (beef ? "beef_burger" : "chicken_burger")), [prod.products, beef]);
+  const list = useMemo(() => prod.products.filter((p) => p.active && p.method === "burger" && p.category === categoryId), [prod.products, categoryId]);
   const first = list[0];
   const meats = prod.settings?.meatTypes ?? [];
   const [meatTypeId, setMeatTypeId] = useState<string | null>(null);
@@ -362,7 +381,7 @@ function BurgerForm({ kind, prod, onDone }: { kind: "beef" | "chicken"; prod: Pr
   const built = useMemo(() => buildBatch(draft, ctx), [JSON.stringify(draft), ctx]); // eslint-disable-line react-hooks/exhaustive-deps
   const mince = prod.settings?.mincedChickenItemId ? prod.itemById.get(prod.settings.mincedChickenItemId) : undefined;
   const suggested = built.suggestedFatKg ?? 0;
-  if (!list.length) return <EmptyState title={L("لا توجد منتجات برجر. أضفها من صفحة المنتجات.", "No burger products yet. Add them in Products.")} />;
+  if (!list.length) return <EmptyState title={L("لا توجد منتجات في هذه الفئة بطريقة البرجر. أضفها من صفحة المنتجات.", "No burger products in this category yet. Add them in Products.")} />;
   return (
     <Layout
       side={
@@ -415,40 +434,6 @@ function BurgerForm({ kind, prod, onDone }: { kind: "beef" | "chicken"; prod: Pr
             <Num key={p.id} big label={loc(p.name)} suffix={L("قطعة", "pcs")} value={counts[p.id] ?? 0} onChange={(v) => setCounts((c) => ({ ...c, [p.id]: v }))} />
           ))}
         </div>
-      </Block>
-    </Layout>
-  );
-}
-
-/* ───────── fat ───────── */
-
-function FatForm({ prod, onDone, initial }: { prod: Prod; onDone: () => void; initial?: MfgProduct }) {
-  const { L, lang, loc } = useT();
-  const ctx = useCtx(prod);
-  const list = useMemo(() => prod.products.filter((p) => p.active && p.method === "fat"), [prod.products]);
-  const [productId, setProductId] = useState(() => initial?.id ?? list[0]?.id ?? "");
-  const [fatKg, setFatKg] = useState(0);
-  const [readyKg, setReadyKg] = useState(0);
-  const p = prod.productById.get(productId) ?? list[0];
-  const [packaging, setPackaging] = useState<MfgRecipeLine[]>(() => p?.packaging ?? []);
-  const raw = prod.settings?.rawFatItemId ? prod.itemById.get(prod.settings.rawFatItemId) : undefined;
-  const draft: BatchDraft = { method: "fat", productId: p?.id ?? "", fatKg, readyKg, packaging: scaleLines(packaging, readyKg) };
-  const built = useMemo(() => buildBatch(draft, ctx), [JSON.stringify(draft), ctx]); // eslint-disable-line react-hooks/exhaustive-deps
-  return (
-    <Layout side={<ResultPanel built={built} footer={<SaveBar prod={prod} draft={draft} ready={!built.errors.length} onDone={onDone} />} />}>
-      {list.length > 1 ? (
-        <Block title={L("المنتج", "Product")}>
-          <ProductChips products={list} value={p?.id ?? ""} onPick={setProductId} />
-        </Block>
-      ) : null}
-      <Block step={1} title={L("تجهيز الدهن البلدي", "Preparing beef fat")} hint={raw ? `${loc(raw.name)} · ${formatMoney(prod.unitCost(raw.id) * 1000, { lang })} / ${L("كجم", "kg")}` : L("حدد خامة الدهن من الثوابت", "Set the raw fat item in Constants")}>
-        <div className="grid gap-3 sm:grid-cols-3">
-          <Num big label={L("وزن الدهن قبل التجهيز", "Fat before prep")} suffix={L("كجم", "kg")} value={fatKg} onChange={setFatKg} />
-          <Num big label={L("وزن الدهن الجاهز", "Ready fat")} suffix={L("كجم", "kg")} value={readyKg} onChange={setReadyKg} />
-        </div>
-      </Block>
-      <Block step={2} title={L("باكيج التخزين", "Storage packaging")} hint={L("اختياري", "Optional")}>
-        <LinesEditor title={L("الأكياس والعلب", "Bags & containers")} lines={packaging} onChange={setPackaging} by={readyKg} items={prod.items} itemById={prod.itemById} unitCost={prod.unitCost} />
       </Block>
     </Layout>
   );

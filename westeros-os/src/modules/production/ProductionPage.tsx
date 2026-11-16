@@ -9,7 +9,7 @@ import { PageHeader } from "@/shell/PageHeader";
 import { Badge, Card, CardHeader, EmptyState, LinkButton, Skeleton, StatTile, Table, type Column } from "@/ui";
 import { cairoDay } from "./calc";
 import { ExpiryBadge, expiryTone, fmtDateTime, outQtyText } from "./ui";
-import { CATEGORY_LABEL, useProduction, type Prod } from "./useProduction";
+import { categoryName, useProduction, type Prod } from "./useProduction";
 
 const NewBatchPage = lazy(() => import("./NewBatchPage"));
 const BatchesPage = lazy(() => import("./BatchesPage"));
@@ -104,7 +104,7 @@ function Overview({ prod }: { prod: Prod }) {
   type LastRow = (typeof s.last)[number];
   const columns: Column<LastRow>[] = [
     { key: "p", header: L("المنتج", "Product"), cell: (r) => <span className="font-semibold whitespace-nowrap">{loc(r.o.name)}</span> },
-    { key: "c", header: L("القسم", "Category"), hideOnMobile: true, cell: (r) => <span className="text-muted">{loc(CATEGORY_LABEL[r.b.category])}</span> },
+    { key: "c", header: L("القسم", "Category"), hideOnMobile: true, cell: (r) => <span className="text-muted">{loc(categoryName(prod.categories, r.b.category))}</span> },
     { key: "n", header: L("آخر باتش", "Last batch"), cell: (r) => <span className="num text-[13px] whitespace-nowrap" dir="ltr">{r.b.number}</span> },
     { key: "d", header: L("التاريخ", "Date"), hideOnMobile: true, cell: (r) => <span className="num text-[13px] whitespace-nowrap text-muted">{fmtDateTime(r.b.madeAt, lang)}</span> },
     { key: "chef", header: L("الشيف", "Chef"), hideOnMobile: true, cell: (r) => <span className="whitespace-nowrap">{r.b.chefName}</span> },

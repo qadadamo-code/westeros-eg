@@ -5,7 +5,7 @@
  */
 import type { Localized, MfgBatch, MfgBatchInput, MfgBatchOutput, MfgCategory, MfgInputRole, MfgMeatType, MfgMethod, MfgProduct, MfgSettings, StockItem } from "@/data/types";
 import type { Units } from "@/lib/money";
-import { calcBurger, calcChicken, calcFat, calcPortion, calcWeight, expiryOf, type CalcLine } from "./calc";
+import { calcBurger, calcChicken, calcPortion, calcWeight, expiryOf, type CalcLine } from "./calc";
 
 export interface DraftLine {
   itemId: string;
@@ -15,14 +15,13 @@ export interface DraftLine {
 export type BatchDraft =
   | { method: "weight"; productId: string; meals: number; netKg: number; lines: DraftLine[]; packaging: DraftLine[] }
   | { method: "portion"; productId: string; meals: number; netCount: number; lines: DraftLine[]; packaging: DraftLine[] }
-  | { method: "chicken"; chickenKg: number; outputs: { productId: string; weightKg: number; count: number; lines: DraftLine[]; packaging: DraftLine[] }[] }
-  | { method: "burger"; kind: "beef" | "chicken"; meatTypeId: string | null; meatKg: number; netKg: number; fatKg: number; lines: DraftLine[]; packaging: DraftLine[]; products: { productId: string; count: number }[] }
-  | { method: "fat"; productId: string; fatKg: number; readyKg: number; packaging: DraftLine[] };
+  | { method: "chicken"; /** the raw material being cut; absent = the default one of the constants */ itemId?: string | null; chickenKg: number; outputs: { productId: string; weightKg: number; count: number; lines: DraftLine[]; packaging: DraftLine[] }[] }
+  | { method: "burger"; kind: "beef" | "chicken"; meatTypeId: string | null; meatKg: number; netKg: number; fatKg: number; lines: DraftLine[]; packaging: DraftLine[]; products: { productId: string; count: number }[] };
 
 export interface BuildCtx {
   products: Map<string, MfgProduct>;
   items: Map<string, StockItem>;
-  settings: Pick<MfgSettings, "meatTypes" | "chickenItemId" | "rawFatItemId" | "burgerFatItemId" | "mincedChickenItemId"> | null;
+  settings: Pick<MfgSettings, "meatTypes" | "chickenItemId" | "rawFatItemId" | "mincedChickenItemId"> | null;
   /** price of one base unit: last purchase price for raw materials, last batch for manufactured ones */
   unitCost: (itemId: string) => Units;
   madeAt: string;
@@ -62,7 +61,7 @@ export function buildBatch(d: BatchDraft, ctx: BuildCtx): BuiltBatch {
     productId: p.id, stockItemId: p.stockItemId, name: p.name, unit: x.unit ?? p.unit, weightKg: x.weightKg, count: x.count, portionGrams: p.portionGrams, scaleDiffG: x.scaleDiffG ?? 0,
     totalCost: x.totalCost, unitCost: x.unitCost, shelfLifeDays: p.shelfLifeDays, expiresAt: expiryOf(ctx.madeAt, p.shelfLifeDays), storageTemp: p.storageTemp, storageMethod: p.storageMethod, ingredientsText: p.ingredientsText,
   });
-  const empty = (method: MfgMethod, category: MfgCategory = "other", categoryCode = 0): BuiltBatch => ({
+  const empty = (method: MfgMethod, category: MfgCategory = "", categoryCode = 0): BuiltBatch => ({
     method, category, categoryCode, meals: null, mainItemId: null, mainWeightKg: null, netWeightKg: null, grossWeightKg: null, fatWeightKg: null, suggestedFatKg: null, meatTypeId: null, expectedCount: null,
     waste: null, debrisKg: null, debrisBp: null, scaleDiffG: null, inputs, outputs: [], totalCost: 0, errors, unpriced,
   });
@@ -89,10 +88,10 @@ export function buildBatch(d: BatchDraft, ctx: BuildCtx): BuiltBatch {
   }
 
   if (d.method === "chicken") {
-    const chickenId = ctx.settings?.chickenItemId ?? null;
+    const chickenId = d.itemId ?? ctx.settings?.chickenItemId ?? null;
     const rows = d.outputs.map((o) => ({ o, p: ctx.products.get(o.productId) })).filter((x): x is { o: (typeof d.outputs)[number]; p: MfgProduct } => !!x.p);
     const first = rows[0]?.p;
-    const b = empty("chicken", first?.category ?? "chicken", first?.categoryCode ?? 0);
+    const b = empty("chicken", first?.category ?? "", first?.categoryCode ?? 0);
     if (!chickenId || !ctx.items.has(chickenId)) errors.push("chickenItem");
     if (!pos(d.chickenKg)) errors.push("chicken");
     if (!rows.length) errors.push("outputs");
@@ -113,14 +112,15 @@ export function buildBatch(d: BatchDraft, ctx: BuildCtx): BuiltBatch {
     };
   }
 
-  if (d.method === "burger") {
+  // 4 · burger
+  {
     const beef = d.kind === "beef";
     const rows = d.products.map((x) => ({ x, p: ctx.products.get(x.productId) })).filter((r): r is { x: (typeof d.products)[number]; p: MfgProduct } => !!r.p && pos(r.x.count));
-    const first = rows[0]?.p ?? [...ctx.products.values()].find((p) => p.category === (beef ? "beef_burger" : "chicken_burger"));
-    const b = empty("burger", first?.category ?? (beef ? "beef_burger" : "chicken_burger"), first?.categoryCode ?? 0);
+    const first = rows[0]?.p;
+    const b = empty("burger", first?.category ?? "", first?.categoryCode ?? 0);
     const meat: MfgMeatType | undefined = beef ? ctx.settings?.meatTypes.find((m) => m.id === d.meatTypeId) : undefined;
     const mainId = beef ? (meat?.stockItemId ?? null) : (ctx.settings?.mincedChickenItemId ?? null);
-    const fatId = ctx.settings?.burgerFatItemId ?? ctx.settings?.rawFatItemId ?? null;
+    const fatId = ctx.settings?.rawFatItemId ?? null;
     if (beef && !meat) errors.push("meatType");
     if (!mainId || !ctx.items.has(mainId)) errors.push(beef ? "meatType" : "minceItem");
     if (beef && !pos(d.meatKg)) errors.push("meat");
@@ -143,20 +143,6 @@ export function buildBatch(d: BatchDraft, ctx: BuildCtx): BuiltBatch {
       outputs: rows.map(({ x, p }, i) => out(p, { weightKg: Math.round(x.count * (p.portionGrams ?? 0)) / 1000, count: x.count, totalCost: r.products[i].total, unitCost: r.products[i].unitCost, unit: "pc" })),
     };
   }
-
-  // fat
-  const p = ctx.products.get(d.productId);
-  if (!p) return { ...empty("fat", "fat"), errors: ["product"] };
-  const b = empty("fat", p.category, p.categoryCode);
-  const rawFat = ctx.settings?.rawFatItemId ?? null;
-  if (!rawFat || !ctx.items.has(rawFat)) errors.push("fatItem");
-  if (!pos(d.fatKg)) errors.push("fat");
-  if (!pos(d.readyKg)) errors.push("net");
-  if (pos(d.fatKg) && d.readyKg > d.fatKg + 1e-9) errors.push("overweight");
-  if (rawFat && pos(d.fatKg)) add({ itemId: rawFat, qty: d.fatKg * 1000 }, "main");
-  const packaging = d.packaging.map((l) => add(l, "packaging"));
-  const r = calcFat({ fatKg: d.fatKg, readyKg: d.readyKg, fatPerKg: rawFat ? ctx.unitCost(rawFat) * 1000 : 0, packaging });
-  return { ...b, mainItemId: rawFat, mainWeightKg: d.fatKg, netWeightKg: d.readyKg, debrisKg: r.debrisKg, debrisBp: r.debrisBp, totalCost: r.total, outputs: [out(p, { weightKg: d.readyKg, count: null, totalCost: r.total, unitCost: r.perKg, unit: "kg" })] };
 }
 
 export const outputLabel = (o: Pick<MfgBatchOutput, "name">) => o.name ?? NONE;

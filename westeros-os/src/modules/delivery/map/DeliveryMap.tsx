@@ -92,7 +92,7 @@ function pinHtml(p: MapPin, selected: boolean): string {
   return `<div class="dm-pin" style="--s:${s}"><svg width="30" height="39" viewBox="0 0 30 39" aria-hidden="true"><path d="M15 38s12-12.2 12-21.6A12 12 0 0 0 3 16.4C3 25.8 15 38 15 38z" fill="${c}" stroke="var(--sf-surface)" stroke-width="2.2"/></svg>${inner}${tag}</div>`;
 }
 
-/* drawn base: the Nile around Zamalek + district names (approximate, for orientation only) */
+/* drawn base: the Nile through central Cairo + district names (approximate, for orientation only) */
 const NILE_EAST: [number, number][] = [[30.098, 31.231], [30.082, 31.2285], [30.0745, 31.2272], [30.064, 31.2275], [30.0545, 31.2272], [30.0465, 31.2262], [30.038, 31.2268], [30.028, 31.2283], [30.015, 31.2295], [30.0, 31.2275]];
 const NILE_WEST: [number, number][] = [[30.082, 31.2268], [30.0755, 31.2165], [30.0705, 31.2128], [30.062, 31.2128], [30.054, 31.2155], [30.048, 31.2195], [30.0445, 31.2232], [30.038, 31.2262]];
 const DISTRICTS: { at: [number, number]; ar: string; en: string }[] = [
@@ -103,6 +103,11 @@ const DISTRICTS: { at: [number, number]; ar: string; en: string }[] = [
   { at: [30.0362, 31.2318], ar: "جاردن سيتي", en: "GARDEN CITY" },
   { at: [30.0488, 31.2425], ar: "وسط البلد", en: "DOWNTOWN" },
   { at: [30.0265, 31.2105], ar: "الجيزة", en: "GIZA" },
+  { at: [30.0561, 31.3301], ar: "مدينة نصر", en: "NASR CITY" },
+  { at: [30.0911, 31.3225], ar: "مصر الجديدة", en: "HELIOPOLIS" },
+  { at: [30.1046, 31.3742], ar: "شيراتون", en: "SHERATON" },
+  { at: [30.1262, 31.3478], ar: "النزهة", en: "EL NOZHA" },
+  { at: [30.0722, 31.2832], ar: "العباسية", en: "ABBASSIA" },
 ];
 
 export const DeliveryMap = forwardRef<MapHandle, DeliveryMapProps>(function DeliveryMap(props, ref) {

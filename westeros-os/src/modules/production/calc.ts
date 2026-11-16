@@ -26,7 +26,7 @@ const bp = (part: number, whole: number) => Math.round(div(part, whole) * 10_000
 export interface WeightResult {
   /** الوزن الإجمالي: مكونات الوصفة قبل التجهيز */
   grossKg: number;
-  /** الهدر (جم) = الوزن الإجمالي − الوزن الصافي */
+  /** الهدر (جم) = الوزن الصافي − الوزن الإجمالي: negative when weight was lost */
   wasteG: number;
   /** سعر الإجمالي: مجموع سعر جميع المكونات (مع باكيج التخزين) */
   total: Units;
@@ -36,7 +36,7 @@ export interface WeightResult {
 export function calcWeight(p: { lines: CalcLine[]; packaging: CalcLine[]; netKg: number }): WeightResult {
   const grossG = linesWeightG(p.lines);
   const total = linesCost(p.lines) + linesCost(p.packaging);
-  return { grossKg: r3(grossG / 1000), wasteG: r3(grossG - p.netKg * 1000), total, perKg: Math.round(div(total, p.netKg)) };
+  return { grossKg: r3(grossG / 1000), wasteG: r3(p.netKg * 1000 - grossG), total, perKg: Math.round(div(total, p.netKg)) };
 }
 
 /* ───────── 2 · تصنيع مباشر يخزن بحصة محددة "بورشن" ───────── */
@@ -45,7 +45,7 @@ export interface PortionResult {
   grossKg: number;
   /** العدد المتوقع انتاجه = اجمالي وزن المكونات ÷ وزن الحصة */
   expected: number;
-  /** الهدر (قطعة) = العدد المتوقع − العدد الصافي */
+  /** الهدر (قطعة) = العدد الصافي − العدد المتوقع: negative when pieces are short */
   wastePcs: number;
   total: Units;
   /** سعر القطعة = سعر الإجمالي ÷ العدد الصافي */
@@ -55,10 +55,10 @@ export function calcPortion(p: { lines: CalcLine[]; packaging: CalcLine[]; porti
   const grossG = linesWeightG(p.lines);
   const expected = Math.floor(div(grossG, p.portionG) + 1e-9);
   const total = linesCost(p.lines) + linesCost(p.packaging);
-  return { grossKg: r3(grossG / 1000), expected, wastePcs: expected - p.netCount, total, perPc: Math.round(div(total, p.netCount)) };
+  return { grossKg: r3(grossG / 1000), expected, wastePcs: p.netCount - expected, total, perPc: Math.round(div(total, p.netCount)) };
 }
 
-/* ───────── 3 · تصنيع منتجات من مادة خام واحدة (الدجاج) ───────── */
+/* ───────── 3 · تصنيع منتجات من مادة خام واحدة (مثل الدجاج) ───────── */
 
 export interface ChickenOutputIn {
   mode: MfgChickenMode;
@@ -157,21 +157,6 @@ export function calcBurger(p: {
       return { unitCost, total: unitCost * x.count };
     }),
   };
-}
-
-/* ───────── تجهيز الدهن البلدي ───────── */
-
-export interface FatResult {
-  debrisKg: number;
-  debrisBp: number;
-  total: Units;
-  /** سعر كيلو الدهن الجاهز */
-  perKg: Units;
-}
-export function calcFat(p: { fatKg: number; readyKg: number; fatPerKg: Units; packaging?: CalcLine[] }): FatResult {
-  const debrisKg = r3(p.fatKg - p.readyKg);
-  const total = Math.round(p.fatPerKg * p.fatKg + linesCost(p.packaging ?? []));
-  return { debrisKg, debrisBp: bp(debrisKg, p.fatKg), total, perKg: Math.round(div(total, p.readyKg)) };
 }
 
 /* ───────── رقم التشغيلة ───────── */

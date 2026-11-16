@@ -1,9 +1,9 @@
-/** الثوابت: chef codes, meat cuts and their suggested fat, storage methods, and the raw materials the methods use. */
+/** ثوابت النظام: product categories and their codes, chef codes, meat cuts and their suggested fat, storage methods, and the raw materials the methods use. */
 import { useState } from "react";
-import { Beef, ChefHat, Package, Plus, Settings2, Trash2, X } from "lucide-react";
+import { Beef, ChefHat, Package, Plus, Settings2, Tags, Trash2, X } from "lucide-react";
 import { useSession } from "@/auth/session";
 import { useDb } from "@/data/hooks";
-import type { MfgMeatType, MfgSettings, StockItem } from "@/data/types";
+import type { MfgCategoryDef, MfgMeatType, MfgSettings, StockItem } from "@/data/types";
 import { useT } from "@/i18n/i18n";
 import { uuid } from "@/lib/id";
 import { Button, Card, CardHeader, EmptyState, IconButton, Input, Select } from "@/ui";
@@ -23,9 +23,34 @@ export default function SettingsPage() {
   const kitchen = prod.staff.filter((m) => m.active && (m.role === "chef" || m.role === "kitchen" || s.chefCodes[m.id]));
   const raws = prod.items.filter((i) => i.active);
   const itemOptions = (list: StockItem[]) => [{ value: "", label: "—" }, ...list.map((i) => ({ value: i.id, label: `${loc(i.name)} · ${i.sku}` }))];
+  const cats = prod.categories;
+  const setCat = (id: string, p: Partial<MfgCategoryDef>) => patch({ productCategories: cats.map((c) => (c.id === id ? { ...c, ...p } : c)) });
+  const usedCats = new Set(prod.products.map((x) => x.category));
   const setMeat = (id: string, p: Partial<MfgMeatType>) => patch({ meatTypes: s.meatTypes.map((m) => (m.id === id ? { ...m, ...p } : m)) });
   return (
     <div className="grid items-start gap-5 lg:grid-cols-2">
+      <Card className="lg:col-span-2">
+        <CardHeader
+          icon={<Tags />}
+          title={L("فئات المنتجات المصنعة", "Product categories")}
+          subtitle={L("الكود هو أول رقم في رقم التشغيلة. حدد نوع البرجر على الفئات التي تُصنع بطريقة البرجر.", "The code is the first number of the batch number. Mark the categories made with the burger method.")}
+          action={<Button size="sm" variant="outline" icon={<Plus />} onClick={() => patch({ productCategories: [...cats, { id: uuid(), name: { ar: L("فئة جديدة", "New category"), en: "New category" }, code: Math.max(0, ...cats.map((c) => c.code)) + 1, burger: null }] })}>{L("فئة جديدة", "Add category")}</Button>}
+        />
+        <ul className="grid gap-2 px-5 pb-5">
+          {cats.map((c) => (
+            <li key={c.id} className="grid items-end gap-2 rounded-xl border border-line p-3 sm:grid-cols-[minmax(0,1.4fr)_110px_minmax(0,1fr)_auto]">
+              <Input label={L("اسم الفئة", "Name")} defaultValue={c.name.ar} onBlur={(e) => e.target.value.trim() && e.target.value !== c.name.ar && setCat(c.id, { name: { ar: e.target.value.trim(), en: e.target.value.trim() } })} />
+              <Num label={L("الكود", "Code")} value={c.code} onChange={(n) => setCat(c.id, { code: Math.max(0, Math.round(n)) })} />
+              <Select label={L("نوع البرجر", "Burger type")} value={c.burger ?? ""} onChange={(e) => setCat(c.id, { burger: (e.target.value || null) as MfgCategoryDef["burger"] })} options={[{ value: "", label: L("ليست برجر", "Not a burger") }, { value: "beef", label: L("برجر لحم (لحم ودهن)", "Meat burger (meat & fat)") }, { value: "chicken", label: L("برجر دجاج (فرم)", "Chicken burger (mince)") }]} />
+              <IconButton label={usedCats.has(c.id) ? L("فيها منتجات، انقلها أولًا", "Has products, move them first") : L("حذف", "Remove")} disabled={usedCats.has(c.id)} onClick={() => patch({ productCategories: cats.filter((x) => x.id !== c.id) })}>
+                <Trash2 />
+              </IconButton>
+            </li>
+          ))}
+          {cats.length ? null : <li className="text-[14px] text-muted">{L("أضف أول فئة.", "Add the first category.")}</li>}
+        </ul>
+      </Card>
+
       <Card>
         <CardHeader icon={<ChefHat />} title={L("أكواد الشيفات", "Chef codes")} subtitle={L("الرقم بين القوسين في رقم الباتش، مثل 2-21102026#1(5)", "The number in brackets in the batch number, e.g. 2-21102026#1(5)")} />
         <ul className="grid gap-2 px-5 pb-5">
@@ -78,7 +103,7 @@ export default function SettingsPage() {
           {s.meatTypes.map((m) => (
             <li key={m.id} className="grid items-end gap-2 rounded-xl border border-line p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_140px_auto]">
               <Input label={L("الاسم", "Name")} defaultValue={m.name.ar} onBlur={(e) => e.target.value.trim() && e.target.value !== m.name.ar && setMeat(m.id, { name: { ar: e.target.value.trim(), en: e.target.value.trim() } })} />
-              <Select label={L("الخامة في المخزن", "Stock item")} value={m.stockItemId ?? ""} onChange={(e) => setMeat(m.id, { stockItemId: e.target.value || null })} options={itemOptions(raws.filter((i) => i.kind === "raw" && (i.category === "meat" || i.id === m.stockItemId)))} />
+              <Select label={L("الخامة في المخزن", "Stock item")} value={m.stockItemId ?? ""} onChange={(e) => setMeat(m.id, { stockItemId: e.target.value || null })} options={itemOptions(raws.filter((i) => i.kind === "raw"))} />
               <Num label={L("دهن لكل كيلو", "Fat per kilo")} suffix={L("جم", "g")} value={m.fatGramsPerKg} onChange={(n) => setMeat(m.id, { fatGramsPerKg: Math.round(n) })} />
               <IconButton label={L("حذف", "Remove")} onClick={() => patch({ meatTypes: s.meatTypes.filter((x) => x.id !== m.id) })}>
                 <Trash2 />
@@ -91,10 +116,9 @@ export default function SettingsPage() {
       <Card className="lg:col-span-2">
         <CardHeader icon={<Settings2 />} title={L("خامات طرق التصنيع", "Raw materials of the methods")} subtitle={L("الخامة التي تُسحب من المخزن في كل طريقة", "The stock item each method draws from")} />
         <div className="grid gap-3 px-5 pb-5 sm:grid-cols-2">
-          <Select label={L("صدور الدجاج (تجهيزات الدجاج)", "Chicken breast")} value={s.chickenItemId ?? ""} onChange={(e) => patch({ chickenItemId: e.target.value || null })} options={itemOptions(raws.filter((i) => i.kind === "raw"))} />
-          <Select label={L("دجاج الفرم (برجر الدجاج)", "Minced chicken (chicken burger)")} value={s.mincedChickenItemId ?? ""} onChange={(e) => patch({ mincedChickenItemId: e.target.value || null })} options={itemOptions(raws)} />
-          <Select label={L("الدهن الخام (تجهيز الدهن)", "Raw fat")} value={s.rawFatItemId ?? ""} onChange={(e) => patch({ rawFatItemId: e.target.value || null })} options={itemOptions(raws.filter((i) => i.kind === "raw"))} />
-          <Select label={L("الدهن المضاف لبرجر اللحم", "Fat added to beef burgers")} value={s.burgerFatItemId ?? ""} onChange={(e) => patch({ burgerFatItemId: e.target.value || null })} options={itemOptions(raws)} />
+          <Select label={L("الخامة المقترحة لطريقة المادة الخام الواحدة", "Default raw material for the one-raw-material method")} hint={L("مثل صدور الدجاج. الشيف يقدر يختار غيرها في كل تشغيلة.", "For example chicken breast. The chef can pick another per batch.")} value={s.chickenItemId ?? ""} onChange={(e) => patch({ chickenItemId: e.target.value || null })} options={itemOptions(raws.filter((i) => i.kind === "raw"))} />
+          <Select label={L("الفرم المستخدم في برجر الدجاج", "Mince used in chicken burgers")} value={s.mincedChickenItemId ?? ""} onChange={(e) => patch({ mincedChickenItemId: e.target.value || null })} options={itemOptions(raws)} />
+          <Select label={L("خامة الدهن في برجر اللحم", "Fat raw material for meat burgers")} hint={L("يُحسب بآخر سعر شراء", "Costed at the last purchase price")} value={s.rawFatItemId ?? ""} onChange={(e) => patch({ rawFatItemId: e.target.value || null })} options={itemOptions(raws.filter((i) => i.kind === "raw"))} />
         </div>
       </Card>
     </div>

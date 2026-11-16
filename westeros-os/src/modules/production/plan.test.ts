@@ -4,7 +4,8 @@ import { LocalAdapter } from "@/data/local/LocalAdapter";
 import { makeDb } from "@/data/hooks";
 import { staffId } from "@/data/seed";
 import type { MfgProduct, StockItem, StockMove } from "@/data/types";
-import { buildWesterosSeed, productId, rawItemId, WESTEROS_BRANCH_ID, WESTEROS_RESTAURANT_ID } from "@/data/westeros/seed";
+import { WESTEROS_BRANCH_ID, WESTEROS_RESTAURANT_ID } from "@/data/westeros/seed";
+import { buildTestKitchen, T } from "./testKitchen";
 import { saveBatch } from "./ops";
 import { buildPlan, roundUp } from "./plan";
 import { batchVariance, varianceReport } from "./variance";
@@ -15,9 +16,9 @@ const B = WESTEROS_BRANCH_ID;
 const NOW = "2026-11-15T10:00:00.000Z";
 
 describe("daily production plan", () => {
-  const seed = buildWesterosSeed(new Date(NOW));
-  const sauce = seed.data.mfgProducts.find((p) => p.id === productId("stark-sauce"))!;
-  const burger = seed.data.mfgProducts.find((p) => p.id === productId("beef-burger-150"))!;
+  const seed = buildTestKitchen(new Date(NOW));
+  const sauce = seed.data.mfgProducts.find((p) => p.id === T.sauce)!;
+  const burger = seed.data.mfgProducts.find((p) => p.id === T.burger150)!;
   const items = (par: Record<string, number> = {}) => new Map<string, StockItem>(seed.data.stockItems.map((i) => [i.id, { ...i, levels: { ...i.levels, par: par[i.id] ?? 0 } }]));
   const move = (itemId: string, day: string, qty: number, kind: StockMove["kind"] = "sale") => ({ itemId, kind, qty: -qty, at: `${day}T12:00:00.000Z` });
   const plan = (p: Partial<Parameters<typeof buildPlan>[0]>) => buildPlan({ products: [sauce, burger], items: items(), onHand: new Map(), moves: [], batches: [], now: NOW, ...p });
@@ -78,23 +79,22 @@ describe("daily production plan", () => {
 });
 
 describe("recipe against actual", () => {
-  const repo = new LocalAdapter({ memory: true, now: () => new Date(NOW), buildSeed: buildWesterosSeed });
+  const repo = new LocalAdapter({ memory: true, now: () => new Date(NOW), buildSeed: buildTestKitchen });
   const db = makeDb(repo, R, B, staffId("chef3"));
-  const chef = { id: staffId("chef3"), name: "محمد رجب" };
-  const mayo = rawItemId(17002);
-  const bag = rawItemId(11027);
+  const chef = { id: staffId("chef3"), name: "شيف 3" };
+  const { mayo, bag } = T;
   const madeAt = "2026-11-15T09:00:00.000Z";
 
   it("leaves a product without a recipe out of the comparison", async () => {
-    const b = await saveBatch(db, { method: "weight", productId: productId("stark-sauce"), meals: 2, netKg: 1.9, lines: [{ itemId: mayo, qty: 2000 }], packaging: [] }, { chef, branchId: B, madeAt });
+    const b = await saveBatch(db, { method: "weight", productId: T.sauce, meals: 2, netKg: 1.9, lines: [{ itemId: mayo, qty: 2000 }], packaging: [] }, { chef, branchId: B, madeAt });
     const products = new Map((await db.list("mfgProducts")).map((p) => [p.id, p]));
     expect(batchVariance(b, products).hasStandard).toBe(false);
   });
 
   it("prices what the chef used over and under the recipe", async () => {
     // the recipe: 1 kg mayo and 1 bag per meal
-    await db.update("mfgProducts", productId("stark-sauce"), { lines: [{ itemId: mayo, qty: 1000 }], packaging: [{ itemId: bag, qty: 1 }] });
-    const b = await saveBatch(db, { method: "weight", productId: productId("stark-sauce"), meals: 3, netKg: 3, lines: [{ itemId: mayo, qty: 3300 }], packaging: [{ itemId: bag, qty: 2 }] }, { chef, branchId: B, madeAt });
+    await db.update("mfgProducts", T.sauce, { lines: [{ itemId: mayo, qty: 1000 }], packaging: [{ itemId: bag, qty: 1 }] });
+    const b = await saveBatch(db, { method: "weight", productId: T.sauce, meals: 3, netKg: 3, lines: [{ itemId: mayo, qty: 3300 }], packaging: [{ itemId: bag, qty: 2 }] }, { chef, branchId: B, madeAt });
     const products = new Map((await db.list("mfgProducts")).map((p) => [p.id, p]));
     const items = new Map((await db.list("stockItems")).map((i) => [i.id, i]));
     const v = batchVariance(b, products);
@@ -111,15 +111,15 @@ describe("recipe against actual", () => {
     // the first batch (2 meals, 2 kg mayo, no bag) now has a standard too: exactly on the mayo, 2 bags under
     expect(rep.totals.compared).toBe(2);
     expect(rep.totals.over).toBe(m.diffValue);
-    expect(rep.byChef[0].name).toBe("محمد رجب");
+    expect(rep.byChef[0].name).toBe("شيف 3");
     expect(rep.byItem.find((i) => i.itemId === mayo)?.diff).toBe(300);
     expect(rep.byItem.find((i) => i.itemId === bag)?.diff).toBe(-3);
   });
 
   it("counts the trimmings of meat batches per chef", async () => {
     const s = (await db.list("mfgSettings"))[0];
-    const cut = s.meatTypes.find((x) => x.name.ar === "سوبريم لحم وش فخدة")!;
-    await saveBatch(db, { method: "burger", kind: "beef", meatTypeId: cut.id, meatKg: 25, netKg: 24, fatKg: 7, lines: [], packaging: [], products: [{ productId: productId("beef-burger-150"), count: 200 }] }, { chef, branchId: B, madeAt });
+    const cut = s.meatTypes[0];
+    await saveBatch(db, { method: "burger", kind: "beef", meatTypeId: cut.id, meatKg: 25, netKg: 24, fatKg: 7, lines: [], packaging: [], products: [{ productId: T.burger150, count: 200 }] }, { chef, branchId: B, madeAt });
     const products = new Map((await db.list("mfgProducts")).map((p) => [p.id, p]));
     const rep = varianceReport(await db.list("mfgBatches"), products, "2026-11-01T00:00:00.000Z", "2026-11-30T00:00:00.000Z");
     expect(rep.totals.debrisKg).toBe(1);

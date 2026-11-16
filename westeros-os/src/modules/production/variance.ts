@@ -1,10 +1,10 @@
 /**
  * المعياري مقابل الفعلي في التصنيع: what a batch should have used according to the product's recipe, against what
  * the chef actually put in, in quantity and in money — per product, per chef and per ingredient. Plus the trimmings
- * (دوبريه) of chicken, beef and fat batches, the other place where money leaks.
+ * (دوبريه) of single-raw-material and meat batches, the other place where money leaks.
  *
  * The standard of a batch is the product's CURRENT recipe scaled the way the batch form scales it:
- *   weight / portion → × meals · chicken → × the product's weight · burger → × net kilos · fat (packaging) → × ready kilos
+ *   weight / portion → × meals · chicken → × the product's weight · burger → × net kilos
  * A product without a recipe has no standard and is left out of the comparison (it is counted in `noStandard`).
  * Pure.
  */
@@ -99,7 +99,7 @@ interface Group {
   diffValue: Units;
 }
 export interface ChefGroup extends Group {
-  /** trimmings across chicken / beef / fat batches */
+  /** trimmings across single-raw-material and meat batches */
   mainKg: number;
   debrisKg: number;
   debrisValue: Units;

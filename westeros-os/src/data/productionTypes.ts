@@ -1,9 +1,10 @@
 /**
- * Central-kitchen manufacturing (التصنيع) — the Westeros "Cost Control" sheet as a system
- * (supabase/migrations/0015_production.sql; src/modules/production).
+ * Central-kitchen manufacturing (التصنيع) — the "Cost Control System" document as a system
+ * (supabase/migrations/0015_production.sql; src/modules/production). Nothing here names a product: categories, meat
+ * cuts, storage methods and the raw materials the methods use are all defined by the restaurant in the constants.
  *
  *  - A manufactured product (MfgProduct) is made in batches (MfgBatch, "تشغيلة") by a chef, with one of the
- *    manufacturing methods of the Cost Control document: by weight, by portion, from chicken breast, burger, fat.
+ *    manufacturing methods of the Cost Control document: by weight, by portion, from one raw material, burger.
  *  - Every batch is signed by the chef who made it and carries a batch number
  *    `<category code>-<DDMMYYYY>#<run of the day>(<chef code>)`, production and expiry dates (the sticker).
  *  - Quantities are in the stock item's base unit (g / ml / pc); money is Units (0.00001 EGP).
@@ -27,12 +28,10 @@ export type MfgMethod =
   | "weight"
   /** 2 · تصنيع مباشر يخزن بحصة محددة "بورشن" */
   | "portion"
-  /** 3 · منتجات من مادة خام واحدة (الدجاج) */
+  /** 3 · منتجات من مادة خام واحدة (مثل الدجاج) — the id stays "chicken", the raw material is chosen per batch */
   | "chicken"
   /** 4 · البرجر (لحم / دجاج) */
-  | "burger"
-  /** تجهيز الدهن البلدي */
-  | "fat";
+  | "burger";
 
 /** Chicken products only: how the piece is weighed against its marinade. */
 export type MfgChickenMode =
@@ -43,7 +42,16 @@ export type MfgChickenMode =
   /** متبل بعد العد (كرسبي، ستيك) */
   | "post_count";
 
-export type MfgCategory = "cold_sauce" | "hot_sauce" | "other" | "chicken" | "beef_burger" | "chicken_burger" | "marinade" | "fat";
+/** id of a category defined in the constants (MfgSettings.productCategories) */
+export type MfgCategory = string;
+/** فئة الأصناف المصنعة: defined by the restaurant, with the code that starts the batch number. */
+export interface MfgCategoryDef {
+  id: string;
+  name: Loc;
+  code: number;
+  /** نوع البرجر: set on the categories the burger method makes — meat (with fat and trimmings) or minced chicken */
+  burger: "beef" | "chicken" | null;
+}
 export type MfgStorageTemp = "chilled" | "frozen" | "room";
 
 /** One ingredient of a recipe: `qty` base units of a stock item. */
@@ -74,8 +82,8 @@ export interface MfgProduct extends Row {
   /** شرح مبسط للمكونات — يطبع على ستيكر الصلاحية */
   ingredientsText: string;
   /**
-   * Recipe. weight / portion methods: quantities for ONE meal (عدد الوجبات multiplies them); fat: per kilo ready.
-   * chicken / burger: quantities per 1 kg of net chicken or meat.
+   * Recipe. weight / portion methods: quantities for ONE meal (عدد الوجبات multiplies them).
+   * single raw material / burger: quantities per 1 kg of the net raw material or meat.
    */
   lines: MfgRecipeLine[];
   /** باكيج التخزين, scaled like `lines`: costed on the batch, never part of the product's weight */
@@ -139,11 +147,11 @@ export interface MfgBatch extends Row {
   chefCode: number;
   /** عدد الوجبات (weight / portion) */
   meals: number | null;
-  /** main raw material: chicken breast, the meat cut, raw fat */
+  /** main raw material: the one the batch was cut from, or the meat cut */
   mainItemId: string | null;
-  /** وزن الدجاج / اللحم / الدهن قبل التشغيل */
+  /** وزن المادة الخام / اللحم قبل التشغيل */
   mainWeightKg: number | null;
-  /** الوزن الصافي: sauce after cooking, meat after trimming, ready fat */
+  /** الوزن الصافي: sauce after cooking, meat after trimming */
   netWeightKg: number | null;
   /** الوزن الإجمالي للمكونات قبل التجهيز */
   grossWeightKg: number | null;
@@ -186,11 +194,14 @@ export interface MfgSettings extends Row {
   chefCodes: Record<string, number>;
   meatTypes: MfgMeatType[];
   storageMethods: string[];
-  /** raw chicken breast and raw fat stock items */
+  /** فئات الأصناف المصنعة; absent on rows saved before categories became constants */
+  productCategories?: MfgCategoryDef[];
+  /** the raw material the single-raw-material method offers first (the chef can pick another per batch) */
   chickenItemId: string | null;
+  /** the fat raw material used in meat burgers, costed at its purchase price */
   rawFatItemId: string | null;
-  /** fat used in beef burgers (the prepared fat product's stock item, or raw fat) */
-  burgerFatItemId: string | null;
+  /** no longer used (kept for rows saved earlier) */
+  burgerFatItemId?: string | null;
   /** minced chicken used in chicken burgers */
   mincedChickenItemId: string | null;
   /** where finished products are stored */
