@@ -19,7 +19,7 @@ import { categoryName } from "./defaults";
 import { LabelDialog } from "./LabelDialog";
 import { packagingItems, recipeItems } from "./ProductsPage";
 import { BatchError, saveBatch } from "./ops";
-import { ERROR_TEXT, LinesEditor, Num, ResultPanel } from "./ui";
+import { ERROR_TEXT, LinesEditor, Num, ResultPanel, r3 } from "./ui";
 import { useProduction, type Prod } from "./useProduction";
 import { COST_CONTROL_ONLY } from "@/costControl";
 
@@ -443,12 +443,19 @@ function BurgerForm({ kind, categoryId, prod, onDone }: { kind: "beef" | "chicke
     for (const p of list) if (!p.portionGrams && portions[p.id] > 0) products.set(p.id, { ...p, portionGrams: portions[p.id] });
     return { ...ctx, products };
   }, [ctx, list, portions]);
-  const [lines, setLines] = useState<MfgRecipeLine[]>(() => first?.lines ?? []);
-  const [packaging, setPackaging] = useState<MfgRecipeLine[]>(() => first?.packaging ?? []);
-  const [keep, setKeep] = useState(() => !first?.lines.length);
+  const [editedLines, setLines] = useState<MfgRecipeLine[]>(() => first?.lines ?? []);
+  const [editedPackaging, setPackaging] = useState<MfgRecipeLine[]>(() => first?.packaging ?? []);
+  const [keepEdited, setKeep] = useState(() => !first?.lines.length);
+  // Cost Control: the mix is shown as numbers only, always straight from the recipe (edited in الوصفات),
+  // and is worked out on the whole mix: net meat after trimming plus the added fat.
+  const fixed = COST_CONTROL_ONLY;
+  const lines = fixed ? first?.lines ?? [] : editedLines;
+  const packaging = fixed ? first?.packaging ?? [] : editedPackaging;
+  const keep = fixed ? false : keepEdited;
+  const mixKg = fixed && beef ? netKg + fatKg : netKg;
   const meat = meats.find((m) => m.id === meatTypeId);
   const draft: BatchDraft = {
-    method: "burger", kind, meatTypeId, meatKg, netKg, fatKg, lines: scaleLines(lines, netKg), packaging: scaleLines(packaging, netKg),
+    method: "burger", kind, meatTypeId, meatKg, netKg, fatKg, lines: scaleLines(lines, mixKg), packaging: scaleLines(packaging, mixKg),
     products: list.map((p) => ({ productId: p.id, count: Math.round(counts[p.id] ?? 0) })),
   };
   const built = useMemo(() => buildBatch(draft, burgerCtx), [JSON.stringify(draft), burgerCtx]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -497,11 +504,11 @@ function BurgerForm({ kind, categoryId, prod, onDone }: { kind: "beef" | "chicke
           <Num big className="max-w-56" label={L("وزن دجاج الفرم", "Minced chicken weight")} suffix={L("كجم", "kg")} value={netKg} onChange={setNetKg} />
         </Block>
       )}
-      <Block step={2} title={L("الخلطة", "Mix")} hint={L("كميات هذه التشغيلة", "Quantities of this batch")}>
+      <Block step={2} title={L("الخلطة", "Mix")} hint={fixed ? (beef ? `الكميات المطلوبة لإجمالي ${r3(mixKg)} كجم (الصافي + الدهن)` : `الكميات المطلوبة لإجمالي ${r3(mixKg)} كجم`) : L("كميات هذه التشغيلة", "Quantities of this batch")}>
         <div className="grid gap-5">
-          <LinesEditor title={L("مكونات الوصفة", "Recipe")} lines={lines} onChange={setLines} by={netKg} items={recipeItems(prod, first?.recipeType ?? "main", first?.stockItemId)} itemById={prod.itemById} unitCost={prod.unitCost} />
-          <LinesEditor title={L("باكيج التخزين", "Storage packaging")} hint={L("يدخل في التكلفة فقط", "Costed only")} lines={packaging} onChange={setPackaging} by={netKg} items={packagingItems(prod)} itemById={prod.itemById} unitCost={prod.unitCost} />
-          <RecipeSwitch value={keep} onChange={setKeep} empty={!first?.lines.length} />
+          <LinesEditor readOnly={fixed} title={L("مكونات الوصفة", "Recipe")} lines={lines} onChange={setLines} by={mixKg} items={recipeItems(prod, first?.recipeType ?? "main", first?.stockItemId)} itemById={prod.itemById} unitCost={prod.unitCost} />
+          <LinesEditor readOnly={fixed} title={L("باكيج التخزين", "Storage packaging")} hint={L("يدخل في التكلفة فقط", "Costed only")} lines={packaging} onChange={setPackaging} by={mixKg} items={packagingItems(prod)} itemById={prod.itemById} unitCost={prod.unitCost} />
+          {fixed ? <p className="text-[12.5px] text-muted">الأرقام للعرض فقط. تعديل المكونات والباكيج يكون من الوصفات.</p> : <RecipeSwitch value={keep} onChange={setKeep} empty={!first?.lines.length} />}
         </div>
       </Block>
       <Block step={3} title={L("العدد الناتج", "Patties made")} hint={L("نفس الكمية بتطلع كل الأصناف دي. اكتب عدد كل صنف، وسيب اللي ما اتصنعش صفر", "The same quantity makes all of these. Type each count; leave zero for what was not made")}>

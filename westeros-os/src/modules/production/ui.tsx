@@ -15,7 +15,7 @@ export function parseNum(s: string): number {
   const n = Number(s.replace(/[٠-٩]/g, (d) => String(AR_DIGITS.indexOf(d))).replace(/[٫,]/g, ".").trim());
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
-const r3 = (n: number) => Math.round(n * 1000) / 1000;
+export const r3 = (n: number) => Math.round(n * 1000) / 1000;
 
 /** Number field that stays empty instead of showing 0 — a chef types into it with wet hands, nothing to clear first. */
 export function Num({ value, onChange, label, suffix, hint, className, autoFocus, big }: { value: number; onChange: (n: number) => void; label?: ReactNode; suffix?: ReactNode; hint?: ReactNode; className?: string; autoFocus?: boolean; big?: boolean }) {
