@@ -30,9 +30,7 @@ export default function ConstantsPage() {
   const usedUnits = new Set(cc.raws.map((i) => specOf(i, lists).storageUnit));
   const usedSale = new Set(menuItems.map((i) => i.categoryId));
   const setMeat = (id: string, p: Partial<MfgMeatType>) => patch({ meatTypes: s.meatTypes.map((m) => (m.id === id ? { ...m, ...p } : m)) });
-  // every raw material of the list is offered, also the warehouse-only ones: choosing one here brings it into manufacturing
-  const rawOptions = [{ value: "", label: "—" }, ...cc.raws.filter((i) => i.active).map((i) => ({ value: i.id, label: `${i.name.ar} · ${i.sku}` }))];
-  // تعريف اللحوم: only the raw materials of the meat category
+  // تعريف اللحوم: only the raw materials of the meat category, also the warehouse-only ones (choosing one brings it into manufacturing)
   const meatCat = lists.meatCategory ?? lists.rawCategories.find((c) => c.includes("لحوم")) ?? "";
   const meatOptions = (chosen: string | null) => [{ value: "", label: "—" }, ...cc.raws.filter((i) => i.active && (!meatCat || specOf(i, lists).category === meatCat || i.id === chosen)).map((i) => ({ value: i.id, label: `${i.name.ar} · ${i.sku}` }))];
   // دجاج الفرم: the meat category's raw materials, plus the manufactured products of the chicken category
@@ -113,7 +111,7 @@ export default function ConstantsPage() {
           <CardHeader title="تعريف اللحوم" subtitle="نوع قطعية اللحم، ربط بمادة خام محددة، وزن الدهن"
             action={<Button size="sm" variant="outline" icon={<Plus />} onClick={() => patch({ meatTypes: [...s.meatTypes, { id: uuid(), name: { ar: "قطعية جديدة", en: "New cut" }, stockItemId: null, fatGramsPerKg: 200 }] })}>قطعية جديدة</Button>} />
           <div className="grid gap-3 px-5 pb-3 sm:grid-cols-2">
-            <Select label="فئة الخام للحوم" hint="قوائم اللحوم والدهن ودجاج الفرم تعرض خامات هذه الفئة فقط" value={meatCat} onChange={(e) => setLists({ meatCategory: e.target.value })} options={[{ value: "", label: "كل الفئات" }, ...lists.rawCategories.map((c) => ({ value: c, label: c }))]} />
+            <Select label="فئة الخام للحوم" hint="كل قوائم المواد الخام في تعريف اللحوم تعرض خامات هذه الفئة فقط" value={meatCat} onChange={(e) => setLists({ meatCategory: e.target.value })} options={[{ value: "", label: "كل الفئات" }, ...lists.rawCategories.map((c) => ({ value: c, label: c }))]} />
             <Select label="فئة المصنعات للدجاج" hint="منتجات هذه الفئة المصنعة تظهر في قائمة دجاج الفرم" value={chickenCat} onChange={(e) => setLists({ chickenProductCategory: e.target.value })} options={[{ value: "", label: "بدون" }, ...cats.map((c) => ({ value: c.id, label: c.name.ar }))]} />
           </div>
           <ul className="grid gap-2 px-5 pb-3">
@@ -130,7 +128,7 @@ export default function ConstantsPage() {
           <div className="grid gap-3 px-5 pb-5 sm:grid-cols-3">
             <Select label="مادة خام الدهن" value={s.rawFatItemId ?? ""} onChange={(e) => patch({ rawFatItemId: pick(e.target.value) })} options={meatOptions(s.rawFatItemId)} />
             <Select label="دجاج الفرم لبرجر الدجاج" value={s.mincedChickenItemId ?? ""} onChange={(e) => patch({ mincedChickenItemId: pick(e.target.value) })} options={mincedOptions} hint="خامات فئة اللحوم ومنتجات فئة الدجاج المصنعة" />
-            <Select label="مادة الخام الواحدة (الدجاج)" value={s.chickenItemId ?? ""} onChange={(e) => patch({ chickenItemId: pick(e.target.value) })} options={rawOptions} />
+            <Select label="مادة الخام الواحدة (الدجاج)" value={s.chickenItemId ?? ""} onChange={(e) => patch({ chickenItemId: pick(e.target.value) })} options={meatOptions(s.chickenItemId)} />
           </div>
         </Card>
 
