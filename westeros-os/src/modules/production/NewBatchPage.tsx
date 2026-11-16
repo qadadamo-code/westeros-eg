@@ -7,7 +7,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Beef, Check, Layers, RefreshCw, Scale, Search, ShieldCheck, Shapes } from "lucide-react";
 import { useSession } from "@/auth/session";
-import { useDb } from "@/data/hooks";
+import { useDb, useLive } from "@/data/hooks";
 import type { MfgBatch, MfgCategoryDef, MfgMethod, MfgProduct, MfgRecipeLine } from "@/data/types";
 import { useT } from "@/i18n/i18n";
 import { cn } from "@/lib/cn";
@@ -426,6 +426,7 @@ function BurgerForm({ kind, categoryId, prod, onDone }: { kind: "beef" | "chicke
   const { L, lang, loc } = useT();
   const db = useDb();
   const ctx = useCtx(prod);
+  const levels = useLive("stockLevels").data;
   const beef = kind === "beef";
   const list = useMemo(() => prod.products.filter((p) => p.active && p.method === "burger" && p.category === categoryId), [prod.products, categoryId]);
   const first = list[0];
@@ -465,6 +466,9 @@ function BurgerForm({ kind, categoryId, prod, onDone }: { kind: "beef" | "chicke
   };
   const mince = prod.settings?.mincedChickenItemId ? prod.itemById.get(prod.settings.mincedChickenItemId) : undefined;
   const suggested = built.suggestedFatKg ?? 0;
+  // the fat of a meat burger is a stock item of its own (the ready fat product): its price and what the stores hold
+  const fatItem = beef && prod.settings?.rawFatItemId ? prod.itemById.get(prod.settings.rawFatItemId) : undefined;
+  const fatOnHandKg = fatItem ? Math.round(levels.reduce((a, l) => (l.itemId === fatItem.id ? a + l.qty : a), 0)) / 1000 : 0;
   if (!list.length) return <EmptyState title={L("لا توجد منتجات في هذه الفئة بطريقة البرجر. أضفها من صفحة المنتجات.", "No burger products in this category yet. Add them in Products.")} />;
   return (
     <Layout
@@ -490,7 +494,13 @@ function BurgerForm({ kind, categoryId, prod, onDone }: { kind: "beef" | "chicke
               <Num big label={L("وزن اللحم قبل التنظيف", "Meat before trimming")} suffix={L("كجم", "kg")} value={meatKg} onChange={setMeatKg} hint={meat?.stockItemId ? `${formatMoney(prod.unitCost(meat.stockItemId) * 1000, { lang })} / ${L("كجم", "kg")}` : undefined} />
               <Num big label={L("الوزن الصافي بعد التنظيف", "Net after trimming")} suffix={L("كجم", "kg")} value={netKg} onChange={setNetKg} />
               <div className="grid gap-1.5">
-                <Num big label={L("وزن الدهن المضاف", "Fat added")} suffix={L("كجم", "kg")} value={fatKg} onChange={setFatKg} />
+                <Num big label={L("وزن الدهن المضاف", "Fat added")} suffix={L("كجم", "kg")} value={fatKg} onChange={setFatKg} hint={fatItem ? `${loc(fatItem.name)} · ${formatMoney(prod.unitCost(fatItem.id) * 1000, { lang })} / ${L("كجم", "kg")}` : L("حدد الدهن من ثوابت النظام", "Set the fat in the constants")} />
+                {fatItem ? (
+                  <span className={cn("num text-[12.5px]", fatKg > fatOnHandKg + 1e-9 ? "font-semibold text-danger" : "text-muted")}>
+                    {L(`المتاح في المخزن ${fatOnHandKg} كجم`, `In stock ${fatOnHandKg} kg`)}
+                    {fatKg > fatOnHandKg + 1e-9 ? L(" · الكمية أكبر من المتاح", " · more than in stock") : ""}
+                  </span>
+                ) : null}
                 {suggested > 0 ? (
                   <button type="button" className="num text-start text-[12.5px] font-semibold text-primary hover:underline" onClick={() => setFatKg(suggested)}>
                     {L(`المقترح ${suggested} كجم، اضغط للاستخدام`, `Suggested ${suggested} kg — tap to use`)}

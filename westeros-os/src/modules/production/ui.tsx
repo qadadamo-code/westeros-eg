@@ -177,7 +177,7 @@ export const ERROR_TEXT: Record<BuildError, { ar: string; en: string }> = {
   meatType: { ar: "اختر نوع اللحم", en: "Choose the meat cut" },
   fat: { ar: "اكتب وزن الدهن", en: "Enter the fat weight" },
   chickenItem: { ar: "خامة صدور الدجاج غير محددة في الثوابت", en: "Chicken raw material is not set in Constants" },
-  fatItem: { ar: "خامة الدهن غير محددة في الثوابت", en: "Fat item is not set in Constants" },
+  fatItem: { ar: "الدهن في برجر اللحم غير محدد في الثوابت", en: "Fat item is not set in Constants" },
   minceItem: { ar: "خامة دجاج الفرم غير محددة في الثوابت", en: "Minced chicken item is not set in Constants" },
   overweight: { ar: "الوزن الناتج أكبر من وزن الخامة", en: "Output weighs more than the raw material" },
 };

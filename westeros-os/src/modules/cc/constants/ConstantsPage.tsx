@@ -44,6 +44,8 @@ export default function ConstantsPage() {
   const chickenCat = lists.chickenProductCategory ?? prod.categories.find((c) => !c.burger && (c.id === "chicken" || c.name.ar.includes("دجاج")))?.id ?? "";
   const chickenCats = new Set(chickenCat ? [chickenCat] : []);
   const mincedOptions = [...meatOptions(s.mincedChickenItemId), ...prod.products.filter((x) => x.active && chickenCats.has(x.category) && cc.itemById.has(x.stockItemId)).map((x) => ({ value: x.stockItemId, label: `${x.name.ar} · ${x.code} (منتج مصنع)` }))];
+  // دهن برجر اللحم: the manufactured fat (a sub-recipe product such as الدهن الجاهز) first, its price and stock are the product's own; a raw material stays possible
+  const fatOptions = [{ value: "", label: "—" }, ...prod.products.filter((x) => x.active && x.recipeType === "sub" && cc.itemById.has(x.stockItemId)).map((x) => ({ value: x.stockItemId, label: `${x.name.ar} · ${x.code} (منتج مصنع)` })), ...meatOptions(s.rawFatItemId).slice(1)];
   const pick = (id: string) => {
     if (id && cc.itemById.get(id)?.mfg === false) void db.update("stockItems", id, { mfg: true });
     return id || null;
@@ -147,7 +149,7 @@ export default function ConstantsPage() {
             {s.meatTypes.length ? null : <li className="text-[14px] text-muted">أضف أول قطعية لحم.</li>}
           </ul>
           <div className="grid gap-3 px-5 pb-5 sm:grid-cols-3">
-            <Select label="مادة خام الدهن" value={s.rawFatItemId ?? ""} onChange={(e) => patch({ rawFatItemId: pick(e.target.value) })} options={meatOptions(s.rawFatItemId)} />
+            <Select label="الدهن في برجر اللحم" value={s.rawFatItemId ?? ""} onChange={(e) => patch({ rawFatItemId: pick(e.target.value) })} options={fatOptions} hint="من الدهن الجاهز (وصفة فرعية): سعره وكميته من المخزن" />
             <Select label="دجاج الفرم لبرجر الدجاج" value={s.mincedChickenItemId ?? ""} onChange={(e) => patch({ mincedChickenItemId: pick(e.target.value) })} options={mincedOptions} hint="خامات فئة اللحوم ومنتجات فئة الدجاج المصنعة" />
             <Select label="مادة الخام الواحدة (الدجاج)" value={s.chickenItemId ?? ""} onChange={(e) => patch({ chickenItemId: pick(e.target.value) })} options={meatOptions(s.chickenItemId)} />
           </div>
