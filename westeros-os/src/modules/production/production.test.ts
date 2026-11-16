@@ -32,8 +32,12 @@ describe("Westeros seed", () => {
   });
   it("starts with warehouse-only items, no products or meat cuts: only the constants", () => {
     expect(seed.data.stockItems).toHaveLength(282);
-    // warehouse and purchasing only: no price, never offered to recipes or manufacturing
-    expect(seed.data.stockItems.every((i) => i.mfg === false && i.lastCost === 0 && i.kind === "raw")).toBe(true);
+    // warehouse and purchasing only: never offered to recipes or manufacturing; last purchase price and date where known
+    expect(seed.data.stockItems.every((i) => i.mfg === false && i.kind === "raw")).toBe(true);
+    const cheddar = seed.data.stockItems.find((i) => i.sku === "10001")!;
+    expect(cheddar.spec).toMatchObject({ lastPrice: major(829.56), lastPurchaseDate: "2026-10-24", perStorage: 200 });
+    expect(cheddar.lastCost).toBe(Math.round(major(829.56) / 200));
+    expect(seed.data.stockItems.filter((i) => i.lastCost > 0)).toHaveLength(215);
     expect(seed.data.mfgProducts).toHaveLength(0);
     const s = seed.data.mfgSettings[0];
     expect(s.meatTypes).toHaveLength(0);

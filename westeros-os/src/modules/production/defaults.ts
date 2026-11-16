@@ -2,16 +2,17 @@
 import type { MfgCategoryDef, MfgSettings } from "@/data/types";
 
 /**
- * The starting list of categories, taken from the examples of the Cost Control document. It is only a starting point:
+ * The starting list of categories, named as the restaurant names its production lists. It is only a starting point:
  * the restaurant renames, adds and removes categories and sets their codes in the constants.
  */
 export const DEFAULT_CATEGORIES: MfgCategoryDef[] = [
-  { id: "cold_sauce", name: { ar: "صوصات باردة", en: "Cold sauces" }, code: 1, burger: null },
-  { id: "hot_sauce", name: { ar: "صوصات ساخنة", en: "Hot sauces" }, code: 2, burger: null },
-  { id: "marinade", name: { ar: "تتبيلة", en: "Marinades" }, code: 3, burger: null },
-  { id: "chicken", name: { ar: "دجاج", en: "Chicken" }, code: 4, burger: null },
-  { id: "beef_burger", name: { ar: "برجر لحم", en: "Beef burger" }, code: 5, burger: "beef" },
+  { id: "cold_sauce", name: { ar: "صوص بارد", en: "Cold sauces" }, code: 1, burger: null },
+  { id: "hot_sauce", name: { ar: "صوص ساخن", en: "Hot sauces" }, code: 2, burger: null },
+  { id: "marinade", name: { ar: "التتبيلات", en: "Marinades" }, code: 3, burger: null },
+  { id: "chicken", name: { ar: "الدجاج", en: "Chicken" }, code: 4, burger: null },
+  { id: "beef_burger", name: { ar: "اللحم", en: "Beef burger" }, code: 5, burger: "beef" },
   { id: "chicken_burger", name: { ar: "برجر دجاج", en: "Chicken burger" }, code: 6, burger: "chicken" },
+  { id: "other", name: { ar: "اخرى", en: "Other" }, code: 7, burger: null },
 ];
 /** طرق التخزين ودرجات الحرارة كما في المستند */
 export const DEFAULT_STORAGE_METHODS = ["كيس صغير", "كيس كبير", "نايلون مكبس", "GN 1/1", "GN 1/2"];
