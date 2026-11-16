@@ -7,6 +7,7 @@ import { uuid } from "@/lib/id";
 import { PageHeader } from "@/shell/PageHeader";
 import { Num } from "@/modules/production/ui";
 import { Button, Card, CardHeader, EmptyState, IconButton, Input, Select } from "@/ui";
+import { specOf } from "../lib";
 import { useCc } from "../useCc";
 
 const BASE_LABEL: Record<MfgUnitDef["base"], string> = { g: "وزن (جرام)", ml: "حجم (مل)", pc: "عدد (قطعة)" };
@@ -25,6 +26,8 @@ export default function ConstantsPage() {
   const cats = prod.categories;
   const setCat = (id: string, p: Partial<MfgCategoryDef>) => patch({ productCategories: cats.map((c) => (c.id === id ? { ...c, ...p } : c)) });
   const usedCats = new Set(prod.products.map((x) => x.category));
+  const usedRawCats = new Set(cc.raws.map((i) => specOf(i, lists).category));
+  const usedUnits = new Set(cc.raws.map((i) => specOf(i, lists).storageUnit));
   const usedSale = new Set(menuItems.map((i) => i.categoryId));
   const setMeat = (id: string, p: Partial<MfgMeatType>) => patch({ meatTypes: s.meatTypes.map((m) => (m.id === id ? { ...m, ...p } : m)) });
   // every raw material of the list is offered, also the warehouse-only ones: choosing one here brings it into manufacturing
@@ -39,7 +42,7 @@ export default function ConstantsPage() {
     <div className="grid gap-5">
       <PageHeader icon={<Settings2 />} title="ثوابت النظام" />
       <div className="grid items-start gap-5 lg:grid-cols-2">
-        <Chips title="تعريف وحدة التخزين لمواد الخام" values={lists.storageUnits} onChange={(storageUnits) => setLists({ storageUnits })} placeholder="وحدة تخزين جديدة" />
+        <Chips title="تعريف وحدة التخزين لمواد الخام" subtitle="الوحدة المستخدمة في مادة خام لا تحذف" used={usedUnits} values={lists.storageUnits} onChange={(storageUnits) => setLists({ storageUnits })} placeholder="وحدة تخزين جديدة" />
 
         <Card>
           <CardHeader title="تعريف وحدة التصنيع لمواد الخام" action={<Button size="sm" variant="outline" icon={<Plus />} onClick={() => setLists({ mfgUnits: [...lists.mfgUnits, { name: "وحدة جديدة", base: "g", factor: 1 }] })}>وحدة جديدة</Button>} />
@@ -55,7 +58,7 @@ export default function ConstantsPage() {
           </ul>
         </Card>
 
-        <Chips title="تعريف فئات مواد الخام" values={lists.rawCategories} onChange={(rawCategories) => setLists({ rawCategories })} placeholder="فئة خام جديدة" />
+        <Chips title="تعريف فئات مواد الخام" subtitle="الفئة المستخدمة في مادة خام لا تحذف" used={usedRawCats} values={lists.rawCategories} onChange={(rawCategories) => setLists({ rawCategories })} placeholder="فئة خام جديدة" />
 
         <Card>
           <CardHeader title="تعريف فئات أصناف البيع" />
@@ -149,7 +152,7 @@ export default function ConstantsPage() {
   );
 }
 
-function Chips({ title, subtitle, values, onChange, placeholder }: { title: ReactNode; subtitle?: ReactNode; values: string[]; onChange: (v: string[]) => void; placeholder: string }) {
+function Chips({ title, subtitle, values, onChange, placeholder, used }: { title: ReactNode; subtitle?: ReactNode; values: string[]; onChange: (v: string[]) => void; placeholder: string; used?: Set<string> }) {
   const [text, setText] = useState("");
   return (
     <Card>
@@ -159,7 +162,7 @@ function Chips({ title, subtitle, values, onChange, placeholder }: { title: Reac
           {values.map((m) => (
             <span key={m} className="inline-flex items-center gap-1 rounded-full border border-line bg-surface-2 py-1 ps-3 pe-1 text-[13.5px] font-semibold">
               {m}
-              <button type="button" aria-label="حذف" className="grid size-6 place-items-center rounded-full text-muted hover:bg-surface-3 hover:text-ink" onClick={() => onChange(values.filter((x) => x !== m))}><X className="size-3.5" /></button>
+              {used?.has(m) ? <span className="pe-2" title="مستخدمة في مواد خام" /> : <button type="button" aria-label="حذف" className="grid size-6 place-items-center rounded-full text-muted hover:bg-surface-3 hover:text-ink" onClick={() => onChange(values.filter((x) => x !== m))}><X className="size-3.5" /></button>}
             </span>
           ))}
         </div>

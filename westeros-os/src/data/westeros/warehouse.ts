@@ -47,3 +47,7 @@ export function warehouseItems(base: (key: string) => RowBase, locId: (k: string
     };
   });
 }
+
+/** The categories and storage units these items use, in list order: the constants define them, the items pick from them. */
+export const WAREHOUSE_CATEGORIES = [...new Set((ITEMS as Row[]).map((r) => (CATEGORY[r.cat] ?? CATEGORY[17]).label))];
+export const WAREHOUSE_STORAGE_UNITS = [...new Set((ITEMS as Row[]).map((r) => r.buyUnit))];

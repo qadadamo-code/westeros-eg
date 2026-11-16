@@ -19,7 +19,8 @@ import { seedId } from "@/lib/id";
 import { COLLECTIONS } from "../types";
 import { WESTEROS_MENU } from "./menu";
 import { WESTEROS_ORIGIN, WESTEROS_ZONES } from "./delivery";
-import { warehouseItems } from "./warehouse";
+import { WAREHOUSE_CATEGORIES, WAREHOUSE_STORAGE_UNITS, warehouseItems } from "./warehouse";
+import { DEFAULT_LISTS } from "@/modules/cc/lib";
 import { DEFAULT_CATEGORIES, DEFAULT_STORAGE_METHODS } from "@/modules/production/defaults";
 
 export const WESTEROS_SLUG = "westeros";
@@ -138,6 +139,8 @@ export function buildWesterosSeed(now: Date = new Date()): Seed {
     rawFatItemId: null,
     mincedChickenItemId: null,
     productLocationId: locId("fridge"),
+    // the constants are the source of the raw material categories and storage units
+    lists: { ...DEFAULT_LISTS, rawCategories: WAREHOUSE_CATEGORIES, storageUnits: [...new Set([...DEFAULT_LISTS.storageUnits, ...WAREHOUSE_STORAGE_UNITS])] },
   };
   data.mfgSettings = [settings];
 

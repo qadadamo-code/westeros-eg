@@ -44,7 +44,8 @@ export default function RawMaterials() {
   const [cat, setCat] = useState("");
   const [edit, setEdit] = useState<StockItem | "new" | null>(null);
   const manage = can("inventory.manage");
-  const cats = useMemo(() => [...new Set([...cc.lists.rawCategories, ...cc.raws.map((i) => specOf(i, cc.lists).category)].filter(Boolean))], [cc.lists, cc.raws]);
+  // فئة الخام: القائمة المعرفة في ثوابت النظام
+  const cats = cc.lists.rawCategories;
   const rows = useMemo(() => {
     const n = q.trim().toLowerCase();
     return cc.raws.filter((i) => (!cat || specOf(i, cc.lists).category === cat) && (!n || i.name.ar.toLowerCase().includes(n) || i.sku.toLowerCase().includes(n)));
@@ -63,6 +64,11 @@ export default function RawMaterials() {
   ];
   const importRows = async (sheet: Record<string, string>[]) => {
     let added = 0, updated = 0;
+    // a category or storage unit the file brings is defined in the constants first
+    const col = (k: string) => [...new Set(sheet.map((r) => (r[k] ?? "").trim()).filter(Boolean))];
+    const newCats = col("فئة الخام").filter((c) => !cc.lists.rawCategories.includes(c));
+    const newUnits = col("وحدة التخزين").filter((u) => !cc.lists.storageUnits.includes(u));
+    if ((newCats.length || newUnits.length) && cc.prod.settings) await db.update("mfgSettings", cc.prod.settings.id, { lists: { ...cc.lists, rawCategories: [...cc.lists.rawCategories, ...newCats], storageUnits: [...cc.lists.storageUnits, ...newUnits] } });
     const bySku = new Map(cc.raws.map((i) => [i.sku, i]));
     for (const r of sheet) {
       const sku = (r["كود الخام"] ?? "").trim();
