@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { Plus, Printer } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Plus, Printer, RotateCcw } from "lucide-react";
 import { COST_CONTROL_ONLY } from "@/costControl";
 import { useDb, useLive } from "@/data/hooks";
 import type { MfgBatch, MfgBatchOutput } from "@/data/types";
 import { useT } from "@/i18n/i18n";
 import { cn } from "@/lib/cn";
-import { Button, Dialog, Select, useToast } from "@/ui";
-import { BatchLabel, labelCopies, labelSizes, printLabels, saveLabelSize, savedLabelSize } from "./Label";
+import { Button, Dialog, IconButton, Select, useToast } from "@/ui";
+import { BatchLabel, labelCopies, labelSizes, printLabels, saveLabelShift, saveLabelSize, savedLabelShift, savedLabelSize } from "./Label";
 import { countLabels } from "./ops";
 import { Num } from "./ui";
 
@@ -23,6 +23,13 @@ export function LabelDialog({ batch, onClose, justSaved }: { batch: MfgBatch | n
   const [typed, setTyped] = useState(1);
   const [pick, setPick] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [shift, setShift] = useState(savedLabelShift);
+  const move = (dx: number, dy: number) => {
+    const r = (n: number) => Math.max(-15, Math.min(15, Math.round(n * 2) / 2));
+    const next = dx || dy ? { x: r(shift.x + dx), y: r(shift.y + dy) } : { x: 0, y: 0 };
+    setShift(next);
+    saveLabelShift(next);
+  };
   const [adding, setAdding] = useState(false);
   const [w, setW] = useState(0);
   const [h, setH] = useState(0);
@@ -39,7 +46,7 @@ export function LabelDialog({ batch, onClose, justSaved }: { batch: MfgBatch | n
     const outs = all ? batch.outputs : [output];
     const ns = outs.map(copiesOf);
     try {
-      await printLabels(batch, outs, size, ns);
+      await printLabels(batch, outs, size, ns, shift);
       await countLabels(db, batch.id, ns.reduce((a, n) => a + n, 0));
     } finally {
       setBusy(false);
@@ -121,6 +128,23 @@ export function LabelDialog({ batch, onClose, justSaved }: { batch: MfgBatch | n
               {L("إضافة مقاس جديد", "Add a new size")}
             </Button>
           )}
+          <div className="grid gap-1.5 rounded-xl border border-line p-3">
+            <span className="text-[13px] font-semibold text-ink-2">{L("تحريك الطباعة على الستيكر", "Move the print on the sticker")}</span>
+            <div className="flex flex-wrap items-center gap-1.5" dir="ltr">
+              <IconButton label={L("يسار", "Left")} onClick={() => move(-0.5, 0)}><ArrowLeft /></IconButton>
+              <IconButton label={L("يمين", "Right")} onClick={() => move(0.5, 0)}><ArrowRight /></IconButton>
+              <IconButton label={L("أعلى", "Up")} onClick={() => move(0, -0.5)}><ArrowUp /></IconButton>
+              <IconButton label={L("أسفل", "Down")} onClick={() => move(0, 0.5)}><ArrowDown /></IconButton>
+              <IconButton label={L("إرجاع للصفر", "Reset")} disabled={!shift.x && !shift.y} onClick={() => move(0, 0)}><RotateCcw /></IconButton>
+            </div>
+            <span className="text-[12.5px] text-muted">
+              <bdi dir="rtl">{shift.x ? `${Math.abs(shift.x)} ${L("مم", "mm")} ${shift.x < 0 ? L("لليسار", "left") : L("لليمين", "right")}` : L("بدون إزاحة أفقية", "No horizontal shift")}</bdi>
+              {" · "}
+              <bdi dir="rtl">{shift.y ? `${Math.abs(shift.y)} ${L("مم", "mm")} ${shift.y < 0 ? L("لأعلى", "up") : L("لأسفل", "down")}` : L("بدون إزاحة رأسية", "No vertical shift")}</bdi>
+              {". "}
+              {L("كل ضغطة نصف مم، وتتحفظ على هذا الجهاز.", "Half a millimetre per press, saved on this device.")}
+            </span>
+          </div>
           <p className="text-[12.5px] text-muted">
             {L("اختر طابعة الستيكر من نافذة الطباعة، ومقاس الورق يتحدد تلقائياً بمقاس الستيكر.", "Choose the label printer in the print dialog; the page size follows the sticker size.")}
             {batch.labelsPrinted ? ` ${L(`طُبع ${batch.labelsPrinted} ستيكر لهذا الباتش.`, `${batch.labelsPrinted} stickers printed so far.`)}` : ""}
