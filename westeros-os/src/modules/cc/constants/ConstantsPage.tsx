@@ -7,7 +7,7 @@ import { uuid } from "@/lib/id";
 import { PageHeader } from "@/shell/PageHeader";
 import { Num } from "@/modules/production/ui";
 import { Button, Card, CardHeader, EmptyState, IconButton, Input, Select, useToast } from "@/ui";
-import { codeRanges, rangeProblem, rawRanges, specOf, type CodeKind } from "../lib";
+import { codeRanges, rangeProblem, rawRanges, specOf, STORE_TYPES, type CodeKind } from "../lib";
 import { useCc } from "../useCc";
 
 const BASE_LABEL: Record<MfgUnitDef["base"], string> = { g: "وزن (جرام)", ml: "حجم (مل)", pc: "عدد (قطعة)" };
@@ -130,13 +130,12 @@ export default function ConstantsPage() {
         </Card>
 
         <Card>
-          <CardHeader title="تعريف أنواع المخازن" action={<Button size="sm" variant="outline" icon={<Plus />} onClick={() => setLists({ warehouseTypes: [...lists.warehouseTypes, { id: uuid(), name: "نوع جديد", holds: "raw" }] })}>نوع جديد</Button>} />
-          <ul className="grid gap-2 px-5 pb-5">
-            {lists.warehouseTypes.map((t) => (
-              <li key={t.id} className="grid items-end gap-2 rounded-xl border border-line p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
-                <Input label="الاسم" defaultValue={t.name} onBlur={(e) => e.target.value.trim() && e.target.value !== t.name && setLists({ warehouseTypes: lists.warehouseTypes.map((x) => (x.id === t.id ? { ...x, name: e.target.value.trim() } : x)) })} />
-                <Select label="الأصناف التي فيه" value={t.holds} onChange={(e) => setLists({ warehouseTypes: lists.warehouseTypes.map((x) => (x.id === t.id ? { ...x, holds: e.target.value as typeof t.holds } : x)) })} options={[{ value: "raw", label: "مواد الخام" }, { value: "products", label: "المنتجات المصنعة" }, { value: "branch", label: "فرع مطعم" }]} />
-                <IconButton label={cc.locations.some((l) => l.type === t.id) ? "مستخدم في مخزن" : "حذف"} disabled={cc.locations.some((l) => l.type === t.id) || lists.warehouseTypes.length <= 1} onClick={() => setLists({ warehouseTypes: lists.warehouseTypes.filter((x) => x.id !== t.id) })}><Trash2 /></IconButton>
+          <CardHeader title="أنواع المخازن ودرجة حرارتها" subtitle="أنواع ثابتة: يختار منها نوع المخزن، ونوع تخزين الخام، ونوع مخزن المنتج المصنع" />
+          <ul className="grid gap-2 px-5 pb-5 sm:grid-cols-2">
+            {STORE_TYPES.map((t) => (
+              <li key={t.id} className="flex items-center justify-between gap-3 rounded-xl border border-line px-4 py-3">
+                <span className="font-semibold">{t.name}</span>
+                <span className="num text-[14.5px] text-muted" dir="ltr">{t.temp != null ? `${t.temp}°` : "—"}</span>
               </li>
             ))}
           </ul>

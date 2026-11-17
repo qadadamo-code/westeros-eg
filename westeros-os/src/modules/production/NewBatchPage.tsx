@@ -14,7 +14,7 @@ import { useT } from "@/i18n/i18n";
 import { cn } from "@/lib/cn";
 import { formatMoney } from "@/lib/money";
 import { nowIso } from "@/lib/time";
-import { Badge, Button, Card, EmptyState, Input, Segmented, Select, Skeleton, Switch, useToast } from "@/ui";
+import { Badge, Button, Card, Dialog, EmptyState, Input, Segmented, Select, Skeleton, Switch, useToast } from "@/ui";
 import { buildBatch, scaleLines, type BatchDraft, type BuildCtx } from "./build";
 import { categoryName } from "./defaults";
 import { LabelDialog } from "./LabelDialog";
@@ -23,6 +23,7 @@ import { BatchError, saveBatch } from "./ops";
 import { ERROR_TEXT, LinesEditor, Num, ResultPanel, r3 } from "./ui";
 import { useProduction, type Prod } from "./useProduction";
 import { COST_CONTROL_ONLY } from "@/costControl";
+import { productStoreType, storeTemp, storeType, storeTypeName } from "@/modules/cc/lib";
 
 type Tab = MfgMethod;
 const clean = (l: MfgRecipeLine[]) => l.filter((x) => x.qty > 0).map((x) => ({ itemId: x.itemId, qty: Math.round(x.qty * 10_000) / 10_000 }));
@@ -149,6 +150,19 @@ function SaveBar({ prod, draft, ready, onDone, afterSave, beforeSave }: { prod: 
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState<MfgBatch | null>(null);
+  // Cost Control: "متابعة" first, then the warehouse each product is stored in, then save
+  const [storing, setStoring] = useState(false);
+  const [where, setWhere] = useState<Record<string, string>>({});
+  const locations = useLive("storageLocations", { orderBy: [{ field: "sort" }] }).data;
+  const branches = useLive("branches").data;
+  const made = useMemo(() => {
+    const ids = draft.method === "chicken" ? draft.outputs.map((o) => o.productId) : draft.method === "burger" ? draft.products.filter((x) => x.count > 0).map((x) => x.productId) : [draft.productId];
+    return [...new Set(ids)].map((id) => prod.productById.get(id)).filter((x): x is MfgProduct => !!x);
+  }, [JSON.stringify(draft), prod.productById]); // eslint-disable-line react-hooks/exhaustive-deps
+  // the warehouses that suit a product: of a branch marked مطبخ مركزي, and of the product's warehouse type (same temperature)
+  const central = useMemo(() => new Set(branches.filter((b) => b.isCentral).map((b) => b.id)), [branches]);
+  const suits = (p: MfgProduct) => locations.filter((l) => l.active && central.has(l.branchId) && storeType(l.type)?.id === productStoreType(p));
+  const chosen = (p: MfgProduct) => { const ok = suits(p); return ok.find((l) => l.id === where[p.stockItemId])?.id ?? ok[0]?.id ?? ""; };
   // a chef signs their own batches; a manager may record one on behalf of the chef who made it
   // Cost Control: the batch always belongs to the signed-in user; only management may put it under another chef
   const delegate = role === "owner" || role === "admin" || (!COST_CONTROL_ONLY && role === "manager");
@@ -160,8 +174,9 @@ function SaveBar({ prod, draft, ready, onDone, afterSave, beforeSave }: { prod: 
     setBusy(true);
     try {
       await beforeSave?.();
-      const b = await saveBatch(db, draft, { chef, branchId: prod.branchId, note: note.trim() });
+      const b = await saveBatch(db, draft, { chef, branchId: prod.branchId, note: note.trim(), outputLocations: COST_CONTROL_ONLY ? Object.fromEntries(made.map((x) => [x.stockItemId, chosen(x)]).filter((x) => x[1])) : undefined });
       await afterSave?.();
+      setStoring(false);
       setSaved(b);
     } catch (e) {
       toast({ tone: "error", title: L("لم تُحفظ التشغيلة", "The batch was not saved"), description: e instanceof BatchError ? e.errors.map((x) => ERROR_TEXT[x][lang]).join("، ") : String((e as Error).message ?? e) });
@@ -182,9 +197,50 @@ function SaveBar({ prod, draft, ready, onDone, afterSave, beforeSave }: { prod: 
         </div>
       )}
       <Input placeholder={L("ملاحظة (اختياري)", "Note (optional)")} value={note} onChange={(e) => setNote(e.target.value)} />
-      <Button size="lg" block icon={<Check />} loading={busy} disabled={!ready} onClick={save}>
-        {L("حفظ التشغيلة وطباعة الستيكر", "Save batch & print sticker")}
-      </Button>
+      {COST_CONTROL_ONLY ? (
+        <Button size="lg" block disabled={!ready} onClick={() => setStoring(true)}>متابعة</Button>
+      ) : (
+        <Button size="lg" block icon={<Check />} loading={busy} disabled={!ready} onClick={save}>
+          {L("حفظ التشغيلة وطباعة الستيكر", "Save batch & print sticker")}
+        </Button>
+      )}
+      {storing ? (
+        <Dialog open onClose={() => (busy ? undefined : setStoring(false))} size="md" title="مخزن تخزين المنتج" description="المخازن المناسبة: التابعة لفرع معرف كمطبخ مركزي، وبنفس درجة حرارة تخزين المنتج."
+          footer={<div className="flex flex-wrap justify-end gap-2"><Button variant="ghost" disabled={busy} onClick={() => setStoring(false)}>رجوع</Button><Button icon={<Check />} loading={busy} disabled={!ready || made.some((x) => !chosen(x))} onClick={save}>حفظ التشغيلة وطباعة الستيكر</Button></div>}>
+          <div className="grid gap-4">
+            {made.map((x) => {
+              const ok = suits(x);
+              const type = productStoreType(x);
+              return (
+                <div key={x.id} className="grid gap-2">
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+                    <span className="text-[15px] font-bold">{x.name.ar}</span>
+                    <span className="text-[13px] text-muted">{storeTypeName(type)} · <span className="num" dir="ltr">{storeTemp(type)}</span></span>
+                  </div>
+                  {ok.length ? (
+                    <div role="radiogroup" aria-label={x.name.ar} className="grid gap-1.5">
+                      {ok.map((l) => {
+                        const on = chosen(x) === l.id;
+                        return (
+                          <button key={l.id} type="button" role="radio" aria-checked={on} onClick={() => setWhere((w) => ({ ...w, [x.stockItemId]: l.id }))}
+                            className={cn("flex min-h-12 items-center gap-3 rounded-xl border px-3 py-2 text-start transition-colors", on ? "border-primary bg-primary-soft/50" : "border-line hover:bg-surface-2")}>
+                            <span className={cn("grid size-5 shrink-0 place-items-center rounded-full border", on ? "border-primary bg-primary text-primary-ink" : "border-line")}>{on ? <Check className="size-3.5" /> : null}</span>
+                            <span className="min-w-0 flex-1"><span className="block truncate text-[14.5px] font-semibold">{l.name.ar}</span><span className="block text-[12.5px] text-muted">{branches.find((b) => b.id === l.branchId)?.name.ar ?? "—"}</span></span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="rounded-xl border border-dashed border-danger/50 px-3 py-3 text-[13.5px] text-danger">
+                      {central.size ? `لا يوجد مخزن من نوع ${storeTypeName(type)} في فرع المطبخ المركزي. أضفه من المخازن والفروع.` : "لا يوجد فرع معرف كمطبخ مركزي. حدده من المخازن والفروع ثم الفروع."}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </Dialog>
+      ) : null}
       <LabelDialog
         batch={saved}
         justSaved
@@ -301,9 +357,11 @@ function SimpleForm({ method, prod, onDone, initial, chosen }: { method: Extract
   // Cost Control: the storage packaging follows what came out, not the meals: the net weight after preparation
   // (stored by weight) or the net count (stored by portion: one container per piece × the pieces made)
   const packBy = fixed ? (method === "weight" ? net : Math.round(net)) : meals;
+  // stored by weight: the number of each packaging item is rounded up to a whole number (2.3 kilos at one bag a kilo = 3 bags)
+  const wholePack = fixed && method === "weight";
   const draft: BatchDraft =
     method === "weight"
-      ? { method, productId, meals, netKg: net, lines: scaleLines(lines, meals), packaging: scaleLines(packaging, packBy) }
+      ? { method, productId, meals, netKg: net, lines: scaleLines(lines, meals), packaging: scaleLines(packaging, packBy, wholePack) }
       : { method, productId, meals, netCount: Math.round(net), lines: scaleLines(lines, meals), packaging: scaleLines(packaging, packBy) };
   const built = useMemo(() => buildBatch(draft, ctx), [JSON.stringify(draft), ctx]); // eslint-disable-line react-hooks/exhaustive-deps
   const ready = !built.errors.length && lines.some((l) => l.qty > 0);
@@ -331,7 +389,7 @@ function SimpleForm({ method, prod, onDone, initial, chosen }: { method: Extract
           <Block step={chosen ? 2 : 3} title={L("المكونات", "Ingredients")} hint={fixed ? "الكميات المطلوبة لهذه التشغيلة" : L("الكميات الفعلية التي دخلت هذه التشغيلة", "What actually went into this batch")}>
             <div className="grid gap-5">
               <LinesEditor readOnly={fixed} title={L("الوصفة", "Recipe")} lines={lines} onChange={setLines} by={meals} items={recipeItems(prod, p.recipeType, p.stockItemId)} itemById={prod.itemById} unitCost={prod.unitCost} />
-              <LinesEditor readOnly={fixed} title={L("باكيج التخزين", "Storage packaging")} hint={fixed ? (method === "weight" ? "على الوزن الصافي بعد التجهيز. يدخل في التكلفة فقط" : "على العدد الصافي الناتج. يدخل في التكلفة فقط") : L("يدخل في التكلفة فقط", "Costed only")} lines={packaging} onChange={setPackaging} by={packBy} items={packagingItems(prod)} itemById={prod.itemById} unitCost={prod.unitCost} />
+              <LinesEditor readOnly={fixed} title={L("باكيج التخزين", "Storage packaging")} whole={wholePack} hint={fixed ? (method === "weight" ? "على الوزن الصافي بعد التجهيز، بالتقريب لأعلى لأقرب عدد صحيح. يدخل في التكلفة فقط" : "على العدد الصافي الناتج. يدخل في التكلفة فقط") : L("يدخل في التكلفة فقط", "Costed only")} lines={packaging} onChange={setPackaging} by={packBy} items={packagingItems(prod)} itemById={prod.itemById} unitCost={prod.unitCost} />
               {fixed ? (p.lines.length ? <p className="text-[12.5px] text-muted">الأرقام للعرض فقط. تعديل المكونات والباكيج يكون من الوصفات.</p> : <p className="text-[13px] font-semibold text-warn">المنتج بدون وصفة. عرّف وصفته من تبويب الوصفات أولاً.</p>) : <RecipeSwitch value={keep} onChange={setKeep} empty={!p.lines.length} />}
             </div>
           </Block>

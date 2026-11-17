@@ -3,7 +3,7 @@ import { useMemo } from "react";
 import { useSession } from "@/auth/session";
 import { useLive } from "@/data/hooks";
 import { useProduction } from "@/modules/production/useProduction";
-import { listsOf } from "./lib";
+import { fitsStore, listsOf, productStoreType } from "./lib";
 
 export function useCc() {
   const prod = useProduction();
@@ -12,6 +12,7 @@ export function useCc() {
   const levels = useLive("stockLevels").data;
   const locations = useLive("storageLocations", { orderBy: [{ field: "sort" }] }).data;
   const members = useLive("memberships").data;
+  const branchRows = useLive("branches").data;
   const branch = branchId ?? branches.find((b) => b.isDefault)?.id ?? branches[0]?.id ?? "";
   return useMemo(() => {
     const lists = listsOf(prod.settings);
@@ -22,7 +23,20 @@ export function useCc() {
     const memberById = new Map(members.map((m) => [m.id, m]));
     /** base quantity on hand: in one warehouse, or everywhere */
     const onHand = (itemId: string, locationId?: string | null) => levels.reduce((a, l) => (l.itemId === itemId && (!locationId || l.locationId === locationId) ? a + l.qty : a), 0);
-    return { prod, lists, all, raws, made, itemById, warehouses, locations, levels, members: members.filter((m) => m.active), memberById, onHand, staff, branchId: branch };
-  }, [prod, all, levels, locations, members, staff, branch]);
+    const productByItem = new Map(prod.products.map((p) => [p.stockItemId, p]));
+    /** نوع التخزين of a stock item: from the raw material card, or from the product that owns the stock card */
+    const storeTypeOf = (item: { id: string; kind: string; spec?: { storeType?: string } | null }): string | null => {
+      if (item.kind === "raw") return item.spec?.storeType || null;
+      const p = productByItem.get(item.id);
+      return p ? productStoreType(p) : null;
+    };
+    /** the items a warehouse takes: by its type, plus whatever it already holds */
+    const fits = (loc: { id: string; type?: string | null }, item: { id: string; kind: string; spec?: { storeType?: string } | null }) =>
+      fitsStore(loc.type, storeTypeOf(item)) || levels.some((l) => l.locationId === loc.id && l.itemId === item.id && l.qty !== 0);
+    const branchesSorted = [...branchRows].sort((a, b) => Number(b.isDefault) - Number(a.isDefault) || (a.code ?? 1e9) - (b.code ?? 1e9) || a.createdAt.localeCompare(b.createdAt));
+    const branchById = new Map(branchRows.map((b) => [b.id, b]));
+    const branchName = (id: string | null | undefined) => branchById.get(id ?? "")?.name.ar ?? "—";
+    return { branches: branchesSorted, branchById, branchName, storeTypeOf, fits, prod, lists, all, raws, made, itemById, warehouses, locations, levels, members: members.filter((m) => m.active), memberById, onHand, staff, branchId: branch };
+  }, [prod, all, levels, locations, members, branchRows, staff, branch]);
 }
 export type Cc = ReturnType<typeof useCc>;

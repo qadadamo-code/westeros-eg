@@ -8,8 +8,8 @@ import type { MfgChickenMode, MfgMethod, MfgProduct, MfgStorageTemp } from "@/da
 import { Num } from "@/modules/production/ui";
 import { categoryName } from "@/modules/production/useProduction";
 import { Button, Card, Dialog, EmptyState, Input, Select, Table, Textarea, useToast, type Column } from "@/ui";
-import { codeRanges, nextCodeIn, num } from "../lib";
-import { ImageField, ReadOnly } from "../ui";
+import { codeRanges, nextCodeIn, num, productStoreType, STORE_TYPE_OPTIONS, storeTemp, storeTypeName, tempOfStoreType } from "../lib";
+import { ExportButton, ImageField, ReadOnly } from "../ui";
 import { sheetCode, sheetNumber } from "../xlsx";
 import { useCc, type Cc } from "../useCc";
 import { BulkBar, useSelection, type DeleteResult } from "./Bulk";
@@ -68,7 +68,8 @@ export default function Products() {
     { key: "unit", header: "وحدة التصنيع", hideOnMobile: true, cell: (p) => p.mfgUnit ?? (p.unit === "kg" ? "كيلو" : "قطعة") },
     { key: "sm", header: "طريقة التخزين", hideOnMobile: true, cell: (p) => p.storageMethod || "—" },
     { key: "sq", header: "كمية وحدة التخزين", align: "end", hideOnMobile: true, cell: (p) => (p.storageQty ? <span className="num">{num(p.storageQty)}</span> : "—") },
-    { key: "temp", header: "درجة حرارة التخزين", hideOnMobile: true, cell: (p) => TEMP_LABEL[p.storageTemp] },
+    { key: "stype", header: "نوع المخزن", hideOnMobile: true, cell: (p) => storeTypeName(productStoreType(p)) },
+    { key: "temp", header: "درجة حرارة التخزين", hideOnMobile: true, cell: (p) => <span className="num" dir="ltr">{storeTemp(productStoreType(p))}</span> },
     { key: "life", header: "صلاحية المنتج", align: "end", cell: (p) => <span className="num">{p.shelfLifeDays} يوم</span> },
     { key: "por", header: "وزن الحصة", align: "end", hideOnMobile: true, cell: (p) => (p.portionGrams ? <span className="num">{p.portionGrams} جم</span> : "—") },
     { key: "m", header: "طريقة التصنيع", hideOnMobile: true, cell: (p) => <span className="text-[13px]">{methodLabel(p)}</span> },
@@ -156,9 +157,11 @@ export default function Products() {
   };
   return (
     <div className="grid gap-4">
-      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_220px_auto_auto]">
+      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_220px_auto_auto_auto]">
         <Input icon={<Search />} placeholder="ابحث باسم المنتج أو الكود" value={q} onChange={(e) => setQ(e.target.value)} />
         <Select value={cat} onChange={(e) => setCat(e.target.value)} options={[{ value: "", label: "كل الفئات" }, ...prod.categories.map((c) => ({ value: c.id, label: c.name.ar }))]} />
+        <ExportButton file="المنتجات المصنعة" head={["كود المنتج", "اسم المنتج", "فئة المنتج", "وحدة التصنيع", "طريقة التخزين", "كمية وحدة التخزين", "نوع المخزن", "درجة حرارة التخزين", "صلاحية المنتج (يوم)", "وزن الحصة (جم)", "طريقة التصنيع"]}
+          rows={() => rows.map((p) => [p.code, p.name.ar, categoryName(prod.categories, p.category).ar, p.mfgUnit ?? (p.unit === "kg" ? "كيلو" : "قطعة"), p.storageMethod, p.storageQty, storeTypeName(productStoreType(p)), storeTemp(productStoreType(p)), p.shelfLifeDays, p.portionGrams, methodLabel(p)])} />
         {manage ? <ExcelImport fields={FIELDS} run={importRows} skipNote="من غير كود، أو منتج جديد من غير اسم أو من غير فئة معرفة في ثوابت النظام." /> : null}
         {manage ? <Button icon={<Plus />} onClick={() => setEdit("new")}>اضافة منتج</Button> : null}
       </div>
@@ -177,7 +180,7 @@ function ProductDialog({ product, cc, readOnly, onClose }: { product: MfgProduct
   const prod = cc.prod;
   const [d, setD] = useState(() => ({
     name: product?.name.ar ?? "", imageUrl: product?.imageUrl ?? null, category: product?.category ?? prod.categories[0]?.id ?? "", mfgUnit: product?.mfgUnit ?? "",
-    storageMethod: product?.storageMethod ?? "", storageQty: product?.storageQty ?? 0, storageTemp: product?.storageTemp ?? ("chilled" as MfgStorageTemp), shelfLifeDays: product?.shelfLifeDays ?? 0,
+    storageMethod: product?.storageMethod ?? "", storageQty: product?.storageQty ?? 0, storeType: product ? productStoreType(product) : "cold", shelfLifeDays: product?.shelfLifeDays ?? 0,
     ingredientsText: product?.ingredientsText ?? "", portionGrams: product?.portionGrams ?? 0, method: product ? methodValue(product) : "weight",
   }));
   const [busy, setBusy] = useState(false);
@@ -197,7 +200,7 @@ function ProductDialog({ product, cc, readOnly, onClose }: { product: MfgProduct
       const name = { ar: n, en: product?.name.en && product.name.en !== product.name.ar ? product.name.en : n };
       const c = prod.categories.find((x) => x.id === d.category);
       const fields = {
-        name, imageUrl: d.imageUrl, category: d.category, categoryCode: c?.code ?? product?.categoryCode ?? 0, mfgUnit, storageMethod: d.storageMethod, storageQty: d.storageQty || null, storageTemp: d.storageTemp,
+        name, imageUrl: d.imageUrl, category: d.category, categoryCode: c?.code ?? product?.categoryCode ?? 0, mfgUnit, storageMethod: d.storageMethod, storageQty: d.storageQty || null, storeType: d.storeType, storageTemp: tempOfStoreType(d.storeType),
         shelfLifeDays: Math.round(d.shelfLifeDays), ingredientsText: d.ingredientsText, portionGrams: d.portionGrams || null, method: opt.method, chickenMode: opt.mode, unit,
       };
       const stock = { name, baseUnit: unit === "kg" ? ("g" as const) : ("pc" as const), countUnit: unit === "kg" ? "kg" : "pc" };
@@ -234,7 +237,8 @@ function ProductDialog({ product, cc, readOnly, onClose }: { product: MfgProduct
           <Select label="وحدة التصنيع" value={mfgUnit} onChange={(e) => set({ mfgUnit: e.target.value })} options={[...new Set([...cc.lists.mfgUnits.map((u) => u.name), mfgUnit])].map((u) => ({ value: u, label: u }))} />
           <Select label="طريقة التخزين" value={d.storageMethod} onChange={(e) => set({ storageMethod: e.target.value })} options={[{ value: "", label: "—" }, ...[...new Set([...(prod.settings?.storageMethods ?? []), d.storageMethod].filter(Boolean))].map((s) => ({ value: s, label: s }))]} />
           <Num label="كمية وحدة التخزين" value={d.storageQty} onChange={(storageQty) => set({ storageQty })} hint={d.storageMethod ? `الكمية لكل ${d.storageMethod}` : "الكمية لكل وحدة تخزين"} />
-          <Select label="درجة حرارة التخزين" value={d.storageTemp} onChange={(e) => set({ storageTemp: e.target.value as MfgStorageTemp })} options={(Object.keys(TEMP_LABEL) as MfgStorageTemp[]).map((t) => ({ value: t, label: TEMP_LABEL[t] }))} />
+          <Select label="نوع المخزن" value={d.storeType} onChange={(e) => set({ storeType: e.target.value })} options={STORE_TYPE_OPTIONS} />
+          <ReadOnly label="درجة حرارة التخزين"><span className="num" dir="ltr">{storeTemp(d.storeType)}</span></ReadOnly>
           <Num label="صلاحية المنتج" suffix="يوم" value={d.shelfLifeDays} onChange={(shelfLifeDays) => set({ shelfLifeDays })} />
           <Num label="وزن الحصة" suffix="جم" value={d.portionGrams} onChange={(portionGrams) => set({ portionGrams })} hint="ان وجد" />
           <Select label="طريقة التصنيع" disabled={locked} hint={locked ? "لا تتغير بعد تسجيل تشغيلات" : undefined} value={d.method} onChange={(e) => set({ method: e.target.value })} options={METHOD_OPTIONS.map((o) => ({ value: o.value, label: o.label }))} />

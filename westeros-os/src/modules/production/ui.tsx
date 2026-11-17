@@ -109,13 +109,14 @@ export function ItemPicker({ items, onPick, placeholder, exclude }: { items: Sto
  * Recipe lines. `lines` hold the quantity for ONE unit (a meal, or a kilo of net meat); `by` is what the batch
  * multiplies them with, so the chef sees and edits the real quantities of this batch.
  */
-export function LinesEditor({ title, hint, lines, onChange, by = 1, items, itemById, unitCost, readOnly }: {
-  title: ReactNode; hint?: ReactNode; lines: MfgRecipeLine[]; onChange: (l: MfgRecipeLine[]) => void; by?: number; items: StockItem[]; itemById: Map<string, StockItem>; unitCost: (id: string) => Units; readOnly?: boolean;
+export function LinesEditor({ title, hint, lines, onChange, by = 1, items, itemById, unitCost, readOnly, whole }: {
+  title: ReactNode; hint?: ReactNode; lines: MfgRecipeLine[]; onChange: (l: MfgRecipeLine[]) => void; by?: number; items: StockItem[]; itemById: Map<string, StockItem>; unitCost: (id: string) => Units; readOnly?: boolean; /** show each quantity rounded up to a whole number */ whole?: boolean;
 }) {
   const { L, lang, loc } = useT();
   const k = by > 0 ? by : 1;
+  const q = (l: MfgRecipeLine) => (whole ? Math.ceil(r3(l.qty * k)) : l.qty * k);
   const used = useMemo(() => new Set(lines.map((l) => l.itemId)), [lines]);
-  const total = lines.reduce((a, l) => a + Math.round(l.qty * k * unitCost(l.itemId)), 0);
+  const total = lines.reduce((a, l) => a + Math.round(q(l) * unitCost(l.itemId)), 0);
   const noPrices = moneyHidden();
   return (
     <div className="grid gap-2">
@@ -135,12 +136,12 @@ export function LinesEditor({ title, hint, lines, onChange, by = 1, items, itemB
                   <span className="block truncate text-[14px] font-semibold">{it ? loc(it.name) : "—"}</span>
                   {noPrices ? null : (
                     <span className={cn("num block text-[12px]", price > 0 ? "text-muted" : "text-warn")}>
-                      {price > 0 ? formatMoney(Math.round(l.qty * k * price), { lang }) : L("بدون سعر", "No price yet")}
+                      {price > 0 ? formatMoney(Math.round(q(l) * price), { lang }) : L("بدون سعر", "No price yet")}
                     </span>
                   )}
                 </span>
                 {readOnly ? (
-                  <span className="num text-[14px] font-semibold">{r3(l.qty * k)} {it ? BASE_NAME[it.baseUnit][lang] : ""}</span>
+                  <span className="num text-[14px] font-semibold">{r3(q(l))} {it ? BASE_NAME[it.baseUnit][lang] : ""}</span>
                 ) : (
                   <Num className="w-32" value={r3(l.qty * k)} suffix={it ? BASE_NAME[it.baseUnit][lang] : ""} onChange={(v) => onChange(lines.map((x, j) => (j === i ? { ...x, qty: v / k } : x)))} />
                 )}

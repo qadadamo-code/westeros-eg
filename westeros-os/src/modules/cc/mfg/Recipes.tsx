@@ -9,7 +9,8 @@ import { packagingItems, recipeItems } from "@/modules/production/ProductsPage";
 import { LinesEditor } from "@/modules/production/ui";
 import { categoryName } from "@/modules/production/useProduction";
 import { Badge, Button, Card, Dialog, EmptyState, Input, Select, Table, useToast, type Column } from "@/ui";
-import { methodLabel, TEMP_LABEL } from "../catalog/Products";
+import { methodLabel } from "../catalog/Products";
+import { productStoreType, storeTemp, storeTypeName } from "../lib";
 import { ReadOnly } from "../ui";
 import { useCc, type Cc } from "../useCc";
 
@@ -136,7 +137,7 @@ function RecipeDialog({ product, cc, readOnly, onClose }: { product: MfgProduct 
               <Info k="فئة المنتج" v={categoryName(prod.categories, p.category).ar} />
               <Info k="وحدة التصنيع" v={p.mfgUnit ?? (p.unit === "kg" ? "كيلو" : "قطعة")} />
               <Info k="طريقة التخزين" v={p.storageMethod ? `${p.storageMethod}${p.storageQty ? ` (${p.storageQty})` : ""}` : "—"} />
-              <Info k="درجة حرارة التخزين" v={TEMP_LABEL[p.storageTemp]} />
+              <Info k="نوع المخزن" v={`${storeTypeName(productStoreType(p))} ${storeTemp(productStoreType(p))}`} />
               <Info k="صلاحية المنتج" v={`${p.shelfLifeDays} يوم`} />
               <Info k="وزن الحصة" v={p.portionGrams ? `${p.portionGrams} جم` : "—"} />
               <Info k="طريقة التصنيع" v={methodLabel(p)} />

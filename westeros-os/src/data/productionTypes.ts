@@ -77,6 +77,8 @@ export interface MfgProduct extends Row {
   /** طريقة التخزين (كيس صغير، نايلون مكبس، GN 1/1 …) */
   storageMethod: string;
   storageTemp: MfgStorageTemp;
+  /** نوع المخزن (STORE_TYPES id); unset = read from storageTemp */
+  storeType?: string | null;
   /** صلاحية المنتج بالأيام */
   shelfLifeDays: number;
   /** شرح مبسط للمكونات — يطبع على ستيكر الصلاحية */
@@ -116,6 +118,8 @@ export interface MfgBatchInput {
 }
 
 export interface MfgBatchOutput {
+  /** the warehouse chosen for this product when the batch was saved (absent on older batches) */
+  locationId?: string | null;
   productId: string;
   stockItemId: string;
   name: Loc;
@@ -231,7 +235,8 @@ export interface MfgLists {
   /** فئة الأصناف المصنعة whose products دجاج الفرم may pick (id of a product category). Unset = the category named دجاج. */
   chickenProductCategory?: string;
   /** أنواع المخازن */
-  warehouseTypes: { id: string; name: string; holds: "raw" | "products" | "branch" }[];
+  /** the removed "تعريف أنواع المخازن" list: kept only as saved, no screen reads it */
+  warehouseTypes?: { id: string; name: string; holds: "raw" | "products" | "branch" }[];
   /** أنواع البرجر */
   burgerTypes: { id: "beef" | "chicken"; name: string }[];
   /** اسماء الوصفات */

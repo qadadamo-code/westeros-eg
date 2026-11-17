@@ -47,4 +47,16 @@ describe("finishing a request", async () => {
     await expect(finishRequest(db, again.id, {})).rejects.toThrow();
     expect((await db.get("stockRequests", again.id))?.status).toBe("in_progress");
   });
+
+  it("a supply that names the branch enters the branch warehouse chosen for the line", async () => {
+    const other = await db.insert("branches", { name: L("فرع 2"), slug: "b2", address: L(""), phone: "", isDefault: false, etaBranchCode: "0", active: true } as never);
+    const dest = await db.insert("storageLocations", { branchId: other.id, name: L("مخزن فرع 2"), kind: "store", sort: 9, active: true });
+    const r = await db.insert("stockRequests", { kind: "supply", number: 3, at: "2026-11-16T10:00:00.000Z", dueDate: "2026-11-17", branchLocationId: null, branchId: other.id, lines: [{ itemId: T.mayo, name: L("مايونيز"), qty: 2, unit: "كيلو" }], keeperId: null, keeperName: "", status: "in_progress", note: "", toLocationId: null, receivedAt: null });
+    // the destination must be a warehouse of the asking branch
+    await expect(finishRequest(db, r.id, { [T.mayo]: branch.id }, { [T.mayo]: store.id })).rejects.toThrow();
+    const done = await finishRequest(db, r.id, { [T.mayo]: branch.id }, { [T.mayo]: dest.id });
+    expect(done.lines[0].toLocationId).toBe(dest.id);
+    expect(await qty(branch.id, T.mayo)).toBe(1000);
+    expect(await qty(dest.id, T.mayo)).toBe(2000);
+  });
 });

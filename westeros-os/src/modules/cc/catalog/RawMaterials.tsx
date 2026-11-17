@@ -9,8 +9,8 @@ import { formatMoney, major } from "@/lib/money";
 import { MoneyInput } from "@/modules/marketing/ui";
 import { Num } from "@/modules/production/ui";
 import { Badge, Button, Card, Dialog, EmptyState, Input, Select, Switch, Table, useToast, type Column } from "@/ui";
-import { conversionOf, fmtDay, mfgUnitPrice, nextCodeIn, num, rawRanges, specOf, stockFieldsOf } from "../lib";
-import { ImageField, Result } from "../ui";
+import { conversionOf, fmtDay, mfgUnitPrice, nextCodeIn, num, rawRanges, specOf, stockFieldsOf, STORE_TYPE_OPTIONS, STORE_TYPES, storeType, storeTypeName } from "../lib";
+import { ExportButton, ImageField, Result } from "../ui";
 import { sheetCode, sheetNumber } from "../xlsx";
 import { useCc, type Cc } from "../useCc";
 import { BulkBar, useSelection, type DeleteResult } from "./Bulk";
@@ -22,6 +22,7 @@ const FIELDS: ImportField[] = [
   { key: "اسم الخام", aliases: ["الاسم", "اسم الصنف", "الصنف", "name"] },
   { key: "فئة الخام", aliases: ["الفئة", "فئة", "المجموعة", "القسم", "category"] },
   { key: "وحدة التخزين", aliases: ["الوحدة", "وحدة", "unit"] },
+  { key: "نوع التخزين", aliases: ["نوع المخزن", "التخزين"] },
   { key: "اخر سعر شراء", aliases: ["السعر", "سعر الشراء", "آخر سعر شراء", "التكلفة", "price", "cost"] },
   { key: "تاريخ اخر عملية شراء", aliases: ["تاريخ اخر شراء", "تاريخ الشراء"] },
   { key: "تاريخ الصلاحية", aliases: ["الصلاحية", "تاريخ الانتهاء"] },
@@ -29,6 +30,7 @@ const FIELDS: ImportField[] = [
   { key: "الكمية في وحدة التخزين", aliases: ["الكمية في الوحدة", "معامل التحويل"] },
 ];
 const money = (u: number) => formatMoney(u, { lang: "ar" });
+const typeByName = (v: string) => { const n = v.trim().replace(/^مخزن\s+/, ""); return STORE_TYPES.find((t) => t.name === v.trim() || t.name.replace(/^مخزن\s+/, "") === n)?.id; };
 const isoDay = (s: string) => {
   const t = s.trim();
   if (/^\d{4}-\d{2}-\d{2}/.test(t)) return t.slice(0, 10);
@@ -94,6 +96,7 @@ export default function RawMaterials() {
     { key: "code", header: "كود الخام", cell: (i) => <span className="num text-muted">{i.sku}</span> },
     { key: "name", header: "اسم الخام", cell: (i) => <span className="font-semibold">{i.name.ar}{i.mfg === false ? <Badge tone="neutral" size="sm" className="ms-2">مخزن ومشتريات فقط</Badge> : null}</span> },
     { key: "cat", header: "فئة الخام", hideOnMobile: true, cell: (i) => specOf(i, cc.lists).category || "—" },
+    { key: "st", header: "نوع التخزين", hideOnMobile: true, cell: (i) => (storeType(specOf(i, cc.lists).storeType) ? storeTypeName(specOf(i, cc.lists).storeType) : <span className="text-faint">—</span>) },
     { key: "su", header: "وحدة التخزين", hideOnMobile: true, cell: (i) => specOf(i, cc.lists).storageUnit },
     { key: "price", header: "اخر سعر شراء", align: "end", cell: (i) => <span className="num">{money(specOf(i, cc.lists).lastPrice)}</span> },
     { key: "date", header: "تاريخ اخر شراء", hideOnMobile: true, cell: (i) => <span className="num">{fmtDay(specOf(i, cc.lists).lastPurchaseDate)}</span> },
@@ -130,6 +133,8 @@ export default function RawMaterials() {
         lastPrice: has("اخر سعر شراء") ? major(sheetNumber(r["اخر سعر شراء"])) : (old?.lastPrice ?? 0),
         lastPurchaseDate: has("تاريخ اخر عملية شراء") ? isoDay(r["تاريخ اخر عملية شراء"]) : (old?.lastPurchaseDate ?? null),
         expiryDate: has("تاريخ الصلاحية") ? isoDay(r["تاريخ الصلاحية"]) : (old?.expiryDate ?? null),
+        // نوع التخزين: by the type's name as the constants show it; a name the system does not know changes nothing
+        storeType: (has("نوع التخزين") ? typeByName(r["نوع التخزين"]) : undefined) ?? old?.storeType,
       };
       const name = has("اسم الخام") ? r["اسم الخام"].trim() : (cur?.name.ar ?? "");
       if (dry) {
@@ -157,9 +162,11 @@ export default function RawMaterials() {
   };
   return (
     <div className="grid gap-4">
-      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_200px_auto_auto]">
+      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_200px_auto_auto_auto]">
         <Input icon={<Search />} placeholder="ابحث باسم الخام أو الكود" value={q} onChange={(e) => setQ(e.target.value)} />
         <Select value={cat} onChange={(e) => setCat(e.target.value)} options={[{ value: "", label: "كل الفئات" }, ...cats.map((c) => ({ value: c, label: c }))]} />
+        <ExportButton file="مواد الخام" head={["كود الخام", "اسم الخام", "فئة الخام", "نوع التخزين", "وحدة التخزين", "اخر سعر شراء", "تاريخ اخر عملية شراء", "تاريخ الصلاحية", "وحدة التصنيع", "الكمية في وحدة التخزين", "معامل التحويل", "سعر وحدة التصنيع"]}
+          rows={() => rows.map((i) => { const s = specOf(i, cc.lists); return [i.sku, i.name.ar, s.category, storeType(s.storeType)?.name ?? "", s.storageUnit, s.lastPrice / 100, s.lastPurchaseDate ?? "", s.expiryDate ?? "", s.mfgUnit, s.perStorage, Math.round(conversionOf(s.perStorage) * 1e5) / 1e5, mfgUnitPrice(s.lastPrice, s.perStorage) / 100]; })} />
         {manage ? <ExcelImport fields={FIELDS} run={importRows} /> : null}
         {manage ? <Button icon={<Plus />} onClick={() => setEdit("new")}>اضافة مادة خام</Button> : null}
       </div>
@@ -215,6 +222,7 @@ function RawDialog({ item, cc, cats, readOnly, onClose }: { item: StockItem | nu
         <ImageField value={s.image} onChange={(image) => set({ image })} />
         <div className="grid gap-3 sm:grid-cols-2">
           <Select label="فئة الخام" value={s.category} onChange={(e) => set({ category: e.target.value })} options={[...(cats.includes(s.category) ? [] : [{ value: s.category, label: s.category || "—" }]), ...cats.map((c) => ({ value: c, label: c }))]} />
+          <Select label="نوع التخزين" value={s.storeType ?? ""} onChange={(e) => set({ storeType: e.target.value || undefined })} options={[{ value: "", label: "اختر نوع المخزن" }, ...STORE_TYPE_OPTIONS]} />
           <Select label="وحدة التخزين" value={s.storageUnit} onChange={(e) => set({ storageUnit: e.target.value })} options={[...new Set([...cc.lists.storageUnits, s.storageUnit])].map((u) => ({ value: u, label: u }))} />
           <MoneyInput label="اخر سعر شراء" value={s.lastPrice} onChange={(lastPrice) => set({ lastPrice })} hint={`لكل ${s.storageUnit}`} />
           <Input label="تاريخ اخر عملية شراء" type="date" dir="ltr" value={s.lastPurchaseDate ?? ""} onChange={(e) => set({ lastPurchaseDate: e.target.value || null })} />

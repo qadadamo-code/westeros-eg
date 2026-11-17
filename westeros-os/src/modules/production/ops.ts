@@ -33,9 +33,10 @@ export async function chefCodeFor(db: Db, chefId: string): Promise<number> {
   return next;
 }
 
-export async function saveBatch(db: Db, draft: BatchDraft, p: { chef: Pick<Membership, "id" | "name">; branchId: string; note?: string; madeAt?: string }): Promise<MfgBatch> {
+export async function saveBatch(db: Db, draft: BatchDraft, p: { chef: Pick<Membership, "id" | "name">; branchId: string; note?: string; madeAt?: string; /** the warehouse chosen for each output, by its stock item */ outputLocations?: Record<string, string> }): Promise<MfgBatch> {
   const madeAt = p.madeAt ?? nowIso();
-  const [products, stockItems, settings, locations] = await Promise.all([db.list("mfgProducts"), db.list("stockItems"), mfgSettings(db), db.list("storageLocations", { where: { branchId: p.branchId } })]);
+  const [products, stockItems, settings, everyLocation] = await Promise.all([db.list("mfgProducts"), db.list("stockItems"), mfgSettings(db), db.list("storageLocations")]);
+  const locations = everyLocation.filter((l) => l.branchId === p.branchId);
   const items = new Map(stockItems.map((i) => [i.id, i]));
   const built = buildBatch(draft, { products: new Map(products.map((x) => [x.id, x])), items, settings, unitCost: (id) => items.get(id)?.lastCost ?? 0, madeAt });
   if (built.errors.length || !built.outputs.length) throw new BatchError(built.errors.length ? built.errors : ["outputs"]);
@@ -48,22 +49,24 @@ export async function saveBatch(db: Db, draft: BatchDraft, p: { chef: Pick<Membe
   const id = uuid();
   const { errors: _e, unpriced: _u, ...fields } = built;
   const locationOf = (it: StockItem | undefined) => homeLocation(it, p.branchId, locations)?.id ?? settings?.productLocationId ?? locations[0]?.id ?? "";
-  const locationId = locationOf(items.get(lead.stockItemId));
+  // an output goes to the warehouse chosen for it (it may belong to another branch: the central kitchen)
+  const outLoc = (stockItemId: string) => { const chosen = everyLocation.find((l) => l.id === p.outputLocations?.[stockItemId] && l.active); return chosen ? { id: chosen.id, branchId: chosen.branchId } : { id: locationOf(items.get(stockItemId)), branchId: p.branchId }; };
+  const locationId = outLoc(lead.stockItemId).id;
 
   const batch = await db.insert("mfgBatches", {
-    ...fields, id, branchId: p.branchId, locationId, number: batchNumber({ categoryCode: built.categoryCode, day, seq, chefCode }), seq, madeAt, day,
+    ...fields, outputs: built.outputs.map((o) => ({ ...o, locationId: outLoc(o.stockItemId).id })), id, branchId: p.branchId, locationId, number: batchNumber({ categoryCode: built.categoryCode, day, seq, chefCode }), seq, madeAt, day,
     chefId: p.chef.id, chefName: p.chef.name, chefCode, status: "done", voidedBy: null, voidedAt: null, voidReason: "", note: p.note ?? "", labelsPrinted: 0, moveGroupId: id,
   });
 
   const ref = { refType: "mfg_batch", refId: id, groupId: id, at: madeAt, branchId: p.branchId };
   const moves: MoveInput[] = [
     ...built.inputs.map((l): MoveInput => ({ ...ref, itemId: l.itemId, locationId: locationOf(items.get(l.itemId)), kind: "production_out", qty: -l.qty, note: batch.number })),
-    ...built.outputs.map((o): MoveInput => ({ ...ref, itemId: o.stockItemId, locationId: locationOf(items.get(o.stockItemId)), kind: "production_in", qty: outQty(o), value: o.totalCost, note: batch.number })),
+    ...built.outputs.map((o): MoveInput => ({ ...ref, itemId: o.stockItemId, locationId: outLoc(o.stockItemId).id, branchId: outLoc(o.stockItemId).branchId, kind: "production_in", qty: outQty(o), value: o.totalCost, note: batch.number })),
   ];
   await applyMoves(db, moves, { items });
   for (const o of built.outputs) {
     const qty = outQty(o);
-    await db.insert("stockBatches", { branchId: p.branchId, locationId: locationOf(items.get(o.stockItemId)), itemId: o.stockItemId, lot: batch.number, receivedAt: madeAt, expiresOn: cairoDay(o.expiresAt), qty, remaining: qty, poId: null });
+    await db.insert("stockBatches", { branchId: outLoc(o.stockItemId).branchId, locationId: outLoc(o.stockItemId).id, itemId: o.stockItemId, lot: batch.number, receivedAt: madeAt, expiresOn: cairoDay(o.expiresAt), qty, remaining: qty, poId: null });
     // price of one base unit (gram or piece) from this batch
     if (items.has(o.stockItemId)) await db.update("stockItems", o.stockItemId, { lastCost: o.unit === "kg" ? Math.round(o.unitCost / 1000) : o.unitCost });
   }
@@ -79,13 +82,16 @@ export async function voidBatch(db: Db, batchId: string, p: { reason: string; by
   const b = await db.get("mfgBatches", batchId);
   if (!b || b.status !== "done") throw new Error("batch is not active");
   const items = new Map((await db.list("stockItems")).map((i) => [i.id, i]));
-  const locations = await db.list("storageLocations", { where: { branchId: b.branchId } });
+  const everyLocation = await db.list("storageLocations");
+  const locations = everyLocation.filter((l) => l.branchId === b.branchId);
   const locationOf = (it: StockItem | undefined) => homeLocation(it, b.branchId, locations)?.id ?? b.locationId;
+  // the product leaves the warehouse it was stored in
+  const outLoc = (o: MfgBatch["outputs"][number]) => { const l = everyLocation.find((x) => x.id === o.locationId); return l ? { locationId: l.id, branchId: l.branchId } : { locationId: locationOf(items.get(o.stockItemId)) }; };
   const ref = { refType: "mfg_batch_void", refId: b.id, groupId: b.id, branchId: b.branchId, note: `إلغاء ${b.number}` };
   await applyMoves(
     db,
     [
-      ...b.outputs.map((o): MoveInput => ({ ...ref, itemId: o.stockItemId, locationId: locationOf(items.get(o.stockItemId)), kind: "production_in", qty: -outQty(o) })),
+      ...b.outputs.map((o): MoveInput => ({ ...ref, itemId: o.stockItemId, ...outLoc(o), kind: "production_in", qty: -outQty(o) })),
       ...b.inputs.map((l): MoveInput => ({ ...ref, itemId: l.itemId, locationId: locationOf(items.get(l.itemId)), kind: "production_out", qty: l.qty, value: l.cost })),
     ],
     { items },

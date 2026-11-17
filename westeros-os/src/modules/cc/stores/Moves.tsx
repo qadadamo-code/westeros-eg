@@ -7,14 +7,14 @@ import type { MoveKind, StockMove } from "@/data/types";
 import { uuid } from "@/lib/id";
 import { applyMoves } from "@/modules/inventory/stock";
 import { Badge, Button, Card, Dialog, EmptyState, Input, Select, Table, useToast, type Column } from "@/ui";
-import { fmtAt, fromLocal, holds, nowLocal, num, toBaseQty, toLine } from "../lib";
-import { ReadOnly, StockLines, type QtyLine } from "../ui";
+import { fmtAt, fromLocal, lineUnit, nowLocal, num, toBaseQty, toLine } from "../lib";
+import { ExportButton, ReadOnly, StockLines, type QtyLine } from "../ui";
 import { useCc, type Cc } from "../useCc";
 
 type MoveType = "opening" | "damage" | "transfer";
 const TYPE_LABEL: Record<MoveType, string> = { opening: "رصيد افتتاحي للمخزن", damage: "اتلاف", transfer: "نقل" };
 const KIND_LABEL: Partial<Record<MoveKind, string>> = {
-  opening: "رصيد افتتاحي", receive: "طلب شراء (دخول)", waste: "اتلاف", transfer_out: "نقل (خروج)", transfer_in: "نقل (دخول)", production_in: "تصنيع (ناتج)", production_out: "تصنيع (مكونات)", count_adjust: "تسوية جرد",
+  opening: "رصيد افتتاحي", receive: "شراء (دخول)", waste: "اتلاف", transfer_out: "نقل (خروج)", transfer_in: "نقل (دخول)", production_in: "تصنيع (ناتج)", production_out: "تصنيع (مكونات)", count_adjust: "تسوية جرد",
 };
 
 export default function Moves() {
@@ -23,19 +23,29 @@ export default function Moves() {
   const moves = useLive("stockMoves", { orderBy: [{ field: "at", dir: "desc" }], limit: 300 }).data;
   const [add, setAdd] = useState(false);
   const rows = useMemo(() => moves.filter((m) => KIND_LABEL[m.kind]), [moves]);
+  const locById = useMemo(() => new Map(cc.locations.map((l) => [l.id, l])), [cc.locations]);
+  const exportRows = () => rows.map((m) => {
+    const it = cc.itemById.get(m.itemId);
+    const l = locById.get(m.locationId);
+    return [fmtAt(m.at), KIND_LABEL[m.kind] ?? "", l?.name.ar ?? "", l ? cc.branchName(l.branchId) : "", it?.sku ?? "", it?.name.ar ?? "", it ? toLine(m.qty, it) : m.qty, it ? lineUnit(it).label : "", cc.memberById.get(m.by ?? "")?.name ?? ""];
+  });
   const columns: Column<StockMove>[] = [
     { key: "at", header: "التاريخ والوقت", cell: (m) => <span className="num whitespace-nowrap text-[13px]">{fmtAt(m.at)}</span> },
     { key: "kind", header: "نوع الحركة", cell: (m) => <Badge tone={m.kind === "waste" ? "danger" : m.kind === "opening" ? "brass" : "info"} size="sm">{KIND_LABEL[m.kind]}</Badge> },
-    { key: "loc", header: "المخزن", cell: (m) => cc.locations.find((l) => l.id === m.locationId)?.name.ar ?? "—" },
+    { key: "loc", header: "المخزن", cell: (m) => { const l = locById.get(m.locationId); return l ? <span>{l.name.ar} <span className="text-[12.5px] text-muted">({cc.branchName(l.branchId)})</span></span> : "—"; } },
     { key: "item", header: "المخزون", cell: (m) => <span className="font-semibold">{cc.itemById.get(m.itemId)?.name.ar ?? "—"}</span> },
     { key: "qty", header: "الكمية", align: "end", cell: (m) => { const it = cc.itemById.get(m.itemId); return it ? <span className="num" dir="ltr">{num(toLine(m.qty, it))}</span> : "—"; } },
+    { key: "unit", header: "وحدة الكمية", cell: (m) => { const it = cc.itemById.get(m.itemId); return it ? <span className="text-muted">{lineUnit(it).label}</span> : "—"; } },
     { key: "by", header: "امين المخزن", hideOnMobile: true, cell: (m) => cc.memberById.get(m.by ?? "")?.name ?? "—" },
   ];
   return (
     <div className="grid gap-4">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-[17px] font-bold">قائمة الحركات المخزنية الحالية والسابقة</h2>
-        {can("inventory.count") ? <Button icon={<Plus />} onClick={() => setAdd(true)}>اضافة حركة مخزنية</Button> : null}
+        <div className="flex flex-wrap items-center gap-2">
+          <ExportButton file="الحركات المخزنية" head={["التاريخ والوقت", "نوع الحركة", "المخزن", "الفرع", "الكود", "المخزون", "الكمية", "وحدة الكمية", "امين المخزن"]} rows={exportRows} />
+          {can("inventory.count") ? <Button icon={<Plus />} onClick={() => setAdd(true)}>اضافة حركة مخزنية</Button> : null}
+        </div>
       </div>
       <Card className="overflow-hidden">
         <Table columns={columns} rows={rows} rowKey={(m) => m.id} dense empty={<EmptyState compact icon={<ArrowLeftRight />} title="لا توجد حركات مخزنية" />} />
@@ -44,6 +54,9 @@ export default function Moves() {
     </div>
   );
 }
+
+/** the warehouse with its branch: "مخزن التبريد (الفرع الرئيسي)" */
+export const whName = (cc: Cc, l: { name: { ar: string }; branchId: string }) => `${l.name.ar} (${cc.branchName(l.branchId)})`;
 
 function MoveDialog({ cc, onClose }: { cc: Cc; onClose: () => void }) {
   const db = useDb();
@@ -56,7 +69,7 @@ function MoveDialog({ cc, onClose }: { cc: Cc; onClose: () => void }) {
   const [busy, setBusy] = useState(false);
   const loc = cc.warehouses.find((l) => l.id === from);
   // *** المخزن فيه اصناف حسب نوعه
-  const items = useMemo(() => (loc ? cc.all.filter((i) => i.active && holds(loc, i, cc.lists)) : []), [cc.all, cc.lists, loc]);
+  const items = useMemo(() => (loc ? cc.all.filter((i) => i.active && cc.fits(loc, i)) : []), [cc, loc]);
   const good = lines.filter((l) => l.qty > 0);
   const short = type !== "opening" ? good.find((l) => { const it = cc.itemById.get(l.itemId); return it && toBaseQty(l.qty, it) > cc.onHand(l.itemId, from) + 1e-6; }) : undefined;
   const valid = !!loc && good.length > 0 && !short && (type !== "transfer" || (!!to && to !== from));
@@ -91,8 +104,8 @@ function MoveDialog({ cc, onClose }: { cc: Cc; onClose: () => void }) {
         <div className="grid gap-3 sm:grid-cols-2">
           <Input label="التاريخ والوقت" type="datetime-local" dir="ltr" value={at} onChange={(e) => setAt(e.target.value)} />
           <Select label="نوع الحركة" value={type} onChange={(e) => setType(e.target.value as MoveType)} options={(Object.keys(TYPE_LABEL) as MoveType[]).map((t) => ({ value: t, label: TYPE_LABEL[t] }))} />
-          <Select label={type === "transfer" ? "من مخزن" : "المخزن"} value={from} onChange={(e) => (setFrom(e.target.value), setLines([]))} options={cc.warehouses.map((l) => ({ value: l.id, label: l.name.ar }))} />
-          {type === "transfer" ? <Select label="الى مخزن" value={to} onChange={(e) => setTo(e.target.value)} options={[{ value: "", label: "اختر المخزن" }, ...cc.warehouses.filter((l) => l.id !== from).map((l) => ({ value: l.id, label: l.name.ar }))]} /> : null}
+          <Select label={type === "transfer" ? "من مخزن" : "المخزن"} value={from} onChange={(e) => (setFrom(e.target.value), setLines([]))} options={cc.warehouses.map((l) => ({ value: l.id, label: whName(cc, l) }))} />
+          {type === "transfer" ? <Select label="الى مخزن" value={to} onChange={(e) => setTo(e.target.value)} options={[{ value: "", label: "اختر المخزن" }, ...cc.warehouses.filter((l) => l.id !== from).map((l) => ({ value: l.id, label: whName(cc, l) }))]} /> : null}
           <ReadOnly label="اسم امين المخزن">{cc.staff?.name ?? "—"}</ReadOnly>
         </div>
         <div className="grid gap-2">

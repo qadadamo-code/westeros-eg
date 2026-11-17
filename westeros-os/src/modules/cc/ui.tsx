@@ -1,11 +1,12 @@
 /** Shared pieces of the Cost Control screens. */
 import { useRef, type ReactNode } from "react";
-import { Camera, Trash2 } from "lucide-react";
+import { Camera, Download, Trash2 } from "lucide-react";
 import type { StockItem } from "@/data/types";
 import { Button, Field, useToast } from "@/ui";
 import { readImage } from "@/modules/inventory/bits";
 import { ItemPicker, Num } from "@/modules/production/ui";
 import { lineUnit, num, toLine } from "./lib";
+import { downloadXlsx, type Cell } from "./xlsx";
 
 export interface QtyLine { itemId: string; qty: number }
 
@@ -95,5 +96,18 @@ export function ReadOnly({ label, children }: { label: ReactNode; children: Reac
     <Field label={label}>
       <div className="flex h-11 items-center rounded-xl border border-line bg-surface-2 px-3 text-muted">{children}</div>
     </Field>
+  );
+}
+
+/** تصدير اكسل: saves what the table shows now as an Excel file. */
+export function ExportButton({ file, head, rows, size, disabled }: { file: string; head: string[]; rows: () => Cell[][]; size?: "sm" | "md"; disabled?: boolean }) {
+  const { toast } = useToast();
+  return (
+    <Button type="button" variant="secondary" size={size} icon={<Download />} disabled={disabled} onClick={() => {
+      const r = rows();
+      if (!r.length) return toast({ tone: "error", title: "لا توجد بيانات للتصدير" });
+      downloadXlsx(file, head, r);
+      toast({ tone: "success", title: `تم تصدير ${r.length} صف إلى اكسل` });
+    }}>تصدير اكسل</Button>
   );
 }

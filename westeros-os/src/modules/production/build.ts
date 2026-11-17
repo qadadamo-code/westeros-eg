@@ -39,8 +39,9 @@ const NONE: Localized = { ar: "—", en: "—" };
 const pos = (n: number) => Number.isFinite(n) && n > 0;
 
 /** recipe quantities scaled by the batch multiplier (meals, or kilos of net meat) */
-export function scaleLines(lines: { itemId: string; qty: number }[], by: number): DraftLine[] {
-  return lines.map((l) => ({ itemId: l.itemId, qty: Math.round(l.qty * by * 1000) / 1000 }));
+/** `whole`: round each quantity up to the next whole number (storage packaging of a product stored by weight). */
+export function scaleLines(lines: { itemId: string; qty: number }[], by: number, whole = false): DraftLine[] {
+  return lines.map((l) => { const q = Math.round(l.qty * by * 1000) / 1000; return { itemId: l.itemId, qty: whole ? Math.ceil(q) : q }; });
 }
 
 export function buildBatch(d: BatchDraft, ctx: BuildCtx): BuiltBatch {

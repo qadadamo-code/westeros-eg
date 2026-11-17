@@ -93,6 +93,8 @@ export interface RawSpec {
   /** اخر سعر شراء, for one storage unit */
   lastPrice: Units;
   lastPurchaseDate: string | null;
+  /** نوع التخزين: the warehouse type the raw material is kept in (STORE_TYPES id); unset on older cards */
+  storeType?: string;
   expiryDate: string | null;
 }
 
@@ -106,6 +108,8 @@ export interface StockRequestLine {
   unit: string;
   /** the warehouse this line enters (purchase) or leaves from (supply); empty = the request's warehouse */
   locationId?: string | null;
+  /** supply: the warehouse of the branch this line entered */
+  toLocationId?: string | null;
 }
 export interface StockRequest extends Row {
   kind: "purchase" | "supply";
@@ -115,6 +119,8 @@ export interface StockRequest extends Row {
   dueDate: string | null;
   /** supply requests: the branch warehouse that asks */
   branchLocationId: string | null;
+  /** supply requests: the branch that asks (requests saved before branches name a branch warehouse above) */
+  branchId?: string | null;
   lines: StockRequestLine[];
   keeperId: string | null;
   keeperName: string;
@@ -137,7 +143,7 @@ export interface StorageLocation extends Row {
   code?: number | null;
   address?: string;
   mapUrl?: string;
-  /** نوع المخزن: id of a warehouse type from the constants */
+  /** نوع المخزن: cold | freezer | dry | supplies (STORE_TYPES); older rows carry an id of the removed types list */
   type?: string | null;
   /** امين المخزن: membership id */
   keeperId?: string | null;

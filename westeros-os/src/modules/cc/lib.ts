@@ -2,7 +2,7 @@
  * Cost Control version — shared rules. Everything here follows the "Cost Control System" document:
  * constants (section 4), the raw material card and its two results (3.1), and the units a stock line is typed in.
  */
-import type { CodeRange, MfgLists, MfgSettings, MfgUnitDef, MfgUserType, RawSpec, StockItem, StorageLocation, Units } from "@/data/types";
+import type { CodeRange, MfgLists, MfgProduct, MfgSettings, MfgUnitDef, MfgUserType, RawSpec, StockItem, Units } from "@/data/types";
 
 export const DEFAULT_LISTS: MfgLists = {
   storageUnits: ["كيلو", "لتر", "قطعة", "كرتونة", "جالون", "بالة"],
@@ -13,11 +13,6 @@ export const DEFAULT_LISTS: MfgLists = {
     { name: "قطعة", base: "pc", factor: 1 },
   ],
   rawCategories: ["مشروبات", "صوصات"],
-  warehouseTypes: [
-    { id: "raw", name: "مخزن خامات", holds: "raw" },
-    { id: "products", name: "مخزن منتجات", holds: "products" },
-    { id: "branch", name: "فرع مطعم", holds: "branch" },
-  ],
   burgerTypes: [
     { id: "beef", name: "برجر لحم" },
     { id: "chicken", name: "برجر دجاج" },
@@ -77,15 +72,31 @@ export function lineUnit(item: Pick<StockItem, "kind" | "baseUnit" | "packs">): 
 export const toLine = (baseQty: number, item: Pick<StockItem, "kind" | "baseUnit" | "packs">) => Math.round((baseQty / lineUnit(item).factor) * 1000) / 1000;
 export const toBaseQty = (qty: number, item: Pick<StockItem, "kind" | "baseUnit" | "packs">) => Math.round(qty * lineUnit(item).factor * 1000) / 1000;
 
-/** نوع المخزن of a location. Locations saved before types existed are raw material stores. */
-export function warehouseType(loc: Pick<StorageLocation, "type">, lists: MfgLists) {
-  return lists.warehouseTypes.find((t) => t.id === loc.type) ?? lists.warehouseTypes[0] ?? DEFAULT_LISTS.warehouseTypes[0];
-}
-/** *** المخزن فيه اصناف حسب نوعه (مواد الخام او المنتجات المصنعة); a branch holds the products it is supplied with. */
-export function holds(loc: Pick<StorageLocation, "type">, item: Pick<StockItem, "kind">, lists: MfgLists) {
-  const h = warehouseType(loc, lists).holds;
-  return h === "raw" ? item.kind === "raw" : item.kind === "prep";
-}
+/**
+ * أنواع المخازن: fixed by the restaurant, each with its temperature (ثوابت النظام shows them; they are not edited).
+ * A warehouse, a raw material and a manufactured product each name one of them.
+ */
+export const STORE_TYPES = [
+  { id: "cold", name: "مخزن تبريد", temp: 5 as number | null },
+  { id: "freezer", name: "مخزن تجميد", temp: -18 as number | null },
+  { id: "dry", name: "مخزن جاف", temp: 25 as number | null },
+  { id: "supplies", name: "مخزن مستلزمات", temp: null as number | null },
+] as const;
+export type StoreType = (typeof STORE_TYPES)[number];
+export const storeType = (id: string | null | undefined): StoreType | null => STORE_TYPES.find((t) => t.id === id) ?? null;
+export const storeTypeName = (id: string | null | undefined) => storeType(id)?.name ?? "غير محدد";
+export const storeTemp = (id: string | null | undefined) => { const t = storeType(id); return t && t.temp != null ? `${t.temp}°` : "—"; };
+export const STORE_TYPE_OPTIONS = STORE_TYPES.map((t) => ({ value: t.id as string, label: t.temp != null ? `${t.name} (${t.temp}°)` : t.name }));
+/** نوع المخزن of a product: its own choice, else what its storage temperature said before types existed. */
+const TEMP_TYPE: Record<MfgProduct["storageTemp"], string> = { chilled: "cold", frozen: "freezer", room: "dry" };
+export const productStoreType = (p: Pick<MfgProduct, "storeType" | "storageTemp">): string => storeType(p.storeType)?.id ?? TEMP_TYPE[p.storageTemp];
+/** the storage temperature kept beside the type (the expiry sticker and older screens read it) */
+export const tempOfStoreType = (id: string): MfgProduct["storageTemp"] => (id === "cold" ? "chilled" : id === "freezer" ? "frozen" : "room");
+/**
+ * *** المخزن فيه اصناف حسب نوعه: an item kept in a named warehouse type goes into the warehouses of that type.
+ * A warehouse or an item without a type (saved before the types) is not limited.
+ */
+export const fitsStore = (locType: string | null | undefined, itemType: string | null | undefined) => !storeType(locType) || !storeType(itemType) || locType === itemType;
 
 export const REQUEST_STATUS = {
   done: { ar: "انتهت", tone: "ok" },
@@ -114,7 +125,7 @@ export const DEFAULT_USER_TYPES: MfgUserType[] = [
 /** الصلاحيات: the screens of the system, in the order of the menu. A user type ticks the ones its users may open. */
 export const SCREENS: { id: string; label: string }[] = [
   { id: "cc-summary", label: "الملخص" },
-  { id: "cc-stores", label: "المخازن" },
+  { id: "cc-stores", label: "المخازن والفروع" },
   { id: "cc-catalog", label: "قائمة المنتجات والخامات" },
   { id: "cc-constants", label: "ثوابت النظام" },
   { id: "cc-mfg", label: "التصنيع" },

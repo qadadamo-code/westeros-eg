@@ -75,6 +75,15 @@ export interface Branch extends TenantRow {
   /** ETA branch code used on e-receipts (`0` for the main branch) */
   etaBranchCode: string;
   openingHours: { open: string; close: string } | null;
+  /* المخازن والفروع (Cost Control) — optional so older rows stay valid */
+  /** مطبخ مركزي: manufactured batches are stored in the warehouses of this branch */
+  isCentral?: boolean;
+  /** كود الفرع, numbered automatically */
+  code?: number | null;
+  /** موقع الفرع: a map link */
+  mapUrl?: string;
+  /** مدير الفرع: membership id */
+  managerId?: string | null;
 }
 
 /**

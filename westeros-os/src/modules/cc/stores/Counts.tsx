@@ -7,7 +7,7 @@ import type { CountLine, StockCount } from "@/data/types";
 import { nowIso } from "@/lib/time";
 import { approveCount } from "@/modules/inventory/stock";
 import { Badge, Button, Card, Dialog, EmptyState, Select, Table, useToast, type Column } from "@/ui";
-import { fmtAt, holds, num, toBaseQty, toLine } from "../lib";
+import { fmtAt, num, toBaseQty, toLine } from "../lib";
 import { ReadOnly, StockLines, type QtyLine } from "../ui";
 import { useCc, type Cc } from "../useCc";
 
@@ -56,7 +56,7 @@ function CountDialog({ cc, onClose, onSaved }: { cc: Cc; onClose: () => void; on
   const [lines, setLines] = useState<QtyLine[]>([]);
   const [busy, setBusy] = useState(false);
   const loc = cc.warehouses.find((l) => l.id === where);
-  const items = useMemo(() => (loc ? cc.all.filter((i) => i.active && holds(loc, i, cc.lists)) : []), [cc.all, cc.lists, loc]);
+  const items = useMemo(() => (loc ? cc.all.filter((i) => i.active && cc.fits(loc, i)) : []), [cc, loc]);
   const save = async () => {
     if (!loc) return;
     setBusy(true);
