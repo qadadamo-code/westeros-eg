@@ -68,6 +68,8 @@ export interface MfgProduct extends Row {
   categoryCode: number;
   method: MfgMethod;
   chickenMode: MfgChickenMode | null;
+  /** the recipe was saved in الوصفات (it may have no ingredients yet) */
+  recipeDefined?: boolean;
   /** ملاحظات التصنيع: written with the recipe, shown when the product is manufactured */
   mfgNotes?: string;
   /** وصفة رئيسية / فرعية / تتبيلة */

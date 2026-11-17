@@ -31,7 +31,7 @@ export default function Recipes() {
     if (!del) return;
     setBusy(true);
     try {
-      await db.update("mfgProducts", del.id, { lines: [], packaging: [], mfgNotes: "" });
+      await db.update("mfgProducts", del.id, { lines: [], packaging: [], mfgNotes: "", recipeDefined: false });
       toast({ tone: "success", title: `تم حذف وصفة ${del.name.ar}` });
       setDel(null);
     } catch (e) {
@@ -45,7 +45,7 @@ export default function Recipes() {
   const names = cc.lists.recipeNames;
   const rows = useMemo(() => {
     const n = q.trim().toLowerCase();
-    return prod.products.filter((p) => p.lines.length > 0 && searchHit(n, p.name.ar, p.code));
+    return prod.products.filter((p) => (p.recipeDefined || p.lines.length > 0) && searchHit(n, p.name.ar, p.code));
   }, [prod.products, q]);
   const columns: Column<MfgProduct>[] = [
     { key: "code", header: "كود المنتج", cell: (p) => <span className="num text-muted">{p.code}</span> },
@@ -114,7 +114,7 @@ function RecipeDialog({ product, cc, readOnly, onClose }: { product: MfgProduct 
     if (!p) return;
     setBusy(true);
     try {
-      await db.update("mfgProducts", p.id, { recipeType: type, lines: clean(lines), packaging: clean(packaging), mfgNotes: notes.trim() });
+      await db.update("mfgProducts", p.id, { recipeType: type, lines: clean(lines), packaging: clean(packaging), mfgNotes: notes.trim(), recipeDefined: true });
       toast({ tone: "success", title: "تم حفظ الوصفة" });
       onClose();
     } catch (e) {
@@ -125,7 +125,7 @@ function RecipeDialog({ product, cc, readOnly, onClose }: { product: MfgProduct 
   };
   return (
     <Dialog open onClose={onClose} size="xl" title={product ? (readOnly ? `وصفة ${product.name.ar}` : `تعديل وصفة ${product.name.ar}`) : "تعريف وصفة"}
-      footer={<div className="flex justify-end gap-2"><Button variant="ghost" onClick={onClose}>{readOnly ? "إغلاق" : "إلغاء"}</Button>{readOnly ? null : <Button loading={busy} disabled={!p || !clean(lines).length} onClick={save}>حفظ</Button>}</div>}>
+      footer={<div className="flex justify-end gap-2"><Button variant="ghost" onClick={onClose}>{readOnly ? "إغلاق" : "إلغاء"}</Button>{readOnly ? null : <Button loading={busy} disabled={!p} onClick={save}>حفظ</Button>}</div>}>
       <fieldset disabled={readOnly} className="grid gap-4">
         <div className="grid gap-3 sm:grid-cols-3">
           <Select label="اسم المنتج" disabled={!!product} value={pid} onChange={(e) => pick(e.target.value)} options={[{ value: "", label: "اختر من المنتجات المصنعة" }, ...prod.products.filter((x) => x.active).map((x) => ({ value: x.id, label: `${x.name.ar} · ${x.code}` }))]} />

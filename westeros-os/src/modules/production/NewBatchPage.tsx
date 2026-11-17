@@ -373,7 +373,8 @@ function SimpleForm({ method, prod, onDone, initial, chosen }: { method: Extract
       ? { method, productId, meals, netKg: net, lines: scaleLines(lines, meals), packaging: scaleLines(packaging, packBy, wholePack) }
       : { method, productId, meals, netCount: Math.round(net), lines: scaleLines(lines, meals), packaging: scaleLines(packaging, packBy) };
   const built = useMemo(() => buildBatch(draft, ctx), [JSON.stringify(draft), ctx]); // eslint-disable-line react-hooks/exhaustive-deps
-  const ready = !built.errors.length && lines.some((l) => l.qty > 0);
+  // Cost Control: a recipe may have no ingredients yet (the batch then costs its packaging only)
+  const ready = !built.errors.length && (fixed || lines.some((l) => l.qty > 0));
   return (
     <Layout
       side={<ResultPanel built={built} footer={<SaveBar prod={prod} draft={draft} ready={ready} onDone={onDone} afterSave={keep && p ? () => db.update("mfgProducts", p.id, { lines: clean(lines), packaging: clean(packaging) }) : undefined} />} />}
@@ -399,7 +400,7 @@ function SimpleForm({ method, prod, onDone, initial, chosen }: { method: Extract
             <div className="grid gap-5">
               <LinesEditor readOnly={fixed} title={L("الوصفة", "Recipe")} lines={lines} onChange={setLines} by={meals} items={recipeItems(prod, p.recipeType, p.stockItemId)} itemById={prod.itemById} unitCost={prod.unitCost} />
               <LinesEditor readOnly={fixed} title={L("باكيج التخزين", "Storage packaging")} whole={wholePack} hint={fixed ? (method === "weight" ? "على الوزن الصافي بعد التجهيز، بالتقريب لأعلى لأقرب عدد صحيح. يدخل في التكلفة فقط" : "على العدد الصافي الناتج. يدخل في التكلفة فقط") : L("يدخل في التكلفة فقط", "Costed only")} lines={packaging} onChange={setPackaging} by={packBy} items={packagingItems(prod)} itemById={prod.itemById} unitCost={prod.unitCost} />
-              {fixed ? (p.lines.length ? <p className="text-[12.5px] text-muted">الأرقام للعرض فقط. تعديل المكونات والباكيج يكون من الوصفات.</p> : <p className="text-[13px] font-semibold text-warn">المنتج بدون وصفة. عرّف وصفته من تبويب الوصفات أولاً.</p>) : <RecipeSwitch value={keep} onChange={setKeep} empty={!p.lines.length} />}
+              {fixed ? (p.lines.length ? <p className="text-[12.5px] text-muted">الأرقام للعرض فقط. تعديل المكونات والباكيج يكون من الوصفات.</p> : <p className="text-[13px] font-semibold text-warn">الوصفة بدون مكونات، فالتكلفة هتطلع من غير مكونات. تقدر تضيفها من تبويب الوصفات.</p>) : <RecipeSwitch value={keep} onChange={setKeep} empty={!p.lines.length} />}
             </div>
           </Block>
         </>
