@@ -68,6 +68,8 @@ export interface MfgProduct extends Row {
   categoryCode: number;
   method: MfgMethod;
   chickenMode: MfgChickenMode | null;
+  /** ملاحظات التصنيع: written with the recipe, shown when the product is manufactured */
+  mfgNotes?: string;
   /** وصفة رئيسية / فرعية / تتبيلة */
   recipeType: "main" | "sub" | "marinade";
   /** stored and costed per kilo or per piece */

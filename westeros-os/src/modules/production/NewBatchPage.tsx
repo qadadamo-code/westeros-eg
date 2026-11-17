@@ -6,7 +6,7 @@
 import { searchHit } from "@/lib/search";
 import { useMemo, useState, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Beef, Check, Layers, RefreshCw, Scale, Search, ShieldCheck, Shapes } from "lucide-react";
+import { Beef, Check, Layers, RefreshCw, Scale, Search, ShieldCheck, Shapes, TriangleAlert } from "lucide-react";
 import { useSession } from "@/auth/session";
 import { useDb, useLive } from "@/data/hooks";
 import type { MfgBatch, MfgCategoryDef, MfgMethod, MfgProduct, MfgRecipeLine } from "@/data/types";
@@ -88,6 +88,15 @@ function ByProduct({ prod, initial }: { prod: Prod; initial: MfgProduct | undefi
         </div>
         <Button variant="outline" icon={<RefreshCw />} onClick={() => setProductId("")}>تغيير الصنف</Button>
       </Card>
+      {p.mfgNotes?.trim() ? (
+        <div role="note" className="flex items-start gap-3 rounded-2xl border-2 border-[#F8BB18] bg-[#F8BB18]/20 p-4">
+          <TriangleAlert className="mt-0.5 size-6 shrink-0 text-warn" aria-hidden />
+          <div className="min-w-0">
+            <p className="text-[13.5px] font-bold text-warn">ملاحظات التصنيع</p>
+            <p className="whitespace-pre-wrap text-[16px] font-bold leading-relaxed" dir="auto">{p.mfgNotes.trim()}</p>
+          </div>
+        </div>
+      ) : null}
       {p.method === "weight" || p.method === "portion" ? (
         <SimpleForm key={key} method={p.method} prod={prod} onDone={again} initial={p} chosen />
       ) : p.method === "chicken" ? (
