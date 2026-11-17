@@ -1,4 +1,5 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { cn } from "@/lib/cn";
 import { HotkeyScope, useHotkeys } from "./hotkeys";
@@ -20,60 +21,72 @@ export function Popover({ trigger, children, align = "start", side = "bottom", c
   const id = useId();
   const root = useRef<HTMLDivElement>(null);
   const reduced = useReduced();
+  const panel = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!open) return;
     const on = (e: PointerEvent) => {
-      if (!root.current?.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      if (!root.current?.contains(t) && !panel.current?.contains(t)) setOpen(false);
     };
     document.addEventListener("pointerdown", on);
     return () => document.removeEventListener("pointerdown", on);
   }, [open]);
   const close = () => setOpen(false);
-  // Keep the panel on screen: an anchored panel near a screen edge (phones) is nudged back inside.
-  const panel = useRef<HTMLDivElement>(null);
-  const [shift, setShift] = useState(0);
+  // The panel floats over the page (never cut by a card, a dialog or a scrolling side bar), anchored to the trigger
+  // and kept inside the screen.
+  const [pos, setPos] = useState<CSSProperties | null>(null);
   useLayoutEffect(() => {
-    if (!open) return setShift(0);
+    if (!open) return setPos(null);
     const fit = () => {
+      const r = root.current?.getBoundingClientRect();
       const el = panel.current;
-      if (!el) return;
-      const left = el.offsetLeft + (root.current?.getBoundingClientRect().left ?? 0);
-      const right = left + el.offsetWidth;
-      const max = document.documentElement.clientWidth - 12;
-      setShift(right > max ? max - right : left < 12 ? 12 - left : 0);
+      if (!r || !el) return;
+      const vw = document.documentElement.clientWidth;
+      const vh = window.innerHeight;
+      const w = el.offsetWidth;
+      const rtl = getComputedStyle(root.current!).direction === "rtl";
+      // "start" hugs the trigger's leading edge: its right edge in Arabic
+      const fromRight = (align === "start") === rtl;
+      const left = Math.min(Math.max(12, fromRight ? r.right - w : r.left), Math.max(12, vw - w - 12));
+      const room = side === "bottom" ? vh - r.bottom - 20 : r.top - 20;
+      setPos({ left, maxHeight: Math.max(160, room), ...(side === "bottom" ? { top: r.bottom + 8 } : { bottom: vh - r.top + 8 }) });
     };
     fit();
     window.addEventListener("resize", fit);
-    return () => window.removeEventListener("resize", fit);
-  }, [open]);
+    window.addEventListener("scroll", fit, true);
+    return () => {
+      window.removeEventListener("resize", fit);
+      window.removeEventListener("scroll", fit, true);
+    };
+  }, [open, align, side]);
   return (
     <div ref={root} className="relative">
       {trigger({ open, props: { "aria-expanded": open, "aria-haspopup": "menu", "aria-controls": id, onClick: () => setOpen((v) => !v) } })}
-      <AnimatePresence>
-        {open ? (
-          <HotkeyScope>
-            <PopEsc onClose={close} />
-            <motion.div
-              id={id}
-              ref={panel}
-              initial={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.96, y: side === "bottom" ? -6 : 6 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.97, transition: { duration: 0.12 } }}
-              transition={spring.snappy}
-              style={{ transformOrigin: side === "bottom" ? "top" : "bottom", translate: shift ? `${shift}px 0` : undefined }}
-              className={cn(
-                "absolute z-[70] max-w-[calc(100vw-24px)] overflow-hidden rounded-2xl border border-line bg-surface p-1.5 shadow-sf-lg",
-                width,
-                side === "bottom" ? "top-[calc(100%+8px)]" : "bottom-[calc(100%+8px)]",
-                align === "start" ? "start-0" : "end-0",
-                className,
-              )}
-            >
-              {typeof children === "function" ? children(close) : children}
-            </motion.div>
-          </HotkeyScope>
-        ) : null}
-      </AnimatePresence>
+      {typeof document === "undefined"
+        ? null
+        : createPortal(
+            <AnimatePresence>
+              {open ? (
+                <HotkeyScope>
+                  <PopEsc onClose={close} />
+                  <motion.div
+                    id={id}
+                    ref={panel}
+                    dir={root.current ? getComputedStyle(root.current).direction : undefined}
+                    initial={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.96, y: side === "bottom" ? -6 : 6 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.97, transition: { duration: 0.12 } }}
+                    transition={spring.snappy}
+                    style={{ position: "fixed", transformOrigin: side === "bottom" ? "top" : "bottom", visibility: pos ? "visible" : "hidden", ...pos }}
+                    className={cn("z-[95] max-w-[calc(100vw-24px)] overflow-y-auto rounded-2xl border border-line bg-surface p-1.5 shadow-sf-lg thin-scrollbar", width, className)}
+                  >
+                    {typeof children === "function" ? children(close) : children}
+                  </motion.div>
+                </HotkeyScope>
+              ) : null}
+            </AnimatePresence>,
+            document.body,
+          )}
     </div>
   );
 }
