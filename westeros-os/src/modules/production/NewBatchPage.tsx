@@ -3,6 +3,7 @@
  * method, types what went in and what came out, and sees the figures of the document live; saving signs the batch with the
  * chef, moves the stock and opens the sticker.
  */
+import { searchHit } from "@/lib/search";
 import { useMemo, useState, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Beef, Check, Layers, RefreshCw, Scale, Search, ShieldCheck, Shapes } from "lucide-react";
@@ -53,7 +54,7 @@ function ByProduct({ prod, initial }: { prod: Prod; initial: MfgProduct | undefi
   const p = prod.productById.get(productId);
   const list = useMemo(() => {
     const n = q.trim().toLowerCase();
-    return prod.products.filter((x) => x.active && (!n || x.name.ar.toLowerCase().includes(n) || x.code.toLowerCase().includes(n)));
+    return prod.products.filter((x) => x.active && searchHit(n, x.name.ar, x.code));
   }, [prod.products, q]);
   // after a save: back to choosing the next product
   const again = () => {

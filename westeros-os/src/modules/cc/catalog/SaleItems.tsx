@@ -1,4 +1,5 @@
 /** 3.3 أصناف البيع: the menu items table, add and edit, and the Excel import matched by the item code. */
+import { searchHit } from "@/lib/search";
 import { useMemo, useState } from "react";
 import { Plus, Search, UtensilsCrossed } from "lucide-react";
 import { useSession } from "@/auth/session";
@@ -42,7 +43,7 @@ export default function SaleItems() {
   const recipeOf = (id: string) => recipes.find((r) => r.ownerType === "menu_item" && r.ownerId === id && !r.scopeItemId) ?? null;
   const rows = useMemo(() => {
     const n = q.trim().toLowerCase();
-    return items.filter((i) => (!cat || i.categoryId === cat) && (!n || i.name.ar.toLowerCase().includes(n) || (i.sku ?? "").toLowerCase().includes(n)));
+    return items.filter((i) => (!cat || i.categoryId === cat) && searchHit(n, i.name.ar, i.sku));
   }, [items, q, cat]);
   const sel = useSelection(rows, (i) => i.id);
   const move = async (categoryId: string) => {

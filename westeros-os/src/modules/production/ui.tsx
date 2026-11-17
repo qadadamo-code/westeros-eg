@@ -1,4 +1,5 @@
 /** Shared pieces of the manufacturing screens: number entry, ingredient picker, recipe lines, the live result panel. */
+import { searchFilter } from "@/lib/search";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AlertTriangle, Plus, Search, Trash2 } from "lucide-react";
 import type { MfgBatchOutput, MfgRecipeLine, StockItem } from "@/data/types";
@@ -57,18 +58,13 @@ export function Num({ value, onChange, label, suffix, hint, className, autoFocus
   );
 }
 
-const norm = (s: string) => s.toLowerCase().replace(/[أإآ]/g, "ا").replace(/ة/g, "ه").replace(/ى/g, "ي").trim();
-
 /** Search box over the stock items (raw materials and the manufactured ones). */
 export function ItemPicker({ items, onPick, placeholder, exclude }: { items: StockItem[]; onPick: (item: StockItem) => void; placeholder?: string; exclude?: Set<string> }) {
   const { L, loc } = useT();
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const found = useMemo(() => {
-    const n = norm(q);
-    return items
-      .filter((i) => i.active && !exclude?.has(i.id) && (!n || norm(i.name.ar).includes(n) || norm(i.name.en).includes(n) || i.sku.toLowerCase().includes(n)))
-      .slice(0, 40);
+    return searchFilter(items.filter((i) => i.active && !exclude?.has(i.id)), q, (i) => [i.name.ar, i.name.en, i.sku]).slice(0, 40);
   }, [items, q, exclude]);
   return (
     <div className="relative">

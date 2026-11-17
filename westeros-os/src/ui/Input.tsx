@@ -1,8 +1,7 @@
-import { forwardRef, useId, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
-import { ChevronDown } from "lucide-react";
+import { forwardRef, useId, type InputHTMLAttributes, type ReactNode, type TextareaHTMLAttributes } from "react";
 import { cn } from "@/lib/cn";
 
-const FIELD =
+export const FIELD =
   "w-full rounded-xl border border-line bg-surface text-ink placeholder:text-faint transition-[border-color,box-shadow] duration-150 outline-none " +
   "hover:border-line-strong focus:border-primary focus:shadow-[var(--sf-glow)] disabled:opacity-60 aria-[invalid=true]:border-danger aria-[invalid=true]:focus:shadow-[0_0_0_4px_color-mix(in_srgb,var(--sf-danger)_18%,transparent)]";
 
@@ -56,33 +55,6 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<H
   return (
     <Field label={label} hint={hint} error={error} htmlFor={fid}>
       <textarea ref={ref} id={fid} aria-invalid={error ? true : undefined} className={cn(FIELD, "min-h-24 resize-y px-3.5 py-2.5 text-[15px]", className)} {...rest} />
-    </Field>
-  );
-});
-
-export interface SelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement>, "size"> {
-  label?: ReactNode;
-  hint?: ReactNode;
-  error?: ReactNode;
-  options: { value: string; label: string; disabled?: boolean }[];
-  size?: "md" | "lg";
-}
-
-export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select({ label, hint, error, options, size = "md", className, id, ...rest }, ref) {
-  const auto = useId();
-  const fid = id ?? auto;
-  return (
-    <Field label={label} hint={hint} error={error} htmlFor={fid}>
-      <div className="relative">
-        <select ref={ref} id={fid} aria-invalid={error ? true : undefined} className={cn(FIELD, "appearance-none ps-3.5 pe-10", size === "lg" ? "h-13 text-[16px]" : "h-11 text-[15px]", className)} {...rest}>
-          {options.map((o) => (
-            <option key={o.value} value={o.value} disabled={o.disabled}>
-              {o.label}
-            </option>
-          ))}
-        </select>
-        <ChevronDown className="pointer-events-none absolute end-3 top-1/2 size-4 -translate-y-1/2 text-muted" aria-hidden />
-      </div>
     </Field>
   );
 });

@@ -1,4 +1,5 @@
 /** 3.2 المنتجات المصنعة: the table of products, add and edit. The recipe itself is defined under التصنيع > الوصفات. */
+import { searchHit } from "@/lib/search";
 import { useMemo, useState } from "react";
 import { ChefHat, Plus, Search } from "lucide-react";
 import { useSession } from "@/auth/session";
@@ -56,7 +57,7 @@ export default function Products() {
   const manage = can("production.manage");
   const rows = useMemo(() => {
     const n = q.trim().toLowerCase();
-    return prod.products.filter((p) => (!cat || p.category === cat) && (!n || p.name.ar.toLowerCase().includes(n) || p.code.toLowerCase().includes(n)));
+    return prod.products.filter((p) => (!cat || p.category === cat) && searchHit(n, p.name.ar, p.code));
   }, [prod.products, q, cat]);
   const sel = useSelection(rows, (p) => p.id);
   const columns: Column<MfgProduct>[] = [

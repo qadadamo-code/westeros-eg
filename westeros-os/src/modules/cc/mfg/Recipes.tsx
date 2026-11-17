@@ -1,4 +1,5 @@
 /** 5.2 الوصفات: every defined recipe in one list; a recipe is defined for a product chosen from the manufactured products. */
+import { searchHit } from "@/lib/search";
 import { useMemo, useState } from "react";
 import { BookOpenCheck, Pencil, Plus, Search } from "lucide-react";
 import { useSession } from "@/auth/session";
@@ -25,7 +26,7 @@ export default function Recipes() {
   const names = cc.lists.recipeNames;
   const rows = useMemo(() => {
     const n = q.trim().toLowerCase();
-    return prod.products.filter((p) => p.lines.length > 0 && (!n || p.name.ar.toLowerCase().includes(n) || p.code.toLowerCase().includes(n)));
+    return prod.products.filter((p) => p.lines.length > 0 && searchHit(n, p.name.ar, p.code));
   }, [prod.products, q]);
   const columns: Column<MfgProduct>[] = [
     { key: "code", header: "كود المنتج", cell: (p) => <span className="num text-muted">{p.code}</span> },

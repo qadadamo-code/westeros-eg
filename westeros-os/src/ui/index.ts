@@ -1,6 +1,7 @@
 /** Westeros OS design system. Import from "@/ui". */
 export * from "./Button";
 export * from "./Input";
+export * from "./Select";
 export * from "./Segmented";
 export * from "./Tabs";
 export * from "./Dialog";

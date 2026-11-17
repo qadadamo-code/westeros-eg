@@ -1,4 +1,5 @@
 /** 3.1 مواد الخام: the list, add and edit, and the Excel import matched by the raw material code. */
+import { searchHit } from "@/lib/search";
 import { useMemo, useState } from "react";
 import { Boxes, Plus, Search } from "lucide-react";
 import { useSession } from "@/auth/session";
@@ -60,7 +61,7 @@ export default function RawMaterials() {
   const cats = cc.lists.rawCategories;
   const rows = useMemo(() => {
     const n = q.trim().toLowerCase();
-    return cc.raws.filter((i) => (!cat || specOf(i, cc.lists).category === cat) && (!n || i.name.ar.toLowerCase().includes(n) || i.sku.toLowerCase().includes(n)));
+    return cc.raws.filter((i) => (!cat || specOf(i, cc.lists).category === cat) && searchHit(n, i.name.ar, i.sku));
   }, [cc.raws, cc.lists, q, cat]);
   const recipes = useLive("recipes").data;
   const sel = useSelection(rows, (i) => i.id);
