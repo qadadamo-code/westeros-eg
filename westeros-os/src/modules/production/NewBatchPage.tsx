@@ -538,8 +538,10 @@ function BurgerForm({ kind, categoryId, prod, onDone }: { kind: "beef" | "chicke
   const keep = fixed ? false : keepEdited;
   const mixKg = fixed && beef ? netKg + fatKg : netKg;
   const meat = meats.find((m) => m.id === meatTypeId);
+  // Cost Control: the storage packaging follows the total count produced (2 sheets a piece × 180 pieces = 360)
+  const packBy = fixed ? list.reduce((a, p) => a + Math.round(counts[p.id] ?? 0), 0) : mixKg;
   const draft: BatchDraft = {
-    method: "burger", kind, meatTypeId, meatKg, netKg, fatKg, lines: scaleLines(lines, mixKg), packaging: scaleLines(packaging, mixKg),
+    method: "burger", kind, meatTypeId, meatKg, netKg, fatKg, lines: scaleLines(lines, mixKg), packaging: scaleLines(packaging, packBy),
     products: list.map((p) => ({ productId: p.id, count: Math.round(counts[p.id] ?? 0) })),
   };
   const built = useMemo(() => buildBatch(draft, burgerCtx), [JSON.stringify(draft), burgerCtx]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -600,7 +602,7 @@ function BurgerForm({ kind, categoryId, prod, onDone }: { kind: "beef" | "chicke
       <Block step={2} title={L("الخلطة", "Mix")} hint={fixed ? (beef ? `الكميات المطلوبة لإجمالي ${r3(mixKg)} كجم (الصافي + الدهن)` : `الكميات المطلوبة لإجمالي ${r3(mixKg)} كجم`) : L("كميات هذه التشغيلة", "Quantities of this batch")}>
         <div className="grid gap-5">
           <LinesEditor readOnly={fixed} title={L("مكونات الوصفة", "Recipe")} lines={lines} onChange={setLines} by={mixKg} items={recipeItems(prod, first?.recipeType ?? "main", first?.stockItemId)} itemById={prod.itemById} unitCost={prod.unitCost} />
-          <LinesEditor readOnly={fixed} title={L("باكيج التخزين", "Storage packaging")} hint={L("يدخل في التكلفة فقط", "Costed only")} lines={packaging} onChange={setPackaging} by={mixKg} items={packagingItems(prod)} itemById={prod.itemById} unitCost={prod.unitCost} />
+          <LinesEditor readOnly={fixed} title={L("باكيج التخزين", "Storage packaging")} hint={fixed ? "على إجمالي العدد الناتج. يدخل في التكلفة فقط" : L("يدخل في التكلفة فقط", "Costed only")} lines={packaging} onChange={setPackaging} by={packBy} items={packagingItems(prod)} itemById={prod.itemById} unitCost={prod.unitCost} />
           {fixed ? <p className="text-[12.5px] text-muted">الأرقام للعرض فقط. تعديل المكونات والباكيج يكون من الوصفات.</p> : <RecipeSwitch value={keep} onChange={setKeep} empty={!first?.lines.length} />}
         </div>
       </Block>

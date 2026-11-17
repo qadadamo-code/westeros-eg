@@ -145,7 +145,7 @@ function RecipeDialog({ product, cc, readOnly, onClose }: { product: MfgProduct 
               <Info k="طريقة التصنيع" v={methodLabel(p)} />
             </div>
             <LinesEditor readOnly={readOnly} title="المكونات" hint={per} lines={lines} onChange={setLines} items={recipeItems(prod, type, p.stockItemId)} itemById={prod.itemById} unitCost={prod.unitCost} />
-            <LinesEditor readOnly={readOnly} title="باكيج التخزين" hint={`من خامات فئة التغليف. ${p.method === "portion" ? "العيارات لكل قطعة ناتجة" : "العيارات لكل كيلو صافي"}. يدخل في التكلفة فقط`} lines={packaging} onChange={setPackaging} items={packagingItems(prod, p.stockItemId)} itemById={prod.itemById} unitCost={prod.unitCost} />
+            <LinesEditor readOnly={readOnly} title="باكيج التخزين" hint={`من خامات فئة التغليف. ${p.method === "portion" || p.method === "burger" ? "العيارات لكل قطعة ناتجة" : "العيارات لكل كيلو صافي"}. يدخل في التكلفة فقط`} lines={packaging} onChange={setPackaging} items={packagingItems(prod, p.stockItemId)} itemById={prod.itemById} unitCost={prod.unitCost} />
             <label className="grid gap-1.5">
               <span className="text-[13.5px] font-semibold">ملاحظات التصنيع <span className="font-normal text-muted">(تظهر للشيف بلون بارز وقت تصنيع المنتج)</span></span>
               <textarea rows={3} dir="auto" className="w-full rounded-xl border border-line bg-surface px-3 py-2.5 text-[14.5px] outline-none focus:border-primary" placeholder="مثال: يتقلب 10 دقايق على نار هادية، ويتبرد قبل التعبئة" value={notes} onChange={(e) => setNotes(e.target.value)} />
