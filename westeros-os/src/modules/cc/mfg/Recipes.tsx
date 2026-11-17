@@ -1,7 +1,7 @@
 /** 5.2 الوصفات: every defined recipe in one list; a recipe is defined for a product chosen from the manufactured products. */
 import { searchHit } from "@/lib/search";
 import { useMemo, useState } from "react";
-import { BookOpenCheck, Pencil, Plus, Search } from "lucide-react";
+import { BookOpenCheck, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { useSession } from "@/auth/session";
 import { useDb } from "@/data/hooks";
 import type { MfgProduct, MfgRecipeLine } from "@/data/types";
@@ -18,9 +18,27 @@ const clean = (l: MfgRecipeLine[]) => l.filter((x) => x.qty > 0);
 
 export default function Recipes() {
   const cc = useCc();
+  const db = useDb();
+  const { toast } = useToast();
   const prod = cc.prod;
   const { can } = useSession();
   const [q, setQ] = useState("");
+  const [del, setDel] = useState<MfgProduct | null>(null);
+  const [busy, setBusy] = useState(false);
+  // حذف الوصفة: the product itself and its batches stay; only its ingredients and storage packaging are cleared
+  const remove = async () => {
+    if (!del) return;
+    setBusy(true);
+    try {
+      await db.update("mfgProducts", del.id, { lines: [], packaging: [] });
+      toast({ tone: "success", title: `تم حذف وصفة ${del.name.ar}` });
+      setDel(null);
+    } catch (e) {
+      toast({ tone: "error", title: "تعذر الحذف", description: String((e as Error).message ?? e) });
+    } finally {
+      setBusy(false);
+    }
+  };
   const [open, setOpen] = useState<MfgProduct | "new" | null>(null);
   const manage = can("production.manage");
   const names = cc.lists.recipeNames;
@@ -35,7 +53,12 @@ export default function Recipes() {
     { key: "type", header: "نوع الوصفة", cell: (p) => <Badge tone={p.recipeType === "main" ? "primary" : "brass"} size="sm">{names[p.recipeType]}</Badge> },
     { key: "n", header: "المكونات", align: "end", cell: (p) => <span className="num">{p.lines.length}</span> },
     ...(manage
-      ? [{ key: "edit", header: "", align: "end" as const, cell: (p: MfgProduct) => <Button size="sm" variant="outline" icon={<Pencil className="size-4" />} onClick={(e) => { e.stopPropagation(); setOpen(p); }}>تعديل</Button> }]
+      ? [{ key: "edit", header: "", align: "end" as const, cell: (p: MfgProduct) => (
+          <span className="inline-flex gap-2">
+            <Button size="sm" variant="outline" icon={<Pencil className="size-4" />} onClick={(e) => { e.stopPropagation(); setOpen(p); }}>تعديل</Button>
+            <Button size="sm" variant="outline" className="text-danger" icon={<Trash2 className="size-4" />} onClick={(e) => { e.stopPropagation(); setDel(p); }}>حذف</Button>
+          </span>
+        ) }]
       : []),
   ];
   return (
@@ -47,6 +70,13 @@ export default function Recipes() {
       <Card className="overflow-hidden">
         <Table columns={columns} rows={rows} rowKey={(p) => p.id} dense onRowClick={(p) => setOpen(p)} empty={<EmptyState compact icon={<BookOpenCheck />} title="لا توجد وصفات معرفة" body={prod.products.length ? undefined : "أضف المنتجات المصنعة أولاً من قائمة المنتجات والخامات"} />} />
       </Card>
+      {del ? (
+        <Dialog open onClose={() => (busy ? undefined : setDel(null))} size="sm" title={`حذف وصفة ${del.name.ar}؟`}
+          description={`هتتمسح مكونات الوصفة (${del.lines.length}) وباكيج التخزين. المنتج نفسه والتشغيلات المسجلة يفضلوا زي ما هم، وتقدر ترجع عن الحذف من السجل والاسترجاع.`}
+          footer={<div className="flex justify-end gap-2"><Button variant="ghost" disabled={busy} onClick={() => setDel(null)}>إلغاء</Button><Button variant="danger" loading={busy} icon={<Trash2 />} onClick={remove}>حذف الوصفة</Button></div>}>
+          {null}
+        </Dialog>
+      ) : null}
       {open ? <RecipeDialog key={open === "new" ? "new" : open.id} product={open === "new" ? null : open} cc={cc} readOnly={!manage} onClose={() => setOpen(null)} /> : null}
     </div>
   );
