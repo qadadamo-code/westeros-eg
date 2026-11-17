@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import { Boxes, Plus, Search } from "lucide-react";
 import { useSession } from "@/auth/session";
-import { useDb } from "@/data/hooks";
+import { useDb, useLive } from "@/data/hooks";
 import type { RawSpec, StockItem } from "@/data/types";
 import { formatMoney, major } from "@/lib/money";
 import { MoneyInput } from "@/modules/marketing/ui";
@@ -12,9 +12,21 @@ import { conversionOf, fmtDay, mfgUnitPrice, nextCodeIn, num, rawRanges, specOf,
 import { ImageField, Result } from "../ui";
 import { sheetCode, sheetNumber } from "../xlsx";
 import { useCc, type Cc } from "../useCc";
-import { ExcelImport } from "./Import";
+import { BulkBar, useSelection, type DeleteResult } from "./Bulk";
+import { ExcelImport, type ImportField, type ImportPlan } from "./Import";
+import { stockItemUse } from "./usage";
 
-const COLS = ["كود الخام", "اسم الخام", "فئة الخام", "وحدة التخزين", "اخر سعر شراء", "تاريخ اخر عملية شراء", "تاريخ الصلاحية", "وحدة التصنيع", "الكمية في وحدة التخزين"];
+const FIELDS: ImportField[] = [
+  { key: "كود الخام", aliases: ["الكود", "كود", "رقم الصنف", "كود الصنف", "code", "sku"] },
+  { key: "اسم الخام", aliases: ["الاسم", "اسم الصنف", "الصنف", "name"] },
+  { key: "فئة الخام", aliases: ["الفئة", "فئة", "المجموعة", "القسم", "category"] },
+  { key: "وحدة التخزين", aliases: ["الوحدة", "وحدة", "unit"] },
+  { key: "اخر سعر شراء", aliases: ["السعر", "سعر الشراء", "آخر سعر شراء", "التكلفة", "price", "cost"] },
+  { key: "تاريخ اخر عملية شراء", aliases: ["تاريخ اخر شراء", "تاريخ الشراء"] },
+  { key: "تاريخ الصلاحية", aliases: ["الصلاحية", "تاريخ الانتهاء"] },
+  { key: "وحدة التصنيع" },
+  { key: "الكمية في وحدة التخزين", aliases: ["الكمية في الوحدة", "معامل التحويل"] },
+];
 const money = (u: number) => formatMoney(u, { lang: "ar" });
 const isoDay = (s: string) => {
   const t = s.trim();
@@ -50,7 +62,34 @@ export default function RawMaterials() {
     const n = q.trim().toLowerCase();
     return cc.raws.filter((i) => (!cat || specOf(i, cc.lists).category === cat) && (!n || i.name.ar.toLowerCase().includes(n) || i.sku.toLowerCase().includes(n)));
   }, [cc.raws, cc.lists, q, cat]);
+  const recipes = useLive("recipes").data;
+  const sel = useSelection(rows, (i) => i.id);
+  const move = async (category: string) => {
+    for (const i of sel.rows) {
+      const spec = specOf(i, cc.lists);
+      if (spec.category !== category) await db.update("stockItems", i.id, { note: category, spec: { ...spec, category } });
+    }
+    return sel.rows.length;
+  };
+  const remove = async (): Promise<DeleteResult> => {
+    const out: DeleteResult = { deleted: 0, refused: [] };
+    for (const i of sel.rows) {
+      const why = await stockItemUse(db, cc, recipes, i.id);
+      if (why) {
+        out.refused.push({ name: i.name.ar, why });
+        continue;
+      }
+      try {
+        await db.remove("stockItems", i.id);
+        out.deleted++;
+      } catch {
+        out.refused.push({ name: i.name.ar, why: "مرتبط ببيانات أخرى" });
+      }
+    }
+    return out;
+  };
   const columns: Column<StockItem>[] = [
+    ...(manage ? [sel.column] : []),
     { key: "code", header: "كود الخام", cell: (i) => <span className="num text-muted">{i.sku}</span> },
     { key: "name", header: "اسم الخام", cell: (i) => <span className="font-semibold">{i.name.ar}{i.mfg === false ? <Badge tone="neutral" size="sm" className="ms-2">مخزن ومشتريات فقط</Badge> : null}</span> },
     { key: "cat", header: "فئة الخام", hideOnMobile: true, cell: (i) => specOf(i, cc.lists).category || "—" },
@@ -62,17 +101,22 @@ export default function RawMaterials() {
     { key: "conv", header: "معامل التحويل", align: "end", hideOnMobile: true, cell: (i) => <span className="num">{num(conversionOf(specOf(i, cc.lists).perStorage), 5)}</span> },
     { key: "mp", header: "سعر وحدة التصنيع", align: "end", cell: (i) => { const s = specOf(i, cc.lists); return <span className="num font-semibold">{money(mfgUnitPrice(s.lastPrice, s.perStorage))}</span>; } },
   ];
-  const importRows = async (sheet: Record<string, string>[]) => {
-    let added = 0, updated = 0;
+  // `dry`: only say what the file would add and edit (the review step); nothing is written
+  const importRows = async (sheet: Record<string, string>[], dry: boolean): Promise<ImportPlan> => {
+    const plan: ImportPlan = { added: [], updated: [], skipped: 0 };
+    const fresh = new Set<string>();
     // a category or storage unit the file brings is defined in the constants first
     const col = (k: string) => [...new Set(sheet.map((r) => (r[k] ?? "").trim()).filter(Boolean))];
     const newCats = col("فئة الخام").filter((c) => !cc.lists.rawCategories.includes(c));
     const newUnits = col("وحدة التخزين").filter((u) => !cc.lists.storageUnits.includes(u));
-    if ((newCats.length || newUnits.length) && cc.prod.settings) await db.update("mfgSettings", cc.prod.settings.id, { lists: { ...cc.lists, rawCategories: [...cc.lists.rawCategories, ...newCats], storageUnits: [...cc.lists.storageUnits, ...newUnits] } });
+    if (!dry && (newCats.length || newUnits.length) && cc.prod.settings) await db.update("mfgSettings", cc.prod.settings.id, { lists: { ...cc.lists, rawCategories: [...cc.lists.rawCategories, ...newCats], storageUnits: [...cc.lists.storageUnits, ...newUnits] } });
     const bySku = new Map(cc.raws.map((i) => [i.sku, i]));
     for (const r of sheet) {
       const sku = sheetCode(r["كود الخام"]);
-      if (!sku) continue;
+      if (!sku) {
+        plan.skipped++;
+        continue;
+      }
       const cur = bySku.get(sku);
       const old = cur ? specOf(cur, cc.lists) : null;
       const has = (k: string) => (r[k] ?? "").trim() !== "";
@@ -87,28 +131,38 @@ export default function RawMaterials() {
         expiryDate: has("تاريخ الصلاحية") ? isoDay(r["تاريخ الصلاحية"]) : (old?.expiryDate ?? null),
       };
       const name = has("اسم الخام") ? r["اسم الخام"].trim() : (cur?.name.ar ?? "");
+      if (dry) {
+        if (cur) plan.updated.push({ code: sku, name });
+        else if (fresh.has(sku)) continue;
+        else if (name) (fresh.add(sku), plan.added.push({ code: sku, name }));
+        else plan.skipped++;
+        continue;
+      }
       if (cur) {
         // an item that already moved keeps its base unit: only the price and the card change
         const moved = cc.levels.some((l) => l.itemId === cur.id);
         const fields = stockFieldsOf(spec, cc.lists);
         await db.update("stockItems", cur.id, moved && fields.baseUnit !== cur.baseUnit ? { name: { ar: name, en: name }, note: spec.category, spec: { ...spec, mfgUnit: old!.mfgUnit, perStorage: old!.perStorage } } : { name: { ar: name, en: name }, note: spec.category, spec, ...fields });
-        updated++;
+        if (fresh.has(sku)) continue;
+        plan.updated.push({ code: sku, name });
       } else if (name) {
         // a code repeated lower in the same file then edits this new item instead of adding it twice
         bySku.set(sku, await db.insert("stockItems", newRaw(cc, name, sku, spec, true)));
-        added++;
-      }
+        fresh.add(sku);
+        plan.added.push({ code: sku, name });
+      } else plan.skipped++;
     }
-    return { added, updated };
+    return plan;
   };
   return (
     <div className="grid gap-4">
       <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_200px_auto_auto]">
         <Input icon={<Search />} placeholder="ابحث باسم الخام أو الكود" value={q} onChange={(e) => setQ(e.target.value)} />
         <Select value={cat} onChange={(e) => setCat(e.target.value)} options={[{ value: "", label: "كل الفئات" }, ...cats.map((c) => ({ value: c, label: c }))]} />
-        {manage ? <ExcelImport columns={COLS} onRows={importRows} /> : null}
+        {manage ? <ExcelImport fields={FIELDS} run={importRows} /> : null}
         {manage ? <Button icon={<Plus />} onClick={() => setEdit("new")}>اضافة مادة خام</Button> : null}
       </div>
+      {manage ? <BulkBar count={sel.rows.length} noun="خام" onClear={sel.clear} onEdit={() => setEdit(sel.rows[0])} categories={cats.map((c) => ({ value: c, label: c }))} onMove={move} onDelete={remove} /> : null}
       <Card className="overflow-hidden">
         <Table columns={columns} rows={rows} rowKey={(i) => i.id} dense onRowClick={(i) => setEdit(i)} empty={<EmptyState compact icon={<Boxes />} title="لا توجد مواد خام" />} />
       </Card>

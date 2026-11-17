@@ -27,6 +27,10 @@ const TABLES: Record<string, L2> = {
   recipes: { ar: "وصفة", en: "Recipe" },
   mfg_batches: { ar: "تشغيلة تصنيع", en: "Production batch" },
   mfg_products: { ar: "منتج مصنّع", en: "Manufactured product" },
+  mfg_settings: { ar: "ثوابت النظام", en: "System constants" },
+  stock_levels: { ar: "رصيد مخزن", en: "Stock level" },
+  storage_locations: { ar: "مخزن", en: "Warehouse" },
+  stock_requests: { ar: "طلب شراء أو توريد", en: "Stock request" },
   checklist_runs: { ar: "قائمة وردية", en: "Checklist run" },
   checklist_templates: { ar: "قالب قائمة", en: "Checklist template" },
   journal_entries: { ar: "قيد محاسبي", en: "Journal entry" },
@@ -93,8 +97,14 @@ export function fieldsText(fields: string[], lang: "ar" | "en"): string {
   return named.slice(0, 3).join(sep) + (rest + Math.max(0, named.length - 3) ? (lang === "ar" ? ` و${rest + Math.max(0, named.length - 3)} غيرها` : ` +${rest + Math.max(0, named.length - 3)} more`) : "");
 }
 
-/** Only the newest change of a record can be undone (the database enforces the same rule). */
-export function undoable(c: ChangeRow, all: ChangeRow[]): boolean {
-  if (c.undoneAt || c.source !== "app") return false;
-  return !all.some((n) => n.table === c.table && n.rowId === c.rowId && n.id > c.id);
+/** A change still in force: made in the app and not taken back. */
+export const standing = (c: ChangeRow): boolean => !c.undoneAt && c.source === "app";
+
+/**
+ * A change can be taken back while no newer change of the same record still stands (the database enforces the same rule).
+ * `picked`: changes being taken back in the same go; they are reversed first, so they do not block.
+ */
+export function undoable(c: ChangeRow, all: ChangeRow[], picked?: ReadonlySet<number>): boolean {
+  if (!standing(c)) return false;
+  return !all.some((n) => n.table === c.table && n.rowId === c.rowId && n.id > c.id && standing(n) && !picked?.has(n.id));
 }

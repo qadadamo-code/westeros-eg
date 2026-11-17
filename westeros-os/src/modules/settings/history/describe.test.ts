@@ -29,4 +29,13 @@ describe("history descriptions", () => {
     expect(undoable(row({ id: 4, rowId: "c", undoneAt: "x" }), all)).toBe(false);
     expect(undoable(row({ id: 5, rowId: "d", source: "restore" }), all)).toBe(false);
   });
+  it("a newer change that was taken back, or is ticked in the same go, does not block", () => {
+    const older = row({ id: 1 });
+    const undone = row({ id: 2, undoneAt: "x" });
+    const itsUndo = row({ id: 3, source: "undo" });
+    expect(undoable(older, [itsUndo, undone, older])).toBe(true);
+    const newer = row({ id: 4 });
+    expect(undoable(older, [newer, older])).toBe(false);
+    expect(undoable(older, [newer, older], new Set([4]))).toBe(true);
+  });
 });

@@ -12,9 +12,15 @@ import { ImageField } from "../ui";
 import { sheetCode, sheetNumber } from "../xlsx";
 import { codeRanges, nextCodeIn } from "../lib";
 import { useCc, type Cc } from "../useCc";
-import { ExcelImport } from "./Import";
+import { BulkBar, useSelection, type DeleteResult } from "./Bulk";
+import { ExcelImport, type ImportField, type ImportPlan } from "./Import";
 
-const COLS = ["كود الصنف", "اسم الصنف", "فئة الصنف", "سعر البيع"];
+const FIELDS: ImportField[] = [
+  { key: "كود الصنف", aliases: ["الكود", "كود", "رقم الصنف", "code", "sku"] },
+  { key: "اسم الصنف", aliases: ["الاسم", "الصنف", "name"] },
+  { key: "فئة الصنف", aliases: ["الفئة", "فئة", "المجموعة", "القسم", "category"] },
+  { key: "سعر البيع", aliases: ["السعر", "price"] },
+];
 const money = (u: number) => formatMoney(u, { lang: "ar" });
 const blank = (categoryId: string): Omit<MenuItem, "id" | "createdAt" | "updatedAt" | "restaurantId"> => ({
   categoryId, name: { ar: "", en: "" }, description: { ar: "", en: "" }, price: 0, cost: null, sku: null, stationId: null, modifierGroupIds: [], tags: [], prepMinutes: 10, available: true,
@@ -38,21 +44,58 @@ export default function SaleItems() {
     const n = q.trim().toLowerCase();
     return items.filter((i) => (!cat || i.categoryId === cat) && (!n || i.name.ar.toLowerCase().includes(n) || (i.sku ?? "").toLowerCase().includes(n)));
   }, [items, q, cat]);
+  const sel = useSelection(rows, (i) => i.id);
+  const move = async (categoryId: string) => {
+    for (const i of sel.rows) if (i.categoryId !== categoryId) await db.update("menuItems", i.id, { categoryId });
+    return sel.rows.length;
+  };
+  const remove = async (): Promise<DeleteResult> => {
+    const out: DeleteResult = { deleted: 0, refused: [] };
+    for (const i of sel.rows) {
+      // an item that was sold stays: its orders point at it
+      if ((await db.list("orderItems", { where: { itemId: i.id }, limit: 1 })).length) {
+        out.refused.push({ name: i.name.ar, why: "اتباع في طلبات" });
+        continue;
+      }
+      try {
+        await db.remove("menuItems", i.id);
+        for (const r of recipes.filter((x) => x.ownerType === "menu_item" && x.ownerId === i.id)) await db.remove("recipes", r.id);
+        out.deleted++;
+      } catch {
+        out.refused.push({ name: i.name.ar, why: "مرتبط ببيانات أخرى" });
+      }
+    }
+    return out;
+  };
   const columns: Column<MenuItem>[] = [
+    ...(manage ? [sel.column] : []),
     { key: "code", header: "كود الصنف", cell: (i) => <span className="num text-muted">{i.sku || "—"}</span> },
     { key: "name", header: "اسم الصنف", cell: (i) => <span className="font-semibold">{i.name.ar}</span> },
     { key: "cat", header: "فئة الصنف", cell: (i) => catName(i.categoryId) },
     { key: "comp", header: "مكونات الصنف", hideOnMobile: true, cell: (i) => { const n = recipeOf(i.id)?.lines.length ?? 0; return n ? <span className="num">{n} مكون</span> : <span className="text-faint">—</span>; } },
     { key: "price", header: "سعر البيع", align: "end", cell: (i) => <span className="num font-semibold">{money(i.price)}</span> },
   ];
-  const importRows = async (sheet: Record<string, string>[]) => {
-    let added = 0, updated = 0;
+  // `dry`: only say what the file would add and edit (the review step); nothing is written
+  const importRows = async (sheet: Record<string, string>[], dry: boolean): Promise<ImportPlan> => {
+    const plan: ImportPlan = { added: [], updated: [], skipped: 0 };
+    const fresh = new Set<string>();
     const bySku = new Map(items.filter((i) => i.sku).map((i) => [i.sku as string, i]));
     const catByName = new Map(cats.map((c) => [c.name.ar.trim(), c]));
     for (const r of sheet) {
       const sku = sheetCode(r["كود الصنف"]);
-      if (!sku) continue;
+      if (!sku) {
+        plan.skipped++;
+        continue;
+      }
       const name = (r["اسم الصنف"] ?? "").trim();
+      if (dry) {
+        const cur = bySku.get(sku);
+        if (cur) plan.updated.push({ code: sku, name: name || cur.name.ar });
+        else if (fresh.has(sku)) continue;
+        else if (name && ((r["فئة الصنف"] ?? "").trim() || cats[0])) (fresh.add(sku), plan.added.push({ code: sku, name }));
+        else plan.skipped++;
+        continue;
+      }
       const cName = (r["فئة الصنف"] ?? "").trim();
       let c: MenuCategory | undefined = cName ? catByName.get(cName) : undefined;
       if (cName && !c) {
@@ -63,22 +106,25 @@ export default function SaleItems() {
       const cur = bySku.get(sku);
       if (cur) {
         await db.update("menuItems", cur.id, { ...(name ? { name: { ar: name, en: cur.name.en && cur.name.en !== cur.name.ar ? cur.name.en : name } } : {}), ...(c ? { categoryId: c.id } : {}), ...(price != null ? { price } : {}) });
-        updated++;
+        if (fresh.has(sku)) continue;
+        plan.updated.push({ code: sku, name: name || cur.name.ar });
       } else if (name && (c ?? cats[0])) {
         bySku.set(sku, await db.insert("menuItems", { ...blank((c ?? cats[0]).id), name: { ar: name, en: name }, sku, price: price ?? 0 }));
-        added++;
-      }
+        fresh.add(sku);
+        plan.added.push({ code: sku, name });
+      } else plan.skipped++;
     }
-    return { added, updated };
+    return plan;
   };
   return (
     <div className="grid gap-4">
       <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_200px_auto_auto]">
         <Input icon={<Search />} placeholder="ابحث باسم الصنف أو الكود" value={q} onChange={(e) => setQ(e.target.value)} />
         <Select value={cat} onChange={(e) => setCat(e.target.value)} options={[{ value: "", label: "كل الفئات" }, ...cats.map((c) => ({ value: c.id, label: c.name.ar }))]} />
-        {manage ? <ExcelImport columns={COLS} onRows={importRows} /> : null}
+        {manage ? <ExcelImport fields={FIELDS} run={importRows} /> : null}
         {manage ? <Button icon={<Plus />} disabled={!cats.length} onClick={() => setEdit("new")}>اضافة صنف</Button> : null}
       </div>
+      {manage ? <BulkBar count={sel.rows.length} noun="صنف" onClear={sel.clear} onEdit={() => setEdit(sel.rows[0])} categories={cats.map((c) => ({ value: c.id, label: c.name.ar }))} onMove={move} onDelete={remove} /> : null}
       <Card className="overflow-hidden">
         <Table columns={columns} rows={rows} rowKey={(i) => i.id} dense onRowClick={(i) => setEdit(i)} empty={<EmptyState compact icon={<UtensilsCrossed />} title="لا توجد أصناف بيع" body={cats.length ? undefined : "عرّف فئات أصناف البيع من ثوابت النظام أولاً"} />} />
       </Card>

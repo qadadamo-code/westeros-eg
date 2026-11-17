@@ -80,12 +80,11 @@ export function parseCsv(text: string): string[][] {
   return rows.filter((r) => r.some((x) => x));
 }
 
-/** Rows as objects keyed by the header row (first row). */
-export async function readSheet(file: File): Promise<Record<string, string>[]> {
+/** The sheet as it is: the first row is the file's own column names, whatever they are called. */
+export async function readTable(file: File): Promise<{ head: string[]; body: string[][] }> {
   const rows = /\.csv$/i.test(file.name) ? parseCsv((await file.text()).replace(/^\uFEFF/, "")) : await readXlsx(await file.arrayBuffer());
-  const [head, ...body] = rows;
-  if (!head) return [];
-  return body.map((r) => Object.fromEntries(head.map((h, i) => [h.trim(), r[i] ?? ""])));
+  const [head = [], ...body] = rows;
+  return { head: head.map((h) => h.trim()), body };
 }
 
 /** A number typed in Excel or by hand: Arabic digits and separators accepted. */

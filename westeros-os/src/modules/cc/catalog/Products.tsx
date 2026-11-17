@@ -2,14 +2,33 @@
 import { useMemo, useState } from "react";
 import { ChefHat, Plus, Search } from "lucide-react";
 import { useSession } from "@/auth/session";
-import { useDb } from "@/data/hooks";
+import { useDb, useLive } from "@/data/hooks";
 import type { MfgChickenMode, MfgMethod, MfgProduct, MfgStorageTemp } from "@/data/types";
 import { Num } from "@/modules/production/ui";
 import { categoryName } from "@/modules/production/useProduction";
 import { Button, Card, Dialog, EmptyState, Input, Select, Table, Textarea, useToast, type Column } from "@/ui";
 import { codeRanges, nextCodeIn, num } from "../lib";
 import { ImageField, ReadOnly } from "../ui";
+import { sheetCode, sheetNumber } from "../xlsx";
 import { useCc, type Cc } from "../useCc";
+import { BulkBar, useSelection, type DeleteResult } from "./Bulk";
+import { ExcelImport, type ImportField, type ImportPlan } from "./Import";
+import { stockItemUse } from "./usage";
+
+const FIELDS: ImportField[] = [
+  { key: "كود المنتج", aliases: ["الكود", "كود", "رقم الصنف", "كود الصنف", "code", "sku"] },
+  { key: "اسم المنتج", aliases: ["الاسم", "اسم الصنف", "الصنف", "name"] },
+  { key: "فئة المنتج", aliases: ["الفئة", "فئة", "المجموعة", "القسم", "category"] },
+  { key: "طريقة التخزين" },
+  { key: "كمية وحدة التخزين", aliases: ["الكمية في وحدة التخزين"] },
+  { key: "صلاحية المنتج", aliases: ["الصلاحية", "مدة الصلاحية", "ايام الصلاحية"] },
+  { key: "وزن الحصة", aliases: ["وزن البورشن", "الحصة"] },
+];
+/** كود المنتج as the system writes it: a bare number in the file is the same code (12 = M012) */
+const productCode = (v: string | undefined) => {
+  const c = sheetCode(v).toUpperCase();
+  return /^\d+$/.test(c) ? `M${c.padStart(3, "0")}` : c;
+};
 
 /** طريقة التصنيع, as the document lists the methods (5.1) */
 export const METHOD_OPTIONS: { value: string; method: MfgMethod; mode: MfgChickenMode | null; label: string }[] = [
@@ -27,8 +46,10 @@ const unitOf = (method: MfgMethod, mode: MfgChickenMode | null): "kg" | "pc" => 
 
 export default function Products() {
   const cc = useCc();
+  const db = useDb();
   const prod = cc.prod;
   const { can } = useSession();
+  const recipes = useLive("recipes").data;
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("");
   const [edit, setEdit] = useState<MfgProduct | "new" | null>(null);
@@ -37,7 +58,9 @@ export default function Products() {
     const n = q.trim().toLowerCase();
     return prod.products.filter((p) => (!cat || p.category === cat) && (!n || p.name.ar.toLowerCase().includes(n) || p.code.toLowerCase().includes(n)));
   }, [prod.products, q, cat]);
+  const sel = useSelection(rows, (p) => p.id);
   const columns: Column<MfgProduct>[] = [
+    ...(manage ? [sel.column] : []),
     { key: "code", header: "كود المنتج", cell: (p) => <span className="num text-muted">{p.code}</span> },
     { key: "name", header: "اسم المنتج", cell: (p) => <span className="font-semibold">{p.name.ar}</span> },
     { key: "cat", header: "فئة المنتج", cell: (p) => categoryName(prod.categories, p.category).ar },
@@ -49,13 +72,96 @@ export default function Products() {
     { key: "por", header: "وزن الحصة", align: "end", hideOnMobile: true, cell: (p) => (p.portionGrams ? <span className="num">{p.portionGrams} جم</span> : "—") },
     { key: "m", header: "طريقة التصنيع", hideOnMobile: true, cell: (p) => <span className="text-[13px]">{methodLabel(p)}</span> },
   ];
+  // `dry`: only say what the file would add and edit (the review step); nothing is written
+  const importRows = async (sheet: Record<string, string>[], dry: boolean): Promise<ImportPlan> => {
+    const plan: ImportPlan = { added: [], updated: [], skipped: 0 };
+    const fresh = new Set<string>();
+    const byCode = new Map(prod.products.map((p) => [p.code.toUpperCase(), p]));
+    const catByName = new Map(prod.categories.map((c) => [c.name.ar.trim(), c]));
+    const store = cc.warehouses.find((l) => l.type === "products")?.id ?? prod.settings?.productLocationId ?? null;
+    let sort = prod.products.length;
+    for (const r of sheet) {
+      const code = productCode(r["كود المنتج"]);
+      if (!code) {
+        plan.skipped++;
+        continue;
+      }
+      const has = (k: string) => (r[k] ?? "").trim() !== "";
+      const cur = byCode.get(code);
+      const n = has("اسم المنتج") ? r["اسم المنتج"].trim() : (cur?.name.ar ?? "");
+      const c = has("فئة المنتج") ? catByName.get(r["فئة المنتج"].trim()) : undefined;
+      // a new product needs a name and a category defined in the constants (the batch number starts with it)
+      const ok = cur ? true : !!n && !!c;
+      if (dry || !ok) {
+        if (cur) plan.updated.push({ code, name: n });
+        else if (fresh.has(code)) continue;
+        else if (ok) (fresh.add(code), plan.added.push({ code, name: n }));
+        else plan.skipped++;
+        continue;
+      }
+      const patch = {
+        ...(has("طريقة التخزين") ? { storageMethod: r["طريقة التخزين"].trim() } : {}),
+        ...(has("كمية وحدة التخزين") ? { storageQty: sheetNumber(r["كمية وحدة التخزين"]) || null } : {}),
+        ...(has("صلاحية المنتج") ? { shelfLifeDays: Math.round(sheetNumber(r["صلاحية المنتج"])) } : {}),
+        ...(has("وزن الحصة") ? { portionGrams: sheetNumber(r["وزن الحصة"]) || null } : {}),
+      };
+      if (cur) {
+        const name = { ar: n, en: cur.name.en && cur.name.en !== cur.name.ar ? cur.name.en : n };
+        await db.update("mfgProducts", cur.id, { name, ...(c ? { category: c.id, categoryCode: c.code } : {}), ...patch });
+        if (n !== cur.name.ar) await db.update("stockItems", cur.stockItemId, { name });
+        if (fresh.has(code)) continue;
+        plan.updated.push({ code, name: n });
+      } else {
+        // a new product is stocked by weight (تصنيع مباشر بالوزن) until its method is chosen on its card
+        const name = { ar: n, en: n };
+        const item = await db.insert("stockItems", {
+          name, baseUnit: "g", countUnit: "kg", sku: code, category: "prep", kind: "prep", packs: [], account: "food", levels: { min: 0, par: 0, max: 0 }, branchLevels: {}, supplierIds: [], preferredSupplierId: null, lastCost: 0,
+          defaultLocationIds: store ? [store] : [], trackBatches: true, shelfLifeDays: null, vatBp: 0, yieldBp: 10_000, allergens: [], active: true, note: "منتج مصنع", marketKey: null,
+        });
+        const made = await db.insert("mfgProducts", {
+          name, imageUrl: null, category: c!.id, categoryCode: c!.code, mfgUnit: "كيلو", storageMethod: "", storageQty: null, storageTemp: "chilled", shelfLifeDays: 0, ingredientsText: "", portionGrams: null,
+          method: "weight", chickenMode: null, unit: "kg", ...patch, code, recipeType: "main", lines: [], packaging: [], stockItemId: item.id, active: true, sort: ++sort,
+        });
+        byCode.set(code, made);
+        fresh.add(code);
+        plan.added.push({ code, name: n });
+      }
+    }
+    return plan;
+  };
+  const move = async (category: string) => {
+    const c = prod.categories.find((x) => x.id === category);
+    if (!c) return 0;
+    for (const p of sel.rows) if (p.category !== c.id) await db.update("mfgProducts", p.id, { category: c.id, categoryCode: c.code });
+    return sel.rows.length;
+  };
+  const remove = async (): Promise<DeleteResult> => {
+    const out: DeleteResult = { deleted: 0, refused: [] };
+    for (const p of sel.rows) {
+      const why = prod.batches.some((b) => b.outputs.some((o) => o.productId === p.id)) ? "له تشغيلات مسجلة" : await stockItemUse(db, cc, recipes, p.stockItemId, p.id);
+      if (why) {
+        out.refused.push({ name: p.name.ar, why });
+        continue;
+      }
+      try {
+        await db.remove("mfgProducts", p.id);
+        await db.remove("stockItems", p.stockItemId);
+        out.deleted++;
+      } catch {
+        out.refused.push({ name: p.name.ar, why: "مرتبط ببيانات أخرى" });
+      }
+    }
+    return out;
+  };
   return (
     <div className="grid gap-4">
-      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_220px_auto]">
+      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_220px_auto_auto]">
         <Input icon={<Search />} placeholder="ابحث باسم المنتج أو الكود" value={q} onChange={(e) => setQ(e.target.value)} />
         <Select value={cat} onChange={(e) => setCat(e.target.value)} options={[{ value: "", label: "كل الفئات" }, ...prod.categories.map((c) => ({ value: c.id, label: c.name.ar }))]} />
+        {manage ? <ExcelImport fields={FIELDS} run={importRows} skipNote="من غير كود، أو منتج جديد من غير اسم أو من غير فئة معرفة في ثوابت النظام." /> : null}
         {manage ? <Button icon={<Plus />} onClick={() => setEdit("new")}>اضافة منتج</Button> : null}
       </div>
+      {manage ? <BulkBar count={sel.rows.length} noun="منتج" onClear={sel.clear} onEdit={() => setEdit(sel.rows[0])} categories={prod.categories.map((c) => ({ value: c.id, label: c.name.ar }))} onMove={move} onDelete={remove} /> : null}
       <Card className="overflow-hidden">
         <Table columns={columns} rows={rows} rowKey={(p) => p.id} dense onRowClick={(p) => setEdit(p)} empty={<EmptyState compact icon={<ChefHat />} title="لا توجد منتجات مصنعة" />} />
       </Card>

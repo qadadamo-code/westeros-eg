@@ -253,7 +253,7 @@ export interface MfgLists {
 export interface CodeRange { from: number; count: number }
 /** مقاس ستيكر مضاف من شاشة الطباعة، بالمليمتر */
 export interface MfgLabelSize { w: number; h: number }
-export interface MfgUserType { id: string; name: string; from?: number; count?: number; code?: number; role: "admin" | "manager" | "chef" | "kitchen"; /** the screens its users may open (module ids); missing = what the role allows */ screens?: string[]; /** may see prices and costs (الأمور المالية); unset = only the level that manages users */ seePrices?: boolean }
+export interface MfgUserType { id: string; name: string; from?: number; count?: number; code?: number; role: "admin" | "manager" | "chef" | "kitchen"; /** the screens its users may open (module ids); missing = what the role allows */ screens?: string[]; /** may see prices and costs (الأمور المالية); unset = only the level that manages users */ seePrices?: boolean; /** may take changes back from السجل والاسترجاع; unset = only the level that manages users */ restore?: boolean }
 
 /* ───────── قوائم فتح وقفل الوردية (0016_checklists.sql; src/modules/checklists) ───────── */
 

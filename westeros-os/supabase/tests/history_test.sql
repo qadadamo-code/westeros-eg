@@ -66,6 +66,39 @@ select public.restore_to(:'rid', :'t2');
 select pg_temp.fingerprint() as fp3 \gset
 select case when :'fp2' = :'fp3' then 'RESTORE_BACK_OK' else 'RESTORE_BACK_MISMATCH' end as restore_back;
 
+-- 3b. selective undo: several changes in one go, two of them on the same record; an unticked newer change blocks
+select id as it1, price as p1 from public.menu_items where restaurant_id = :'rid' order by id limit 1 \gset
+select id as it2, price as p2 from public.menu_items where restaurant_id = :'rid' order by id offset 1 limit 1 \gset
+update public.menu_items set price = :p1 + 1 where id = :'it1';
+update public.menu_items set price = :p1 + 2 where id = :'it1';
+update public.menu_items set price = :p2 + 5 where id = :'it2';
+insert into public.customers (id, restaurant_id, name, phone) values ('00000000-0000-4000-8000-0000000000c1', :'rid', 'Keep me', '01000000001');
+select array_agg(id) as picks from public.change_log where source = 'app' and undone_at is null and table_name = 'menu_items' and row_id in (:'it1', :'it2') and (after ->> 'price')::bigint in (:p1 + 1, :p1 + 2, :p2 + 5) \gset
+select public.undo_changes(:'picks'::bigint[]) as undone \gset
+select case when :undone = 3 then 'SELECTIVE_COUNT_OK' else 'SELECTIVE_COUNT_BAD' end as selective_count;
+do $$ begin
+  if (select count(*) from public.customers where id = '00000000-0000-4000-8000-0000000000c1') <> 1 then raise exception 'the unticked change must stay'; end if;
+end $$;
+select case when (select price from public.menu_items where id = :'it1') = :p1 and (select price from public.menu_items where id = :'it2') = :p2 then 'SELECTIVE_OK' else 'SELECTIVE_MISMATCH' end as selective;
+-- one after the other on the same record now works too
+update public.menu_items set price = :p1 + 10 where id = :'it1';
+update public.menu_items set price = :p1 + 20 where id = :'it1';
+select public.undo_change((select max(id) from public.change_log where row_id = :'it1' and source = 'app'));
+select public.undo_change((select max(id) from public.change_log where row_id = :'it1' and source = 'app' and undone_at is null));
+select case when (select price from public.menu_items where id = :'it1') = :p1 then 'STEPWISE_OK' else 'STEPWISE_MISMATCH' end as stepwise;
+-- the older of two standing changes alone is refused, and a refused group changes nothing
+update public.menu_items set price = :p1 + 30 where id = :'it1';
+update public.menu_items set price = :p1 + 40 where id = :'it1';
+update public.menu_items set price = :p2 + 50 where id = :'it2';
+do $$ declare ok boolean := false; older bigint; other bigint; begin
+  select min(id) into older from public.change_log where source = 'app' and undone_at is null and table_name = 'menu_items' and (after ->> 'price')::bigint = (before ->> 'price')::bigint + 30;
+  select max(id) into other from public.change_log where source = 'app' and undone_at is null and table_name = 'menu_items' and (after ->> 'price')::bigint = (before ->> 'price')::bigint + 50;
+  begin perform public.undo_changes(array[older, other]); exception when others then ok := true; end;
+  if not ok then raise exception 'an older change under a standing newer one must be refused'; end if;
+  if (select undone_at from public.change_log where id = other) is not null then raise exception 'a refused group must change nothing'; end if;
+end $$;
+select case when (select price from public.menu_items where id = :'it2') = :p2 + 50 then 'ATOMIC_OK' else 'ATOMIC_MISMATCH' end as atomic;
+
 -- 4. only the owner restores; outsiders see nothing
 select pg_temp.act((select id from auth.users where email = 'manager@westeros.local'));
 do $$ declare ok boolean := false; begin

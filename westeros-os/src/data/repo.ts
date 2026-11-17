@@ -131,6 +131,8 @@ export interface HistoryApi {
   /** how many journalled changes happened after this moment */
   countSince(restaurantId: string, iso: string): Promise<number>;
   undo(id: number): Promise<void>;
+  /** reverses the given changes in one go, newest first: all of them or none; resolves with how many */
+  undoMany(ids: number[]): Promise<number>;
   /** reverses every change after this moment; resolves with how many were reversed */
   restoreTo(restaurantId: string, iso: string): Promise<number>;
   prune(restaurantId: string): Promise<void>;

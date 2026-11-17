@@ -373,6 +373,11 @@ export class SupabaseAdapter implements Repo {
       const { error } = await this.client.rpc("undo_change", { p_id: id });
       if (error) throw error;
     },
+    undoMany: async (ids) => {
+      const { data, error } = await this.client.rpc("undo_changes", { p_ids: ids });
+      if (error) throw error;
+      return Number(data ?? 0);
+    },
     restoreTo: async (restaurantId, iso) => {
       const { data, error } = await this.client.rpc("restore_to", { p_restaurant_id: restaurantId, p_ts: iso });
       if (error) throw error;

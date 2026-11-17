@@ -8,7 +8,8 @@ import type { Membership, MfgUserType } from "@/data/types";
 import { uuid } from "@/lib/id";
 import { PageHeader } from "@/shell/PageHeader";
 import { Badge, Button, Card, CardHeader, Dialog, IconButton, EmptyState, Input, Select, Switch, Table, useToast, type Column } from "@/ui";
-import { nextUserCode, overlapping, rangeOf, roleForScreens, SCREENS, screensOf, seesPrices, userTypeOf, userTypesOf } from "../lib";
+import { cn } from "@/lib/cn";
+import { canRestore, nextUserCode, overlapping, rangeOf, roleForScreens, SCREENS, screensOf, seesPrices, userTypeOf, userTypesOf } from "../lib";
 import { useCc, type Cc } from "../useCc";
 
 export default function UsersPage() {
@@ -163,6 +164,10 @@ function UserTypes({ cc, members }: { cc: Cc; members: Membership[] }) {
                 <label className="mt-2 flex min-h-11 cursor-pointer items-center gap-2.5 rounded-lg border border-line px-3 text-[14.5px] hover:bg-surface-2">
                   <input type="checkbox" className="size-4.5 accent-[var(--color-brand,#F8BB18)]" checked={seesPrices(t)} onChange={(e) => void setType(t.id, { seePrices: e.target.checked })} />
                   رؤية الأسعار والتكاليف
+                </label>
+                <label className={cn("mt-1.5 flex min-h-11 items-center gap-2.5 rounded-lg border border-line px-3 text-[14.5px]", t.role === "admin" ? "cursor-pointer hover:bg-surface-2" : "opacity-60")}>
+                  <input type="checkbox" className="size-4.5 accent-[var(--color-brand,#F8BB18)]" disabled={t.role !== "admin"} checked={canRestore(t)} onChange={(e) => void setType(t.id, { restore: e.target.checked })} />
+                  <span>الاسترجاع من السجل (التراجع عن إضافة أو تعديل أو حذف){t.role !== "admin" ? <span className="block text-[12.5px] text-muted">تحتاج صلاحية المستخدمين</span> : null}</span>
                 </label>
               </div>
             </li>

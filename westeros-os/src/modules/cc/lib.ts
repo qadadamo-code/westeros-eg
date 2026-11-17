@@ -130,6 +130,8 @@ const ROLE_SCREENS: Record<MfgUserType["role"], string[]> = {
 export const screensOf = (t: MfgUserType): string[] => t.screens ?? ROLE_SCREENS[t.role];
 /** رؤية الأسعار والتكاليف: ticked by management on the type; until it is set, only the users-management level sees them. */
 export const seesPrices = (t: MfgUserType): boolean => t.seePrices ?? t.role === "admin";
+/** الاسترجاع من السجل: ticked by management on the type; it needs the users-management level, which the database checks too. */
+export const canRestore = (t: MfgUserType): boolean => t.role === "admin" && (t.restore ?? true);
 const LEVELS: MfgUserType["role"][] = ["kitchen", "chef", "manager", "admin"];
 /**
  * The database level a checklist needs, so saving works on every ticked screen:
