@@ -19,14 +19,14 @@ export function ExcelImport({ columns, onRows }: { columns: string[]; onRows: (r
           const rows = await readSheet(f);
           if (!rows.length || !(columns[0] in rows[0])) throw new Error(`أول صف في الملف لازم يكون أسماء الأعمدة: ${columns.join("، ")}`);
           const r = await onRows(rows);
-          toast({ tone: "success", title: "تم الاستيراد", description: `أضيف ${r.added} وتحدّث ${r.updated}` });
+          toast({ tone: "success", title: "تم الاستيراد", description: `أضيف ${r.added} جديد، وتعدل ${r.updated} موجود (بالكود)` });
         } catch (err) {
           toast({ tone: "error", title: "تعذر استيراد الملف", description: String((err as Error).message ?? err), duration: 9000 });
         } finally {
           setBusy(false);
         }
       }} />
-      <Button variant="secondary" icon={<FileSpreadsheet />} loading={busy} title={`الأعمدة: ${columns.join("، ")}`} onClick={() => file.current?.click()}>استيراد من ملف اكسل</Button>
+      <Button variant="secondary" icon={<FileSpreadsheet />} loading={busy} title={`الربط بالكود (${columns[0]}): الكود الموجود تتعدل بياناته، والكود الجديد يتضاف. الخانة الفاضية لا تغير شيئاً. الأعمدة: ${columns.join("، ")}`} onClick={() => file.current?.click()}>استيراد من ملف اكسل</Button>
     </>
   );
 }

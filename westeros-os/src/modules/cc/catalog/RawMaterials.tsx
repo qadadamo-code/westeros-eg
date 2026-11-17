@@ -10,7 +10,7 @@ import { Num } from "@/modules/production/ui";
 import { Badge, Button, Card, Dialog, EmptyState, Input, Select, Switch, Table, useToast, type Column } from "@/ui";
 import { conversionOf, fmtDay, mfgUnitPrice, nextCodeIn, num, rawRanges, specOf, stockFieldsOf } from "../lib";
 import { ImageField, Result } from "../ui";
-import { sheetNumber } from "../xlsx";
+import { sheetCode, sheetNumber } from "../xlsx";
 import { useCc, type Cc } from "../useCc";
 import { ExcelImport } from "./Import";
 
@@ -71,7 +71,7 @@ export default function RawMaterials() {
     if ((newCats.length || newUnits.length) && cc.prod.settings) await db.update("mfgSettings", cc.prod.settings.id, { lists: { ...cc.lists, rawCategories: [...cc.lists.rawCategories, ...newCats], storageUnits: [...cc.lists.storageUnits, ...newUnits] } });
     const bySku = new Map(cc.raws.map((i) => [i.sku, i]));
     for (const r of sheet) {
-      const sku = (r["كود الخام"] ?? "").trim();
+      const sku = sheetCode(r["كود الخام"]);
       if (!sku) continue;
       const cur = bySku.get(sku);
       const old = cur ? specOf(cur, cc.lists) : null;
@@ -94,7 +94,8 @@ export default function RawMaterials() {
         await db.update("stockItems", cur.id, moved && fields.baseUnit !== cur.baseUnit ? { name: { ar: name, en: name }, note: spec.category, spec: { ...spec, mfgUnit: old!.mfgUnit, perStorage: old!.perStorage } } : { name: { ar: name, en: name }, note: spec.category, spec, ...fields });
         updated++;
       } else if (name) {
-        await db.insert("stockItems", newRaw(cc, name, sku, spec, true));
+        // a code repeated lower in the same file then edits this new item instead of adding it twice
+        bySku.set(sku, await db.insert("stockItems", newRaw(cc, name, sku, spec, true)));
         added++;
       }
     }

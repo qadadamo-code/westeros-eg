@@ -9,7 +9,7 @@ import { MoneyInput } from "@/modules/marketing/ui";
 import { LinesEditor } from "@/modules/production/ui";
 import { Button, Card, Dialog, EmptyState, Input, Select, Table, useToast, type Column } from "@/ui";
 import { ImageField } from "../ui";
-import { sheetNumber } from "../xlsx";
+import { sheetCode, sheetNumber } from "../xlsx";
 import { codeRanges, nextCodeIn } from "../lib";
 import { useCc, type Cc } from "../useCc";
 import { ExcelImport } from "./Import";
@@ -50,7 +50,7 @@ export default function SaleItems() {
     const bySku = new Map(items.filter((i) => i.sku).map((i) => [i.sku as string, i]));
     const catByName = new Map(cats.map((c) => [c.name.ar.trim(), c]));
     for (const r of sheet) {
-      const sku = (r["كود الصنف"] ?? "").trim();
+      const sku = sheetCode(r["كود الصنف"]);
       if (!sku) continue;
       const name = (r["اسم الصنف"] ?? "").trim();
       const cName = (r["فئة الصنف"] ?? "").trim();
@@ -65,7 +65,7 @@ export default function SaleItems() {
         await db.update("menuItems", cur.id, { ...(name ? { name: { ar: name, en: cur.name.en && cur.name.en !== cur.name.ar ? cur.name.en : name } } : {}), ...(c ? { categoryId: c.id } : {}), ...(price != null ? { price } : {}) });
         updated++;
       } else if (name && (c ?? cats[0])) {
-        await db.insert("menuItems", { ...blank((c ?? cats[0]).id), name: { ar: name, en: name }, sku, price: price ?? 0 });
+        bySku.set(sku, await db.insert("menuItems", { ...blank((c ?? cats[0]).id), name: { ar: name, en: name }, sku, price: price ?? 0 }));
         added++;
       }
     }

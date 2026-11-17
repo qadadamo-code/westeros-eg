@@ -93,3 +93,8 @@ export function sheetNumber(s: string | undefined): number {
   const n = Number(String(s ?? "").replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d))).replace(/[٬,\s]/g, "").replace("٫", "."));
   return Number.isFinite(n) ? n : 0;
 }
+
+/** A code read from a sheet, as the system stores it: Arabic digits become 0-9, and Excel's "10001.0" is 10001. This is what an existing item is matched on. */
+export function sheetCode(s: string | undefined): string {
+  return String(s ?? "").trim().replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d))).replace(/^(\d+)\.0+$/, "$1");
+}
