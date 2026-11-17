@@ -1,12 +1,14 @@
 /**
  * The batch sticker: product, batch number, production and expiry dates, the chef who made it, quantity and storage.
- * One sticker per product of the batch, printed on a label printer installed as a system printer (the page is the
- * label size, so each sticker is one page).
+ * One sticker per product of the batch, printed on a label printer installed as a system printer. The page size is
+ * the printer's own paper: a fixed CSS page size was centred small on drivers whose paper is larger, so the sticker
+ * scales to fill the page instead (each sticker is one page).
  */
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { flushSync } from "react-dom";
 import type { MfgBatch, MfgBatchOutput } from "@/data/types";
+import { COST_CONTROL_ONLY } from "@/costControl";
 import { qrMatrix } from "@/lib/receipt/qr";
 
 export interface LabelSize {
@@ -15,9 +17,9 @@ export interface LabelSize {
   h: number;
 }
 export const LABEL_SIZES: LabelSize[] = [
+  { id: "50x25", w: 50, h: 25 },
   { id: "60x40", w: 60, h: 40 },
   { id: "50x30", w: 50, h: 30 },
-  { id: "50x25", w: 50, h: 25 },
   { id: "80x50", w: 80, h: 50 },
 ];
 /** The built-in sizes plus the ones the restaurant added (width × height in mm). */
@@ -57,13 +59,21 @@ const t2 = (iso: string) => new Date(iso).toLocaleTimeString("en-GB", { timeZone
 
 export type LabelBatch = Pick<MfgBatch, "number" | "madeAt" | "chefName" | "chefCode">;
 
+/** كود المسح: the link of the batch in سجل التشغيلات, so scanning the sticker opens the run it came from. */
+export function batchLink(number: string): string {
+  const origin = typeof location === "undefined" ? "" : location.origin;
+  return `${origin}${import.meta.env.BASE_URL}${COST_CONTROL_ONLY ? "manufacturing/log" : "production/batches"}?b=${encodeURIComponent(number)}`;
+}
+
 /** Sized in millimetres; all type scales with the label height so the three sizes share one layout. */
-export function BatchLabel({ batch, output, size, index, of }: { batch: LabelBatch; output: MfgBatchOutput; size: LabelSize; index?: number; of?: number }) {
+export function BatchLabel({ batch, output, size, index, of, fit }: { batch: LabelBatch; output: MfgBatchOutput; size: LabelSize; index?: number; of?: number; fit?: boolean }) {
   const u = size.h / 40; // 1u = 1mm on the 60×40 label
-  const qr = qrMatrix(batch.number, "M");
+  // on paper (`fit`) every length is a share of the page (--lw: the widest the sticker can be inside it), so the sticker fills the label whatever paper size the printer driver reports
+  const mm = (n: number) => (fit ? `calc(var(--lw) * ${Math.round((n * u * 100000) / size.w) / 100000})` : `${Math.round(n * u * 1000) / 1000}mm`);
+  const qr = qrMatrix(batchLink(batch.number), "L");
   const qty = output.unit === "pc" ? `${output.count ?? 0} قطعة` : `${Math.round((output.weightKg ?? 0) * 1000) / 1000} كجم`;
   const Line = ({ k, v, bold }: { k: string; v: ReactNode; bold?: boolean }) => (
-    <div style={{ display: "flex", justifyContent: "space-between", gap: `${1.5 * u}mm`, fontSize: `${2.55 * u}mm`, lineHeight: 1.25 }}>
+    <div style={{ display: "flex", justifyContent: "space-between", gap: mm(1.5), fontSize: mm(2.55), lineHeight: 1.25 }}>
       <span style={{ fontWeight: 500 }}>{k}</span>
       <span dir="ltr" style={{ fontWeight: bold ? 800 : 700, whiteSpace: "nowrap" }}>{v}</span>
     </div>
@@ -72,28 +82,28 @@ export function BatchLabel({ batch, output, size, index, of }: { batch: LabelBat
     <div
       dir="rtl"
       className="mfg-label"
-      style={{ width: `${size.w}mm`, height: `${size.h}mm`, boxSizing: "border-box", padding: `${1.6 * u}mm ${2 * u}mm`, background: "#fff", color: "#000", fontFamily: "'Tajawal','IBM Plex Sans Arabic',system-ui,sans-serif", display: "flex", flexDirection: "column", overflow: "hidden" }}
+      style={{ ...(fit ? ({ "--lw": `min(100vw, ${Math.round((size.w * 100000) / size.h) / 1000}vh)` } as CSSProperties) : null), width: fit ? "var(--lw)" : `${size.w}mm`, height: fit ? `calc(var(--lw) * ${Math.round((size.h * 100000) / size.w) / 100000})` : `${size.h}mm`, boxSizing: "border-box", padding: `${mm(1.6)} ${mm(2)}`, background: "#fff", color: "#000", fontFamily: "'Tajawal','IBM Plex Sans Arabic',system-ui,sans-serif", display: "flex", flexDirection: "column", overflow: "hidden" }}
     >
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `${0.3 * u}mm solid #000`, paddingBottom: `${0.7 * u}mm` }}>
-        <span dir="ltr" style={{ fontSize: `${2.3 * u}mm`, fontWeight: 800, letterSpacing: "0.12em" }}>WESTEROS</span>
-        <span style={{ fontSize: `${2.2 * u}mm`, fontWeight: 700 }}>{TEMP[output.storageTemp]}{output.storageMethod ? ` · ${output.storageMethod}` : ""}</span>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `${mm(0.3)} solid #000`, paddingBottom: mm(0.7) }}>
+        <span dir="ltr" style={{ fontSize: mm(2.3), fontWeight: 800, letterSpacing: "0.12em" }}>WESTEROS</span>
+        <span style={{ fontSize: mm(2.2), fontWeight: 700 }}>{TEMP[output.storageTemp]}{output.storageMethod ? ` · ${output.storageMethod}` : ""}</span>
       </div>
-      <div style={{ fontSize: `${4.3 * u}mm`, fontWeight: 800, lineHeight: 1.15, margin: `${0.9 * u}mm 0 ${0.6 * u}mm`, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{output.name.ar}</div>
+      <div style={{ fontSize: mm(4.3), fontWeight: 800, lineHeight: 1.15, margin: `${mm(0.9)} 0 ${mm(0.6)}`, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{output.name.ar}</div>
       {output.ingredientsText?.trim() ? (
-        <div style={{ fontSize: `${2.05 * u}mm`, fontWeight: 600, lineHeight: 1.2, maxHeight: `${2.05 * 1.2 * 2 * u}mm`, overflow: "hidden", marginBottom: `${0.5 * u}mm`, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+        <div style={{ fontSize: mm(2.05), fontWeight: 600, lineHeight: 1.2, maxHeight: mm(2.05 * 1.2 * 2), overflow: "hidden", marginBottom: mm(0.5), display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
           <span style={{ fontWeight: 800 }}>المكونات: </span>
           {output.ingredientsText.trim()}
         </div>
       ) : null}
-      <div style={{ display: "flex", gap: `${2 * u}mm`, flex: 1, minHeight: 0 }}>
+      <div style={{ display: "flex", gap: mm(2), flex: 1, minHeight: 0 }}>
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
           <Line k="إنتاج" v={`${d2(batch.madeAt)} ${t2(batch.madeAt)}`} />
           <Line k="انتهاء" v={d2(output.expiresAt)} bold />
           <Line k="الشيف" v={<span dir="rtl">{batch.chefName} ({batch.chefCode})</span>} />
           <Line k="الكمية" v={<span dir="rtl">{qty}{of && of > 1 ? ` · ${index}/${of}` : ""}</span>} />
-          <div dir="ltr" style={{ fontSize: `${2.9 * u}mm`, fontWeight: 800, textAlign: "center", border: `${0.3 * u}mm solid #000`, borderRadius: `${0.8 * u}mm`, padding: `${0.3 * u}mm 0`, marginTop: `${0.4 * u}mm`, letterSpacing: "0.02em" }}>{batch.number}</div>
+          <div dir="ltr" style={{ fontSize: mm(2.9), fontWeight: 800, textAlign: "center", border: `${mm(0.3)} solid #000`, borderRadius: mm(0.8), padding: `${mm(0.3)} 0`, marginTop: mm(0.4), letterSpacing: "0.02em" }}>{batch.number}</div>
         </div>
-        <svg viewBox={`0 0 ${qr.size} ${qr.size}`} shapeRendering="crispEdges" style={{ width: `${15 * u}mm`, height: `${15 * u}mm`, alignSelf: "center", flexShrink: 0 }} aria-hidden>
+        <svg viewBox={`0 0 ${qr.size} ${qr.size}`} shapeRendering="crispEdges" style={{ width: mm(17), height: mm(17), alignSelf: "center", flexShrink: 0 }} aria-hidden>
           <path d={qr.path} fill="#000" />
         </svg>
       </div>
@@ -115,7 +125,7 @@ export function printLabels(batch: LabelBatch, outputs: MfgBatchOutput[], size: 
   css.textContent = `
 #${ROOT_ID}{position:fixed;inset:auto auto 0 -10000px;}
 @media print{
-  @page{size:${size.w}mm ${size.h}mm;margin:0}
+  @page{margin:0}
   html,body{background:#fff!important;height:auto!important;overflow:visible!important;margin:0!important}
   body>*:not(#${ROOT_ID}){display:none!important}
   #${ROOT_ID}{position:static!important;display:block!important}
@@ -128,7 +138,7 @@ export function printLabels(batch: LabelBatch, outputs: MfgBatchOutput[], size: 
   flushSync(() =>
     root.render(
       <>
-        {outputs.flatMap((o, oi) => Array.from({ length: nOf(oi) }, (_, i) => <BatchLabel key={`${oi}-${i}`} batch={batch} output={o} size={size} index={i + 1} of={nOf(oi)} />))}
+        {outputs.flatMap((o, oi) => Array.from({ length: nOf(oi) }, (_, i) => <BatchLabel key={`${oi}-${i}`} batch={batch} output={o} size={size} index={i + 1} of={nOf(oi)} fit />))}
       </>,
     ),
   );

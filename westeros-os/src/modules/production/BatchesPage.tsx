@@ -1,5 +1,6 @@
 /** سجل التشغيلات: every batch with its number, chef, cost and expiry — search by batch number, open, reprint, void. */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Ban, ClipboardList, Printer, Search } from "lucide-react";
 import { useSession } from "@/auth/session";
 import { useDb } from "@/data/hooks";
@@ -27,6 +28,16 @@ export default function BatchesPage() {
       (b) => (!chef || b.chefId === chef) && (!cat || b.category === cat) && (!n || b.number.toLowerCase().includes(n) || b.chefName.toLowerCase().includes(n) || b.outputs.some((o) => o.name.ar.includes(n) || o.name.en.toLowerCase().includes(n))),
     );
   }, [prod.batches, q, chef, cat]);
+  // a scanned sticker opens its batch: the link carries the batch number as ?b=
+  const [params, setParams] = useSearchParams();
+  const scanned = params.get("b");
+  useEffect(() => {
+    if (!scanned || prod.loading) return;
+    const hit = prod.batches.find((b) => b.number === scanned);
+    if (hit) setOpenId(hit.id);
+    else setQ(scanned);
+    setParams({}, { replace: true });
+  }, [scanned, prod.loading, prod.batches, setParams]);
   const open = prod.batches.find((b) => b.id === openId) ?? null;
   const columns: Column<MfgBatch>[] = [
     { key: "n", header: L("رقم الباتش", "Batch no."), cell: (b) => <span className="num font-semibold" dir="ltr">{b.number}</span> },

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowLeft, ArrowRight, Mail, Search } from "lucide-react";
 import { useSession } from "@/auth/session";
@@ -33,6 +33,7 @@ export function PinLoginPage() {
   const repo = useRepo();
   const { t, loc, lang, dir } = useT();
   const nav = useNavigate();
+  const location = useLocation();
   const reduced = useReduced();
   const now = useClock();
   const [roster, setRoster] = useState<Membership[] | null>(null);
@@ -44,8 +45,11 @@ export function PinLoginPage() {
   const Back = dir === "rtl" ? ArrowRight : ArrowLeft;
 
   useEffect(() => {
-    if (s.status === "ready" && s.staff) nav(homeFor(s.role), { replace: true });
-  }, [s.status, s.staff, s.role, nav]);
+    if (s.status !== "ready" || !s.staff) return;
+    // a link opened before signing in (a scanned batch sticker) continues to its page
+    const from = (location.state as { from?: string } | null)?.from;
+    nav(from && from !== "/" ? from : homeFor(s.role), { replace: true });
+  }, [s.status, s.staff, s.role, nav, location.state]);
 
   useEffect(() => {
     const rid = s.deviceRestaurantId;
