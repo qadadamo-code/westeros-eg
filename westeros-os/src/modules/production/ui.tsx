@@ -1,6 +1,7 @@
 /** Shared pieces of the manufacturing screens: number entry, ingredient picker, recipe lines, the live result panel. */
 import { searchFilter } from "@/lib/search";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { AlertTriangle, Plus, Search, Trash2 } from "lucide-react";
 import type { MfgBatchOutput, MfgRecipeLine, StockItem } from "@/data/types";
 import { useT } from "@/i18n/i18n";
@@ -63,12 +64,33 @@ export function ItemPicker({ items, onPick, placeholder, exclude }: { items: Sto
   const { L, loc } = useT();
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
-  const found = useMemo(() => {
-    return searchFilter(items.filter((i) => i.active && !exclude?.has(i.id)), q, (i) => [i.name.ar, i.name.en, i.sku]).slice(0, 40);
-  }, [items, q, exclude]);
+  const box = useRef<HTMLSpanElement>(null);
+  const [pos, setPos] = useState<CSSProperties | null>(null);
+  // every item that matches: the list scrolls, nothing is cut off
+  const found = useMemo(() => searchFilter(items.filter((i) => i.active && !exclude?.has(i.id)), q, (i) => [i.name.ar, i.name.en, i.sku]), [items, q, exclude]);
+  // the list floats over the page (above a dialog too), under the field or above it when there is no room below
+  useLayoutEffect(() => {
+    if (!open) return setPos(null);
+    const place = () => {
+      const r = box.current?.getBoundingClientRect();
+      if (!r) return;
+      const vh = window.innerHeight;
+      const below = vh - r.bottom - 12;
+      const above = r.top - 12;
+      const up = below < 260 && above > below;
+      setPos({ left: r.left, width: r.width, maxHeight: Math.max(160, Math.min(420, up ? above : below)), ...(up ? { bottom: vh - r.top + 6 } : { top: r.bottom + 6 }) });
+    };
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [open]);
   return (
     <div className="relative">
-      <span className="flex h-11 items-center gap-2 rounded-xl border border-dashed border-line-strong bg-surface-2 px-3 focus-within:border-primary focus-within:bg-surface">
+      <span ref={box} className="flex h-11 items-center gap-2 rounded-xl border border-dashed border-line-strong bg-surface-2 px-3 focus-within:border-primary focus-within:bg-surface">
         <Search className="size-4 shrink-0 text-muted" aria-hidden />
         <input
           className="w-0 flex-1 bg-transparent text-[14.5px] outline-none placeholder:text-faint"
@@ -79,28 +101,31 @@ export function ItemPicker({ items, onPick, placeholder, exclude }: { items: Sto
           onBlur={() => setTimeout(() => setOpen(false), 150)}
           onKeyDown={(e) => {
             if (e.key === "Enter" && found[0]) (e.preventDefault(), onPick(found[0]), setQ(""));
-            if (e.key === "Escape") setOpen(false);
+            if (e.key === "Escape" && open) (e.stopPropagation(), setOpen(false));
           }}
         />
         <Plus className="size-4 shrink-0 text-muted" aria-hidden />
       </span>
-      {open ? (
-        <ul className="absolute inset-x-0 top-12 z-20 max-h-64 overflow-y-auto rounded-xl border border-line bg-surface p-1 shadow-sf-lg thin-scrollbar">
-          {found.length ? (
-            found.map((i) => (
-              <li key={i.id}>
-                <button type="button" className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-start text-[14px] hover:bg-surface-2" onMouseDown={(e) => (e.preventDefault(), onPick(i), setQ(""))}>
-                  <span className="min-w-0 flex-1 truncate">{loc(i.name)}</span>
-                  {i.kind === "prep" ? <Badge tone="brass" size="sm">{L("مصنّع", "Made here")}</Badge> : null}
-                  <span className="num text-[12px] text-faint">{i.sku}</span>
-                </button>
-              </li>
-            ))
-          ) : (
-            <li className="px-3 py-3 text-[13.5px] text-muted">{L("لا يوجد صنف بهذا الاسم", "No item matches")}</li>
-          )}
-        </ul>
-      ) : null}
+      {open && typeof document !== "undefined"
+        ? createPortal(
+            <ul dir={document.documentElement.dir || "rtl"} style={{ position: "fixed", visibility: pos ? "visible" : "hidden", ...pos }} className="z-[95] overflow-y-auto rounded-xl border border-line bg-surface p-1 shadow-sf-lg thin-scrollbar" onMouseDown={(e) => e.preventDefault()}>
+              {found.length ? (
+                found.map((i) => (
+                  <li key={i.id}>
+                    <button type="button" className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-start text-[14px] hover:bg-surface-2" onMouseDown={(e) => (e.preventDefault(), onPick(i), setQ(""))}>
+                      <span className="min-w-0 flex-1 truncate">{loc(i.name)}</span>
+                      {i.kind === "prep" ? <Badge tone="brass" size="sm">{L("مصنّع", "Made here")}</Badge> : null}
+                      <span className="num text-[12px] text-faint">{i.sku}</span>
+                    </button>
+                  </li>
+                ))
+              ) : (
+                <li className="px-3 py-3 text-[13.5px] text-muted">{L("لا يوجد صنف بهذا الاسم", "No item matches")}</li>
+              )}
+            </ul>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }
