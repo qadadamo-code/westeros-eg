@@ -1,9 +1,9 @@
 /**
  * The batch sticker: product, batch number, production and expiry dates, the chef who made it, quantity and storage.
- * One sticker per product of the batch, printed on a label printer installed as a system printer. The page size is
- * the printer's own paper: a fixed CSS page size was centred small on drivers whose paper is larger, so the sticker
- * scales to fill the page instead (each sticker is one page). Only the orientation is fixed: the browser's default
- * "Portrait" layout stands a 50×25 label on its short side, which printed the sticker at half width.
+ * One sticker per product of the batch, printed on a label printer installed as a system printer. The page is the
+ * label size, so the browser picks the orientation from the printer's paper, and the sticker is drawn as a share of
+ * the page (not in fixed millimetres) so it fills whatever page the browser ends up with. The printer's stock must be
+ * defined as width × height of the label (50 × 25 mm): defined the other way round it prints sideways or at half width.
  */
 import type { CSSProperties, ReactNode } from "react";
 import { createRoot } from "react-dom/client";
@@ -126,7 +126,7 @@ export function printLabels(batch: LabelBatch, outputs: MfgBatchOutput[], size: 
   css.textContent = `
 #${ROOT_ID}{position:fixed;inset:auto auto 0 -10000px;}
 @media print{
-  @page{size:${size.w >= size.h ? "landscape" : "portrait"};margin:0}
+  @page{size:${size.w}mm ${size.h}mm;margin:0}
   html,body{background:#fff!important;height:auto!important;overflow:visible!important;margin:0!important}
   body>*:not(#${ROOT_ID}){display:none!important}
   #${ROOT_ID}{position:static!important;display:block!important}
