@@ -19,6 +19,7 @@ export default function ConstantsPage() {
   const s = prod.settings;
   const saleCats = useLive("menuCategories", { orderBy: [{ field: "sort" }] }).data;
   const menuItems = useLive("menuItems").data;
+  const { toast } = useToast();
   if (!s) return <EmptyState icon={<Settings2 />} title="لا توجد ثوابت لهذا المطعم" />;
   const lists = cc.lists;
   const patch = (p: Partial<MfgSettings>) => db.update("mfgSettings", s.id, p);
@@ -27,7 +28,6 @@ export default function ConstantsPage() {
   const setCat = (id: string, p: Partial<MfgCategoryDef>) => patch({ productCategories: cats.map((c) => (c.id === id ? { ...c, ...p } : c)) });
   const usedCats = new Set(prod.products.map((x) => x.category));
   const usedRawCats = new Set(cc.raws.map((i) => specOf(i, lists).category));
-  const usedUnits = new Set(cc.raws.map((i) => specOf(i, lists).storageUnit));
   const usedSale = new Set(menuItems.map((i) => i.categoryId));
   // مدى أكواد كل فئة: a new item takes the next free code of its category
   const ranges: Record<CodeKind, Record<string, CodeRange>> = {
@@ -36,6 +36,22 @@ export default function ConstantsPage() {
     product: codeRanges(lists.codeRanges?.product, cats.map((c) => c.id)),
   };
   const saveRange = (kind: CodeKind, key: string, next: CodeRange) => setLists({ codeRanges: { ...lists.codeRanges, [kind]: { ...ranges[kind], [key]: next } } });
+  // تعديل اسم فئة خام: the list, its code range, the meat and packaging choices and every raw material of the category follow the new name
+  const renameRawCat = async (old: string, typed: string): Promise<boolean> => {
+    const next = typed.trim();
+    if (!next || next === old) return false;
+    if (lists.rawCategories.includes(next)) {
+      toast({ tone: "error", title: "الاسم مستخدم", description: `فيه فئة خام تانية اسمها ${next}` });
+      return false;
+    }
+    const raw = Object.fromEntries(Object.entries(ranges.raw).map(([k, v]) => [k === old ? next : k, v]));
+    const packCat = lists.packagingCategory ?? lists.rawCategories.find((c) => c.includes("تغليف")) ?? "";
+    const moved = cc.raws.filter((i) => specOf(i, lists).category === old);
+    await patch({ lists: { ...lists, rawCategories: lists.rawCategories.map((c) => (c === old ? next : c)), codeRanges: { ...lists.codeRanges, raw }, ...(meatCat === old ? { meatCategory: next } : {}), ...(packCat === old ? { packagingCategory: next } : {}) } });
+    for (const i of moved) await db.update("stockItems", i.id, i.spec ? { spec: { ...i.spec, category: next } } : { note: next });
+    toast({ tone: "success", title: "تم تعديل اسم الفئة", description: moved.length ? `اتنقل معاها ${moved.length} مادة خام` : undefined });
+    return true;
+  };
   const setMeat = (id: string, p: Partial<MfgMeatType>) => patch({ meatTypes: s.meatTypes.map((m) => (m.id === id ? { ...m, ...p } : m)) });
   // تعريف اللحوم: only the raw materials of the meat category, also the warehouse-only ones (choosing one brings it into manufacturing)
   const meatCat = lists.meatCategory ?? lists.rawCategories.find((c) => c.includes("لحوم")) ?? "";
@@ -44,8 +60,15 @@ export default function ConstantsPage() {
   const chickenCat = lists.chickenProductCategory ?? prod.categories.find((c) => !c.burger && (c.id === "chicken" || c.name.ar.includes("دجاج")))?.id ?? "";
   const chickenCats = new Set(chickenCat ? [chickenCat] : []);
   const mincedOptions = [...meatOptions(s.mincedChickenItemId), ...prod.products.filter((x) => x.active && chickenCats.has(x.category) && cc.itemById.has(x.stockItemId)).map((x) => ({ value: x.stockItemId, label: `${x.name.ar} · ${x.code} (منتج مصنع)` }))];
-  // دهن برجر اللحم: the manufactured fat (a sub-recipe product such as الدهن الجاهز) first, its price and stock are the product's own; a raw material stays possible
-  const fatOptions = [{ value: "", label: "—" }, ...prod.products.filter((x) => x.active && x.recipeType === "sub" && cc.itemById.has(x.stockItemId)).map((x) => ({ value: x.stockItemId, label: `${x.name.ar} · ${x.code} (منتج مصنع)` })), ...meatOptions(s.rawFatItemId).slice(1)];
+  // دهن برجر اللحم: raw materials of the meat and chicken categories, plus the manufactured products of the meat and chicken categories (such as الدهن الجاهز: its price and stock are the product's own)
+  const isMeatName = (n: string) => /لحم|لحوم|دجاج|فراخ/.test(n);
+  const fatRawCats = new Set([meatCat, ...lists.rawCategories.filter(isMeatName)].filter(Boolean));
+  const fatProductCats = new Set(cats.filter((c) => c.burger || c.id === chickenCat || isMeatName(c.name.ar)).map((c) => c.id));
+  const fatOptions = [
+    { value: "", label: "—" },
+    ...cc.raws.filter((x) => x.active && (fatRawCats.has(specOf(x, lists).category) || x.id === s.rawFatItemId) && !prod.products.some((pr) => pr.stockItemId === x.id)).map((x) => ({ value: x.id, label: `${x.name.ar} · ${x.sku}` })),
+    ...prod.products.filter((x) => x.active && (fatProductCats.has(x.category) || x.stockItemId === s.rawFatItemId) && cc.itemById.has(x.stockItemId)).map((x) => ({ value: x.stockItemId, label: `${x.name.ar} · ${x.code} (منتج مصنع)` })),
+  ];
   const pick = (id: string) => {
     if (id && cc.itemById.get(id)?.mfg === false) void db.update("stockItems", id, { mfg: true });
     return id || null;
@@ -54,7 +77,7 @@ export default function ConstantsPage() {
     <div className="grid gap-5">
       <PageHeader icon={<Settings2 />} title="ثوابت النظام" />
       <div className="grid items-start gap-5 lg:grid-cols-2">
-        <Chips title="تعريف وحدة التخزين لمواد الخام" subtitle="الوحدة المستخدمة في مادة خام لا تحذف" used={usedUnits} values={lists.storageUnits} onChange={(storageUnits) => setLists({ storageUnits })} placeholder="وحدة تخزين جديدة" />
+        <Chips title="تعريف وحدة التخزين لمواد الخام" subtitle="حذف الوحدة من هنا يشيلها من القائمة فقط، والخامات المسجلة بها تفضل كما هي" values={lists.storageUnits} onChange={(storageUnits) => setLists({ storageUnits })} placeholder="وحدة تخزين جديدة" />
 
         <Card>
           <CardHeader title="تعريف وحدة التصنيع لمواد الخام" action={<Button size="sm" variant="outline" icon={<Plus />} onClick={() => setLists({ mfgUnits: [...lists.mfgUnits, { name: "وحدة جديدة", base: "g", factor: 1 }] })}>وحدة جديدة</Button>} />
@@ -76,7 +99,7 @@ export default function ConstantsPage() {
             {lists.rawCategories.map((c) => (
               <li key={c} className="grid items-end gap-2 rounded-xl border border-line p-3 grid-cols-[minmax(0,1fr)_auto]">
                 <div className="grid gap-2">
-                  <span className="text-[14.5px] font-semibold">{c}</span>
+                  <Input label="اسم الفئة" defaultValue={c} onBlur={(e) => { const el = e.target; void renameRawCat(c, el.value).then((ok) => { if (!ok) el.value = c; }); }} />
                   <RangeInputs id={c} ranges={ranges.raw} nameOf={(k) => k} onSave={(r) => saveRange("raw", c, r)} />
                 </div>
                 <IconButton label={usedRawCats.has(c) ? "مستخدمة في مواد خام" : "حذف"} disabled={usedRawCats.has(c)} onClick={() => setLists({ rawCategories: lists.rawCategories.filter((x) => x !== c) })}><Trash2 /></IconButton>
@@ -149,7 +172,7 @@ export default function ConstantsPage() {
             {s.meatTypes.length ? null : <li className="text-[14px] text-muted">أضف أول قطعية لحم.</li>}
           </ul>
           <div className="grid gap-3 px-5 pb-5 sm:grid-cols-3">
-            <Select label="الدهن في برجر اللحم" value={s.rawFatItemId ?? ""} onChange={(e) => patch({ rawFatItemId: pick(e.target.value) })} options={fatOptions} hint="من الدهن الجاهز (وصفة فرعية): سعره وكميته من المخزن" />
+            <Select label="الدهن في برجر اللحم" value={s.rawFatItemId ?? ""} onChange={(e) => patch({ rawFatItemId: pick(e.target.value) })} options={fatOptions} hint="المستخدم في تصنيع برجر اللحم: خامات ومصنعات فئات اللحوم والدجاج، سعره وكميته من المخزن" />
             <Select label="دجاج الفرم لبرجر الدجاج" value={s.mincedChickenItemId ?? ""} onChange={(e) => patch({ mincedChickenItemId: pick(e.target.value) })} options={mincedOptions} hint="خامات فئة اللحوم ومنتجات فئة الدجاج المصنعة" />
             <Select label="مادة الخام الواحدة (الدجاج)" value={s.chickenItemId ?? ""} onChange={(e) => patch({ chickenItemId: pick(e.target.value) })} options={meatOptions(s.chickenItemId)} />
           </div>
@@ -201,7 +224,11 @@ function SaleCategories({ cats, used, ranges, onSave }: { cats: { id: string; na
         {cats.map((c) => (
           <li key={c.id} className="grid items-end gap-2 rounded-xl border border-line p-3 grid-cols-[minmax(0,1fr)_auto]">
             <div className="grid gap-2">
-              <span className="text-[14.5px] font-semibold">{c.name.ar}</span>
+              <Input label="اسم الفئة" defaultValue={c.name.ar} onBlur={(e) => {
+                const v = e.target.value.trim();
+                if (!v || cats.some((x) => x.id !== c.id && x.name.ar === v)) e.target.value = c.name.ar;
+                else if (v !== c.name.ar) void db.update("menuCategories", c.id, { name: { ar: v, en: c.name.en === c.name.ar ? v : c.name.en } });
+              }} />
               <RangeInputs id={c.id} ranges={ranges} nameOf={(k) => cats.find((x) => x.id === k)?.name.ar ?? ""} onSave={(r) => onSave(c.id, r)} />
             </div>
             <IconButton label={used.has(c.id) ? "فيها أصناف" : "حذف"} disabled={used.has(c.id)} onClick={() => void db.remove("menuCategories", c.id)}><Trash2 /></IconButton>
