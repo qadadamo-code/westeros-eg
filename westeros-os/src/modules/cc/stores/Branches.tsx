@@ -20,7 +20,7 @@ export default function Branches() {
   const nextCode = Math.max(0, ...cc.branches.map((b) => branchCode(b, cc.branches))) + 1;
   const columns: Column<Branch>[] = [
     { key: "code", header: "كود الفرع", cell: (b) => <span className="num text-muted">{branchCode(b, cc.branches)}</span> },
-    { key: "name", header: "اسم الفرع", cell: (b) => <span className="font-semibold">{b.name.ar}{b.isDefault ? <Badge tone="brass" size="sm" className="ms-2">الرئيسي</Badge> : null}{b.isCentral ? <Badge tone="info" size="sm" className="ms-2">مطبخ مركزي</Badge> : null}</span> },
+    { key: "name", header: "اسم الفرع", cell: (b) => <span className="font-semibold">{b.name.ar}{b.isCentral ? <Badge tone="info" size="sm" className="ms-2">مطبخ مركزي</Badge> : null}</span> },
     { key: "address", header: "عنوان الفرع", hideOnMobile: true, cell: (b) => b.address?.ar || "—" },
     { key: "map", header: "موقع الفرع", hideOnMobile: true, cell: (b) => (b.mapUrl ? <a className="inline-flex items-center gap-1 font-semibold text-primary" href={b.mapUrl} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>لوكيشن <ExternalLink className="size-3.5" /></a> : "—") },
     { key: "manager", header: "مدير الفرع", cell: (b) => cc.memberById.get(b.managerId ?? "")?.name ?? "—" },
