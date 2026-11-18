@@ -71,7 +71,7 @@ const inRange = (d: string, f: { from: string; to: string }) => d >= f.from && d
 export function bookedOn(entries: FinEntry[], accountId: string, f: { from: string; to: string }, branchId: string | null, centreId?: string | null): Units {
   let s = 0;
   for (const e of entries) {
-    if (e.status !== "posted" || !inRange(e.date, f)) continue;
+    if (e.status !== "posted" || e.kind === "closing" || !inRange(e.date, f)) continue;
     for (const l of e.lines) if (l.account === accountId && ((l.branchId ?? e.branchId) ?? null) === branchId && (centreId === undefined || (l.centreId ?? null) === centreId)) s += l.debit - l.credit;
   }
   return s;

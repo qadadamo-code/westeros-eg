@@ -48,7 +48,11 @@ const head = (id: string, label: string, n: number): StRow => ({ id, label, leve
 const sumRow = (id: string, label: string, values: Units[]): StRow => ({ id, label, level: 0, kind: "total", values });
 
 /** قائمة الدخل: إيرادات، تكلفة مبيعات، مجمل ربح، مصروفات، صافي ربح. One value per filter. */
-export function incomeStatement(accounts: FinAccount[], entries: FinEntry[], cols: BalanceFilter[], level = 3) {
+/** قيد إقفال السنة يصفر الإيرادات والمصروفات في الدفتر، لكن قوائم الدخل تقرأ السنة قبل إقفالها */
+export const beforeClosing = (entries: FinEntry[]) => (entries.some((e) => e.kind === "closing") ? entries.filter((e) => e.kind !== "closing") : entries);
+
+export function incomeStatement(accounts: FinAccount[], all: FinEntry[], cols: BalanceFilter[], level = 3) {
+  const entries = beforeClosing(all);
   const nets = cols.map((f) => netByCode(accounts, entries, f));
   const rev = section(accounts, nets, "revenue", -1, level);
   const cogs = section(accounts, nets, "cogs", 1, level);
@@ -75,7 +79,7 @@ export function balanceSheet(accounts: FinAccount[], entries: FinEntry[], cols: 
   const ix = indexChart(accounts);
   const roots = ix.kids(null) as FinAccount[];
   // income and cost accounts that no closing entry has emptied yet: the profit of the open period
-  const open = nets.map((n) => -roots.filter((r) => r.type === "revenue" || r.type === "cogs" || r.type === "expense").reduce((s, r) => s + (n.get(r.code) ?? 0), 0));
+  const open = nets.map((n) => -roots.filter((r) => r.type === "revenue" || r.type === "cogs" || r.type === "expense").reduce((s, r) => s + (n.get(r.code) ?? 0), 0) || 0);
   const equity = eq.total.map((v, i) => v + open[i]);
   const n = cols.length;
   const rows: StRow[] = [
@@ -161,7 +165,7 @@ export interface Kpis {
 }
 export function kpis(accounts: FinAccount[], entries: FinEntry[], settings: Pick<FinSettingsData, "links">, f: BalanceFilter): Kpis {
   const pl = incomeStatement(accounts, entries, [f], 1);
-  const net = netByCode(accounts, entries, f);
+  const net = netByCode(accounts, beforeClosing(entries), f);
   const at = netByCode(accounts, entries, { to: f.to, branchId: f.branchId });
   const ix = indexChart(accounts);
   const code = (key: string) => settings.links[key] ?? "";

@@ -82,6 +82,7 @@ export async function reverseEntry(db: Db, id: string, opts: { date: string; mem
   if (!e || e.status !== "posted") throw new JournalError("يعكس القيد المرحل فقط");
   if (e.reversedBy) throw new JournalError("القيد معكوس بالفعل");
   if (e.kind === "reversal") throw new JournalError("القيد العكسي لا يعكس. اعمل قيد جديد.");
+  if (e.kind === "closing") throw new JournalError("قيد إقفال السنة يتعكس من شاشة الإقفال (فتح السنة)");
   if (e.sourceType?.startsWith("stock:") && e.sourceType !== "stock:revalue") throw new JournalError("قيد تلقائي من حركة مخزنية، يتصحح من مصدره وليس بقيد عكسي");
   if (!actor.canApprove) throw new JournalError("ليس لديك صلاحية عكس القيود");
   const lines = reversed(e.lines);
@@ -171,4 +172,19 @@ export async function saveOpening(db: Db, date: string, lines: FinLine[], actor:
     ...blank, date, memo: "الأرصدة الافتتاحية", lines: clean, branchId, kind: "opening", status: "posted", attachments: [], meta: {}, sourceType: OPENING, sourceId: "opening",
     createdBy: actor.id, createdByName: actor.name, year, no: nextNo(c.entries, year), postedAt: nowIso(), approvedBy: actor.id,
   });
+}
+
+/* ───────── قيود الإقفال ───────── */
+
+/**
+ * An entry the year-end close writes. It lands on the last day of a year whose months are already closed, so the
+ * period lock is not asked; everything else about the entry is checked as usual.
+ */
+export async function postClosing(db: Db, input: EntryInput & { sourceType: string; sourceId: string; reverses?: string | null }, actor: Actor): Promise<FinEntry> {
+  const c = await context(db);
+  const lines = cleanLines(input.lines);
+  const problem = entryProblem({ date: input.date, lines }, c.byId, { periods: {} });
+  if (problem) throw new JournalError(problem);
+  const year = fiscalYear(input.date, c.settings.yearStartMonth);
+  return db.insert("finEntries", { ...blank, ...base({ ...input, lines }, actor), status: "posted", year, no: nextNo(c.entries, year), postedAt: nowIso(), approvedBy: actor.id, reverses: input.reverses ?? null });
 }

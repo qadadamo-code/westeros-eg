@@ -1,10 +1,12 @@
 /** الحسابات: the chart of accounts and, around it, the journal, the reports and the settings. */
 import { Navigate, Route, Routes } from "react-router-dom";
-import { Banknote, BookOpen, FileBarChart, Flag, Gauge, Landmark, ListTree, Settings as Cog, Target } from "lucide-react";
+import { Banknote, BookOpen, FileBarChart, Flag, Gauge, Landmark, ListTree, Lock, PiggyBank, Settings as Cog, Target } from "lucide-react";
 import { PageHeader } from "@/shell/PageHeader";
 import { RouteTabs } from "@/modules/marketing/ui";
+import Budget from "./Budget";
 import Centres from "./Centres";
 import Chart from "./Chart";
+import Close from "./Close";
 import Dashboard from "./Dashboard";
 import Journal from "./Journal";
 import Opening from "./Opening";
@@ -26,6 +28,8 @@ export default function FinancePage() {
         { to: "/finance/treasury", label: "الخزينة والبنوك", icon: <Banknote /> },
         ...(reports ? [{ to: "/finance/reports", label: "التقارير", icon: <FileBarChart /> }] : []),
         { to: "/finance/centres", label: "مراكز التكلفة", icon: <Target /> },
+        ...(perms.has("budget") || perms.has("profit") ? [{ to: "/finance/budget", label: "الموازنة", icon: <PiggyBank /> }] : []),
+        { to: "/finance/close", label: "الإقفال", icon: <Lock /> },
         { to: "/finance/opening", label: "الأرصدة الافتتاحية", icon: <Flag /> },
         { to: "/finance/settings", label: "الإعدادات وربط الحسابات", icon: <Cog /> },
       ]} />
@@ -36,6 +40,8 @@ export default function FinancePage() {
         <Route path="treasury" element={<Treasury />} />
         {reports ? <Route path="reports/*" element={<Reports />} /> : null}
         <Route path="centres" element={<Centres />} />
+        {perms.has("budget") || perms.has("profit") ? <Route path="budget" element={<Budget />} /> : null}
+        <Route path="close" element={<Close />} />
         <Route path="opening" element={<Opening />} />
         <Route path="settings" element={<Settings />} />
         {["ledger", "trial", "stock"].map((r) => <Route key={r} path={r} element={<ReportRedirect to={r} />} />)}
