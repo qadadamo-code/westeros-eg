@@ -39,3 +39,10 @@ export function useFinPerms() {
   const set = new Set<string>(mine);
   return { has: (p: FinPerm) => set.has(p), owner };
 }
+
+/** The signed-in user as the journal sees them. */
+export function useActor() {
+  const { staff } = useSession();
+  const perms = useFinPerms();
+  return { id: staff?.id ?? null, name: staff?.name ?? "", canApprove: perms.has("journal.approve") };
+}
