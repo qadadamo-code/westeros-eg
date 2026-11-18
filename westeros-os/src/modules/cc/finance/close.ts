@@ -9,6 +9,7 @@ import type { MfgLists } from "@/data/types";
 import type { Units } from "@/lib/money";
 import { depreciationDue } from "./assets";
 import { kitchenPlan } from "./centres";
+import { EMPLOYEE, PAYROLL, payrollOf } from "./payroll";
 import { cairoDay, JournalError, monthOf, periodStatus } from "./journal";
 import { journalContext, postClosing, RECURRING, type Actor, type RecurringData } from "./journalOps";
 import { saveSettings } from "./ops";
@@ -57,6 +58,13 @@ export function monthChecks(a: CloseData, month: string): CloseCheck[] {
   add("prepaid", "أقساط المصروفات المقدمة مسجلة", prepaid, `${prepaid} مصروف مقدم له قسط لم يسجل`, "/finance/treasury");
   const recurring = a.docs.filter((d) => d.kind === RECURRING && d.status === "active").filter((d) => { const r = d.data as unknown as RecurringData; return (!r.lastRun || r.lastRun < month) && (!r.until || monthOf(r.until) >= month); }).length;
   add("recurring", "القيود المتكررة أنشئت", recurring, `${recurring} قيد متكرر لم ينشأ لهذا الشهر`, "/finance/journal");
+
+  const staff = a.docs.filter((d) => d.kind === EMPLOYEE && d.status === "active" && (!d.date || d.date <= to));
+  if (staff.length) {
+    const paid = new Set(a.docs.filter((d) => d.kind === PAYROLL && d.status !== "cancelled" && payrollOf(d).month === month).flatMap((d) => payrollOf(d).lines.map((l) => l.employeeId)));
+    const missing = staff.filter((d) => !paid.has(d.id)).length;
+    add("payroll", "رواتب الشهر مسجلة", missing, `${missing} موظف بدون كشف رواتب عن الشهر`, "/finance/payroll");
+  }
 
   const dep = depreciationDue(a.docs, month);
   add("depreciation", "إهلاك الأصول الثابتة مسجل", dep.length, `${new Set(dep.map((d) => d.doc.id)).size} أصل له إهلاك لم يسجل`, "/finance/assets");

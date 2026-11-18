@@ -17,13 +17,14 @@ export const FIN_PERMS = [
   { id: "budget", label: "الموازنة التقديرية" },
   { id: "close.month", label: "إقفال وفتح شهر" },
   { id: "close.year", label: "إقفال سنة" },
+  { id: "branches.all", label: "كل الفروع (بدونها يشوف فروعه فقط في المؤشرات والتقارير والقيود)" },
 ] as const;
 export type FinPerm = (typeof FIN_PERMS)[number]["id"];
 
 const ALL = FIN_PERMS.map((p) => p.id) as FinPerm[];
 const BY_ROLE: Record<MfgUserType["role"], FinPerm[]> = {
   admin: ALL,
-  manager: ["chart.view", "journal.approve", "reports", "close.month"],
+  manager: ["chart.view", "journal.approve", "reports", "close.month", "branches.all"],
   chef: [],
   kitchen: [],
 };

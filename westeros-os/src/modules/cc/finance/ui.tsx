@@ -1,5 +1,5 @@
 /** Shared pieces of the finance screens: amounts, the period picker, the account picker, printing a table. */
-import { useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, type ReactNode } from "react";
 import { Printer } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { major, MONEY_MASK, moneyHidden, UNITS_PER_MAJOR, type Units } from "@/lib/money";
@@ -64,7 +64,12 @@ export function PeriodPicker({ value, onChange, startMonth = 1, className }: { v
 export const periodLabel = (p: Period) => (p.from || p.to ? `${p.from ? p.from.split("-").reverse().join("/") : "البداية"} إلى ${p.to ? p.to.split("-").reverse().join("/") : "اليوم"}` : "كل الفترات");
 
 export function BranchSelect({ fin, value, onChange, label = "الفرع", all = "كل الفروع", className }: { fin: Fin; value: string; onChange: (id: string) => void; label?: string; all?: string | null; className?: string }) {
-  return <Select label={label} className={className ?? "w-44"} value={value} onChange={(e) => onChange(e.target.value)} options={[...(all ? [{ value: "", label: all }] : []), ...fin.branches.map((b) => ({ value: b.id, label: b.name.ar }))]} />;
+  // a user held to their own branches never gets "all branches", and a screen that starts on it is moved to their branch
+  const only = fin.onlyBranches;
+  const list = only ? fin.branches.filter((b) => only.includes(b.id)) : fin.branches;
+  const forced = only && !only.includes(value) ? list[0]?.id ?? "" : null;
+  useEffect(() => { if (forced != null && forced !== value) onChange(forced); }, [forced, value, onChange]);
+  return <Select label={label} className={className ?? "w-44"} value={forced ?? value} onChange={(e) => onChange(e.target.value)} options={[...(all && !only ? [{ value: "", label: all }] : []), ...list.map((b) => ({ value: b.id, label: b.name.ar }))]} />;
 }
 
 /** اختيار حساب: by code or name; the list floats over the page. `leaf` shows only the accounts that take entries. */

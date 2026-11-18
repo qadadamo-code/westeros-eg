@@ -10,7 +10,8 @@ import { finAlerts } from "./alerts";
 import { cairoDay } from "./journal";
 import { useFinPerms } from "./perms";
 import { previousPeriod } from "./Reports";
-import { incomeStatement, kpis } from "./statements";
+import { CHANNELS } from "./sales";
+import { incomeStatement, kpis, netByCode } from "./statements";
 import { inTransit, postedMoves, stockRecon } from "./sync";
 import { addMonths, monthEnd } from "./treasury";
 import { BranchSelect, fmt, periodLabel, periodOf, PeriodPicker, today, type Period } from "./ui";
@@ -58,6 +59,13 @@ export default function Dashboard() {
       return { month: m, label: m.split("-").reverse().join("/"), sales: r.revenue[0], net: r.net[0], expenses: r.expenses[0] + r.cogs[0] };
     });
   }, [fin.accounts, fin.entries, branch]);
+  /** sales of the period by channel, net of tax, with the delivery fees */
+  const channels = useMemo(() => {
+    const net = netByCode(fin.accounts, fin.entries, f);
+    const rows = [...CHANNELS.map((c) => ({ label: c.label, key: c.key as string })), { label: "رسوم التوصيل", key: "sales.fees" }].map((c) => ({ label: c.label, value: -(net.get(fin.settings.links[c.key] ?? "") ?? 0) })).filter((r) => r.value);
+    const total = rows.reduce((s, r) => s + r.value, 0);
+    return { rows, total, top: Math.max(0, ...rows.map((r) => r.value)) };
+  }, [fin.accounts, fin.entries, fin.settings.links, f]);
   const byBranch = useMemo(() => (fin.branches.length > 1 && !branch ? fin.branches.map((b) => ({ b, k: kpis(fin.accounts, fin.entries, fin.settings, { ...f, branchId: b.id }) })) : []), [fin.branches, fin.accounts, fin.entries, fin.settings, f, branch]);
 
   if (!fin.loading && !fin.accounts.length) return <Card><EmptyState icon={<ListTree />} title="ابدأ بشجرة الحسابات" body="حمّل الشجرة الجاهزة لمطعم أو استوردها من إكسل، وبعدها تظهر المؤشرات هنا." action={<Link to="/finance/chart"><Button>افتح شجرة الحسابات</Button></Link>} /></Card>;
@@ -107,6 +115,20 @@ export default function Dashboard() {
           )) : <p className="py-6 text-center text-[14px] text-muted">لا توجد تنبيهات. كل شيء في مكانه.</p>}
         </Card>
       </div>
+      {channels.rows.length ? (
+        <Card className="grid gap-3 p-4">
+          <h2 className="text-[16px] font-bold">المبيعات حسب القناة</h2>
+          <div className="grid gap-2.5">
+            {channels.rows.map((r) => (
+              <div key={r.label} className="grid grid-cols-[110px_1fr_auto] items-center gap-3 text-[14px]">
+                <span>{r.label}</span>
+                <div className="h-2.5 overflow-hidden rounded-full bg-surface-2"><div className="h-full rounded-full bg-primary" style={{ width: `${channels.top ? Math.max(2, (r.value / channels.top) * 100) : 0}%` }} /></div>
+                <span className="num text-end" dir="ltr"><b>{fmt(r.value)}</b> <span className="text-[12.5px] text-muted">{channels.total ? `${((r.value / channels.total) * 100).toFixed(0)}%` : ""}</span></span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      ) : null}
       {byBranch.length ? (
         <Card className="overflow-hidden">
           <h2 className="px-4 pt-4 text-[16px] font-bold">مقارنة الفروع</h2>

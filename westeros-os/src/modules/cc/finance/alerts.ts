@@ -3,9 +3,11 @@ import type { FinAccount, FinDoc, FinEntry, FinSettingsData } from "@/data/finan
 import type { Units } from "@/lib/money";
 import { depreciationDue } from "./assets";
 import { monthOf, periodStatus } from "./journal";
+import { PAYROLL, payrollOf } from "./payroll";
 import { supplierBook } from "./purchases";
 import { netByCode } from "./statements";
 import { isDebit } from "./tree";
+import { vatRows } from "./vat";
 import { fmt } from "./ui";
 
 export interface FinAlert { id: string; tone: "danger" | "warning" | "info"; text: string; to: string }
@@ -30,9 +32,13 @@ export function finAlerts(a: { accounts: FinAccount[]; entries: FinEntry[]; sett
     const late = book.filter((b) => b.overdue > 0), overdue = late.reduce((s, b) => s + b.overdue, 0), soon = book.reduce((s, b) => s + b.soon, 0);
     if (overdue) out.push({ id: "ap-late", tone: "danger", text: `${fmt(overdue)} ج.م مستحقة للموردين فات ميعادها (${late.length === 1 ? late[0].doc.name : `${late.length} موردين`})`, to: "/finance/purchases" });
     if (soon) out.push({ id: "ap-soon", tone: "warning", text: `${fmt(soon)} ج.م للموردين تستحق خلال 7 أيام`, to: "/finance/purchases" });
+    const unpaid = a.docs.filter((d) => d.kind === PAYROLL && d.status === "posted");
+    if (unpaid.length) out.push({ id: "payroll", tone: "warning", text: `رواتب مستحقة لم تصرف: ${fmt(unpaid.reduce((s, d) => s + payrollOf(d).net, 0))} ج.م`, to: "/finance/payroll" });
     const dep = depreciationDue(a.docs, monthOf(a.today)).filter((d) => d.month < monthOf(a.today));
     if (dep.length) out.push({ id: "depr", tone: "warning", text: `إهلاك ${new Set(dep.map((d) => d.month)).size} شهر لم يسجل بعد`, to: "/finance/assets" });
   }
+  const vat = vatRows(a.accounts, a.entries, a.settings).filter((r) => !r.settled && r.month < monthOf(a.today));
+  if (vat.length) out.push({ id: "vat", tone: vat.some((r) => r.payable > 0) ? "danger" : "info", text: vat.length === 1 ? `ضريبة القيمة المضافة عن ${monthLabel(vat[0].month)} لم تتسوى${vat[0].payable ? ` (${fmt(vat[0].payable)} ج.م)` : ""}` : `ضريبة القيمة المضافة عن ${vat.length} شهور لم تتسوى`, to: "/finance/tax" });
   const net = netByCode(a.accounts, a.entries, { to: a.today });
   for (const acc of a.accounts) {
     if (!acc.postable || !acc.active) continue;

@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { useSession } from "@/auth/session";
 import { useLive } from "@/data/hooks";
 import { settingsOf } from "./ops";
+import { useFinPerms } from "./perms";
 import { indexChart } from "./tree";
 
 export function useFinance() {
@@ -13,6 +14,7 @@ export function useFinance() {
   const centres = useLive("finCentres").data;
   const settingsRow = useLive("finSettings").data[0];
   const branches = useLive("branches").data;
+  const everyBranch = useFinPerms().has("branches.all");
   return useMemo(() => {
     const ix = indexChart(accounts);
     const byId = new Map(accounts.map((x) => [x.id, x]));
@@ -23,9 +25,11 @@ export function useFinance() {
       loading: accountsLive.loading, accounts, entries, centres, settings, ix, byId, branches: sorted,
       branchName: (id: string | null | undefined) => branchById.get(id ?? "")?.name.ar ?? "كل الفروع",
       branchId: branchId ?? mine.find((b) => b.isDefault)?.id ?? mine[0]?.id ?? null,
+      /** the only branches this user may look at; null = all of them */
+      onlyBranches: everyBranch || !mine.length ? null : mine.map((b) => b.id),
       /** "1101 · النقدية" */
       label: (id: string | null | undefined) => { const x = byId.get(id ?? ""); return x ? `${x.code} · ${x.name.ar}` : "—"; },
     };
-  }, [accounts, entries, centres, settingsRow, branches, accountsLive.loading, branchId, mine]);
+  }, [accounts, entries, centres, settingsRow, branches, accountsLive.loading, branchId, mine, everyBranch]);
 }
 export type Fin = ReturnType<typeof useFinance>;
