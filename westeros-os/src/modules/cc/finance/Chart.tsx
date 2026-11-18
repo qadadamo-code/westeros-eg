@@ -11,7 +11,7 @@ import { ExportButton, ReadOnly } from "../ui";
 import { IMPORT_FIELDS, importAccounts, loadDefaultChart, mergeAccounts, moveAccount, removeAccount, saveAccount, type AccountFields } from "./ops";
 import { useFinPerms } from "./perms";
 import { balanceOf, CASHFLOWS, deleteProblem, isDebit, KINDS, MAX_LEVEL, movement, moveProblem, nextCode, rollup, typeInfo, TYPES, usageOf } from "./tree";
-import { AccountSelect, Amount, BranchSelect, fmt, fromText, periodLabel, periodOf, PeriodPicker, PrintButton, printTable, toText, type Period } from "./ui";
+import { AccountSelect, Amount, BranchSelect, fmt, fromText, periodLabel, periodOf, PeriodPicker, PrintButton, printTable, toText, type Period, Toolbar } from "./ui";
 import { useFinance, type Fin } from "./useFinance";
 
 const err = (e: unknown) => String((e as Error).message ?? e);
@@ -83,24 +83,14 @@ export default function Chart() {
 
   return (
     <div className="grid gap-4">
-      <div className="flex flex-wrap items-end gap-2">
-        <Input label="بحث" className="w-56" icon={<Search />} placeholder="كود أو اسم" value={q} onChange={(e) => setQ(e.target.value)} />
+      <Toolbar collapse fold actions={<>{canEdit ? <Button icon={<Plus />} onClick={() => setEdit({ row: null, parent: null })}>إضافة حساب</Button> : null}</>} more={<><Button variant="secondary" icon={<ChevronsUpDown />} onClick={() => toLevel(MAX_LEVEL)}>فتح الكل</Button><Button variant="secondary" icon={<ChevronsDownUp />} onClick={() => toLevel(1)}>قفل الكل</Button>{canEdit ? <ExcelImport fields={IMPORT_FIELDS} run={(sheet, dry) => importAccounts(db, sheet, dry)} skipNote="من غير كود صحيح، أو كود جديد من غير اسم أو من غير أب." /> : null}<ExportButton file="شجرة-الحسابات" head={["الكود", "اسم الحساب", "الاسم بالإنجليزية", "كود الأب", "المستوى", "النوع", "الطبيعة", "تجميعي أو نهائي", "الحالة", "الرصيد"]} rows={exportRows} /><PrintButton onClick={print} />{canEdit ? <Button variant="secondary" icon={<Sparkles />} loading={busy} onClick={loadReady}>تحميل الشجرة الجاهزة</Button> : null}</>}>
+        <Input label="بحث" wrapClassName="fin-wide" className="w-52" icon={<Search />} placeholder="كود أو اسم" value={q} onChange={(e) => setQ(e.target.value)} />
         <Select label="النوع" className="w-40" value={type} onChange={(e) => setType(e.target.value)} options={[{ value: "", label: "كل الأنواع" }, ...TYPES.map((t) => ({ value: t.id, label: t.ar }))]} />
         <Select label="الحالة" className="w-32" value={status} onChange={(e) => setStatus(e.target.value)} options={[{ value: "active", label: "نشط" }, { value: "stopped", label: "موقوف" }, { value: "all", label: "الكل" }]} />
         <BranchSelect fin={fin} value={branch} onChange={setBranch} />
         <PeriodPicker value={period} onChange={setPeriod} startMonth={fin.settings.yearStartMonth} />
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        {canEdit ? <Button icon={<Plus />} onClick={() => setEdit({ row: null, parent: null })}>إضافة حساب</Button> : null}
-        <Select aria-label="المستوى الظاهر" className="w-40" value="" onChange={(e) => e.target.value && toLevel(Number(e.target.value))} options={[{ value: "", label: "المستوى الظاهر" }, ...Array.from({ length: MAX_LEVEL }, (_, i) => ({ value: String(i + 1), label: `حتى المستوى ${i + 1}` }))]} />
-        <Button variant="secondary" icon={<ChevronsUpDown />} onClick={() => toLevel(MAX_LEVEL)}>فتح الكل</Button>
-        <Button variant="secondary" icon={<ChevronsDownUp />} onClick={() => toLevel(1)}>قفل الكل</Button>
-        <span className="flex-1" />
-        {canEdit ? <ExcelImport fields={IMPORT_FIELDS} run={(sheet, dry) => importAccounts(db, sheet, dry)} skipNote="من غير كود صحيح، أو كود جديد من غير اسم أو من غير أب." /> : null}
-        <ExportButton file="شجرة-الحسابات" head={["الكود", "اسم الحساب", "الاسم بالإنجليزية", "كود الأب", "المستوى", "النوع", "الطبيعة", "تجميعي أو نهائي", "الحالة", "الرصيد"]} rows={exportRows} />
-        <PrintButton onClick={print} />
-        {canEdit ? <Button variant="secondary" icon={<Sparkles />} loading={busy} onClick={loadReady}>تحميل الشجرة الجاهزة</Button> : null}
-      </div>
+        <Select label="المستوى الظاهر" className="w-40" value="" onChange={(e) => e.target.value && toLevel(Number(e.target.value))} options={[{ value: "", label: "اختر" }, ...Array.from({ length: MAX_LEVEL }, (_, i) => ({ value: String(i + 1), label: `حتى المستوى ${i + 1}` }))]} />
+      </Toolbar>
 
       <Card className="overflow-hidden">
         <div className="overflow-x-auto thin-scrollbar">

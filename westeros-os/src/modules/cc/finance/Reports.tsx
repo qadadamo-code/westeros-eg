@@ -14,7 +14,7 @@ import StockRecon from "./StockRecon";
 import { moneyAccounts } from "./treasury";
 import { isDebit, MAX_LEVEL } from "./tree";
 import TrialBalance from "./TrialBalance";
-import { Amount, BranchSelect, fmt, periodLabel, periodOf, PeriodPicker, PrintButton, printTable, today, type Period } from "./ui";
+import { Amount, BranchSelect, fmt, periodLabel, periodOf, PeriodPicker, PrintButton, printTable, today, type Period, Toolbar } from "./ui";
 import { useFinance, type Fin } from "./useFinance";
 
 export const REPORTS: { id: string; label: string; hint: string; profit?: boolean }[] = [
@@ -35,8 +35,8 @@ export default function Reports() {
   const list = REPORTS.filter((r) => !r.profit || perms.has("profit"));
   return (
     <div className="grid gap-4">
-      <nav aria-label="التقارير" className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-        {list.map((r) => <NavLink key={r.id} to={`/finance/reports/${r.id}`} title={r.hint} className={({ isActive }) => cn("whitespace-nowrap rounded-full border px-3.5 py-1.5 text-[13.5px] font-semibold transition-colors", isActive ? "border-primary bg-primary/10 text-primary" : "border-line text-muted hover:bg-surface-2")}>{r.label}</NavLink>)}
+      <nav aria-label="التقارير" className="flex flex-wrap gap-1.5 rounded-2xl border border-line bg-surface p-2">
+        {list.map((r) => <NavLink key={r.id} to={`/finance/reports/${r.id}`} title={r.hint} className={({ isActive }) => cn("inline-flex h-9 items-center whitespace-nowrap rounded-xl px-3 text-[13.5px] font-semibold transition-colors", isActive ? "bg-brass-soft text-brass-text ring-1 ring-brass/40" : "text-muted hover:bg-surface-2 hover:text-ink")}>{r.label}</NavLink>)}
       </nav>
       <Routes>
         <Route index element={<Navigate to={list[0]?.id ?? "trial"} replace />} />
@@ -128,15 +128,15 @@ function Income({ mode }: { mode: "period" | "branches" | "centres" }) {
   const open = (x: StRow, i: number) => { const f = cols[i].f as { from?: string | null; to?: string | null; branchId?: string | null }; nav(`/finance/reports/ledger?account=${x.accountId}${f.from ? `&from=${f.from}` : ""}${f.to ? `&to=${f.to}` : ""}${f.branchId ? `&branch=${f.branchId}` : ""}`); };
   return (
     <div className="grid gap-3">
-      <div className="flex flex-wrap items-end gap-2">
+      <Toolbar>
         <PeriodPicker value={period} onChange={setPeriod} startMonth={fin.settings.yearStartMonth} />
         {mode !== "branches" ? <BranchSelect fin={fin} value={branch} onChange={setBranch} /> : null}
         {mode === "period" && centres.length ? <Select label="مركز التكلفة" className="w-44" value={centre} onChange={(e) => setCentre(e.target.value)} options={[{ value: "", label: "كل المراكز" }, ...centres.map((c) => ({ value: c.id, label: c.name.ar }))]} /> : null}
         <Select label="التفصيل" className="w-40" value={level} onChange={(e) => setLevel(e.target.value)} options={levels} />
         {mode === "period" ? <Select label="مقارنة" className="w-56" value={compare} onChange={(e) => setCompare(e.target.value)} options={COMPARE} /> : null}
-      </div>
+      </Toolbar>
       {mode === "centres" && !centres.length ? <p className="rounded-xl border border-line px-3 py-3 text-[14px] text-muted">لا توجد مراكز تكلفة. عرّفها من تبويب مراكز التكلفة، ثم اختر المركز على سطور القيود والسندات.</p> : null}
-      <div className="grid gap-2 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {[["المبيعات", r.revenue[main]], ["مجمل الربح", r.gross[main]], ["المصروفات", r.expenses[main]], ["صافي الربح", r.net[main]]].map(([l, v]) => <Card key={l as string} className="p-3"><div className="text-[12.5px] text-muted">{l}</div><div className="text-[18px] font-bold"><Amount value={v as number} zero="0.00" tone="auto" /></div><div className="num text-[12.5px] text-muted" dir="ltr">{l === "المبيعات" ? "" : pct(v as number, r.revenue[main])}</div></Card>)}
       </div>
       <StatementTable title={title} sub={`${periodLabel(period)}${branch ? ` · ${fin.branchName(branch)}` : ""}`} file={title.replace(/ /g, "-")} cols={cols.map((c) => c.label)} rows={r.rows} extra={extra} onOpen={open} />
@@ -155,12 +155,12 @@ function Balance() {
   const r = useMemo(() => balanceSheet(fin.accounts, fin.entries, cols, Number(level)), [fin.accounts, fin.entries, to, other, branch, level]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="grid gap-3">
-      <div className="flex flex-wrap items-end gap-2">
+      <Toolbar>
         <Input label="في تاريخ" type="date" dir="ltr" className="w-44" value={to} onChange={(e) => setTo(e.target.value || today())} />
         <Input label="مقارنة بتاريخ (اختياري)" type="date" dir="ltr" className="w-48" value={other} onChange={(e) => setOther(e.target.value)} />
         <BranchSelect fin={fin} value={branch} onChange={setBranch} />
         <Select label="التفصيل" className="w-40" value={level} onChange={(e) => setLevel(e.target.value)} options={levels} />
-      </div>
+      </Toolbar>
       {!branch ? <Banner ok={r.balanced} yes="المركز المالي متوازن: الأصول تساوي الالتزامات وحقوق الملكية" no="المركز المالي غير متوازن، راجع ميزان المراجعة" /> : <p className="text-[13.5px] text-muted">مركز مالي لفرع واحد قد لا يتوازن، لأن جزء من القيد قد يكون على فرع آخر.</p>}
       <StatementTable title="المركز المالي" sub={`في ${fmtDay(to)}${branch ? ` · ${fin.branchName(branch)}` : ""}`} file="المركز-المالي" cols={cols.map((c) => fmtDay(c.to))} rows={r.rows}
         extra={other ? [{ head: "التغير", cell: (x) => change(x.values[0], x.values[1]) }] : undefined} onOpen={(x, i) => nav(`/finance/reports/ledger?account=${x.accountId}&to=${cols[i].to}${branch ? `&branch=${branch}` : ""}`)} />
@@ -180,8 +180,8 @@ function CashFlow() {
   const r = useMemo(() => cashFlow(fin.accounts, fin.entries, { from: period.from, to: period.to, branchId: branch || null }), [fin.accounts, fin.entries, period, branch]);
   return (
     <div className="grid gap-3">
-      <div className="flex flex-wrap items-end gap-2"><PeriodPicker value={period} onChange={setPeriod} startMonth={fin.settings.yearStartMonth} /><BranchSelect fin={fin} value={branch} onChange={setBranch} /></div>
-      <div className="grid gap-2 sm:grid-cols-5">
+      <Toolbar><PeriodPicker value={period} onChange={setPeriod} startMonth={fin.settings.yearStartMonth} /><BranchSelect fin={fin} value={branch} onChange={setBranch} /></Toolbar>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5 max-sm:[&>*:last-child:nth-child(odd)]:col-span-2">
         {[["رصيد أول الفترة", r.opening], ["التشغيل", r.operating], ["الاستثمار", r.investing], ["التمويل", r.financing], ["رصيد آخر الفترة", r.closing]].map(([l, v]) => <Card key={l as string} className="p-3"><div className="text-[12.5px] text-muted">{l}</div><div className="text-[18px] font-bold"><Amount value={v as number} zero="0.00" tone="auto" /></div></Card>)}
       </div>
       {r.unexplained ? <p className="text-[13.5px] text-muted">يوجد <span className="num" dir="ltr">{fmt(Math.abs(r.unexplained))}</span> حركة نقدية طرفها الآخر على فرع مختلف، تظهر عند اختيار كل الفروع.</p> : null}
@@ -200,13 +200,10 @@ function CashMovement() {
   const name = account ? fin.byId.get(account)?.name.ar ?? "" : "كل الخزائن والبنوك";
   return (
     <div className="grid gap-3">
-      <div className="flex flex-wrap items-end gap-2">
+      <Toolbar more={<><ExportButton file="حركة-الخزائن" head={head} rows={() => r.rows.map((d) => [d.date, d.opening / 100000, d.in / 100000, d.out / 100000, d.closing / 100000])} /><PrintButton onClick={() => printTable("حركة الخزائن والبنوك", `${name} · ${periodLabel(period)}`, head, r.rows.map((d) => [fmtDay(d.date), ...[d.opening, d.in, d.out, d.closing].map((v) => ({ text: fmt(v), align: "end" as const }))]), ["الإجمالي", { text: fmt(r.opening), align: "end" }, { text: fmt(r.in), align: "end" }, { text: fmt(r.out), align: "end" }, { text: fmt(r.closing), align: "end" }])} /></>}>
         <PeriodPicker value={period} onChange={setPeriod} startMonth={fin.settings.yearStartMonth} />
         <Select label="الخزينة أو البنك" className="w-64" value={account} onChange={(e) => setAccount(e.target.value)} options={[{ value: "", label: "كل الخزائن والبنوك" }, ...money.map((a) => ({ value: a.id, label: a.name.ar }))]} />
-        <span className="flex-1" />
-        <ExportButton file="حركة-الخزائن" head={head} rows={() => r.rows.map((d) => [d.date, d.opening / 100000, d.in / 100000, d.out / 100000, d.closing / 100000])} />
-        <PrintButton onClick={() => printTable("حركة الخزائن والبنوك", `${name} · ${periodLabel(period)}`, head, r.rows.map((d) => [fmtDay(d.date), ...[d.opening, d.in, d.out, d.closing].map((v) => ({ text: fmt(v), align: "end" as const }))]), ["الإجمالي", { text: fmt(r.opening), align: "end" }, { text: fmt(r.in), align: "end" }, { text: fmt(r.out), align: "end" }, { text: fmt(r.closing), align: "end" }])} />
-      </div>
+      </Toolbar>
       <Card className="overflow-hidden">
         <div className="overflow-x-auto thin-scrollbar">
           <table className="w-full text-[14px]">
@@ -235,13 +232,10 @@ function GeneralLedger() {
   const flat = () => blocks.flatMap(({ a, s }) => [[`${a.code} · ${a.name.ar}`, "", "رصيد أول الفترة", "", "", s.opening / 100000], ...s.rows.map((r) => [r.entry.date, entryRef(r.entry), r.line.memo ?? r.entry.memo, r.debit / 100000, r.credit / 100000, r.balance / 100000])]);
   return (
     <div className="grid gap-3">
-      <div className="flex flex-wrap items-end gap-2">
+      <Toolbar more={<><ExportButton file="دفتر-الأستاذ" head={head} rows={flat} /><PrintButton onClick={() => printTable("دفتر الأستاذ العام", periodLabel(period), head, blocks.flatMap(({ a, s }) => [[{ text: `${a.code} · ${a.name.ar}`, bold: true }, "", "رصيد أول الفترة", "", "", { text: fmt(s.opening), align: "end" as const, bold: true }], ...s.rows.map((r) => [fmtDay(r.entry.date), entryRef(r.entry), r.line.memo ?? r.entry.memo, { text: r.debit ? fmt(r.debit) : "", align: "end" as const }, { text: r.credit ? fmt(r.credit) : "", align: "end" as const }, { text: fmt(r.balance), align: "end" as const }])]))} /></>}>
         <PeriodPicker value={period} onChange={setPeriod} startMonth={fin.settings.yearStartMonth} /><BranchSelect fin={fin} value={branch} onChange={setBranch} />
         <div className="pb-1"><Switch checked={zero} onChange={setZero} label="إظهار حسابات برصيد بدون حركة" /></div>
-        <span className="flex-1" />
-        <ExportButton file="دفتر-الأستاذ" head={head} rows={flat} />
-        <PrintButton onClick={() => printTable("دفتر الأستاذ العام", periodLabel(period), head, blocks.flatMap(({ a, s }) => [[{ text: `${a.code} · ${a.name.ar}`, bold: true }, "", "رصيد أول الفترة", "", "", { text: fmt(s.opening), align: "end" as const, bold: true }], ...s.rows.map((r) => [fmtDay(r.entry.date), entryRef(r.entry), r.line.memo ?? r.entry.memo, { text: r.debit ? fmt(r.debit) : "", align: "end" as const }, { text: r.credit ? fmt(r.credit) : "", align: "end" as const }, { text: fmt(r.balance), align: "end" as const }])]))} />
-      </div>
+      </Toolbar>
       {blocks.map(({ a, s }) => (
         <Card key={a.id} className="overflow-hidden">
           <button type="button" className="flex w-full flex-wrap items-center gap-x-4 gap-y-1 bg-surface-2 px-3 py-2.5 text-start" onClick={() => nav(`/finance/reports/ledger?account=${a.id}${period.from ? `&from=${period.from}` : ""}${period.to ? `&to=${period.to}` : ""}`)}>

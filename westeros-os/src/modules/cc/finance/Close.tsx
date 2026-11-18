@@ -13,7 +13,7 @@ import { EntryView } from "./Journal";
 import { useActor, useFinPerms } from "./perms";
 import { incomeStatement } from "./statements";
 import { monthEnd } from "./treasury";
-import { Confirm, fmt, today } from "./ui";
+import { Confirm, fmt, today, Toolbar } from "./ui";
 import { useFinance } from "./useFinance";
 
 const err = (e: unknown) => String((e as Error)?.message ?? e);
@@ -72,10 +72,10 @@ export default function Close() {
 
   return (
     <div className="grid gap-4">
-      <div className="flex flex-wrap items-end gap-2">
+      <Toolbar>
         <Select label="السنة المالية" className="w-44" value={String(year)} onChange={(e) => setYear(Number(e.target.value))} options={years.map((y) => ({ value: String(y), label: s.yearStartMonth === 1 ? String(y) : `${y}/${y + 1}` }))} />
-        <p className="min-w-0 flex-1 pb-2 text-[13.5px] text-muted">اختار الشهر، راجع القائمة، ثم اقفله. الشهر المقفول لا يقبل قيود، فأرقام تقاريره تثبت.</p>
-      </div>
+      </Toolbar>
+      <p className="text-[13.5px] text-muted">اختار الشهر، راجع القائمة، ثم اقفله. الشهر المقفول لا يقبل قيود، فأرقام تقاريره تثبت.</p>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6" role="radiogroup" aria-label="شهور السنة">
         {cards.map((c) => (
           <button key={c.m} type="button" role="radio" aria-checked={c.m === sel} onClick={() => setMonth(c.m)} className={cn("grid gap-1 rounded-2xl border p-3 text-start transition-colors", c.m === sel ? "border-primary bg-primary/10" : "border-line hover:bg-surface-2")}>
@@ -123,7 +123,7 @@ export default function Close() {
         ) : (
           <>
             {perms.has("profit") ? (
-              <div className="grid gap-2 sm:grid-cols-3">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 max-sm:[&>*:last-child:nth-child(odd)]:col-span-2">
                 {[[plan.profit >= 0 ? "صافي ربح السنة" : "صافي خسارة السنة", Math.abs(plan.profit)], ["أرباح العام السابق تنتقل للمرحلة", plan.carried], ["سطور قيد الإقفال", null]].map(([l, v]) => <div key={l as string} className="rounded-xl border border-line p-3"><div className="text-[12.5px] text-muted">{l}</div><div className="num text-[18px] font-bold" dir="ltr">{v == null ? plan.lines.length : fmt(v as number)}</div></div>)}
               </div>
             ) : null}

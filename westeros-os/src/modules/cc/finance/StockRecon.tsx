@@ -11,7 +11,7 @@ import { cairoDay } from "./journal";
 import { useActor, useFinPerms } from "./perms";
 import { COSTING } from "./Settings";
 import { inTransit, postedMoves, postRevaluation, stockRecon } from "./sync";
-import { Amount, Confirm, fmt, PrintButton, printTable, today } from "./ui";
+import { Amount, Confirm, fmt, PrintButton, printTable, today, Toolbar } from "./ui";
 import { useFinance } from "./useFinance";
 import { runSync, useSyncState } from "./useStockSync";
 
@@ -48,14 +48,9 @@ export default function StockRecon() {
   if (!start) return <p className="rounded-xl border border-warn/50 px-3 py-3 text-[14px] text-warn">حدد تاريخ بداية القيود التلقائية من الإعدادات أولا، وبعدها تظهر المطابقة.</p>;
   return (
     <div className="grid gap-4">
-      <div className="flex flex-wrap items-end gap-2">
+      <Toolbar actions={<><Button variant="secondary" icon={<RefreshCw />} loading={sync.busy} onClick={() => runSync(db)}>ترحيل الحركات الآن</Button>{can && off && !pending && to === today() ? <Button icon={<Scale />} onClick={() => setAsk(true)}>قيد تسوية الفرق</Button> : null}</>} more={<><ExportButton file="مطابقة-المخزون" head={head} rows={() => rows.map((r) => [r.account.code, r.account.name.ar, r.ledger / 100000, r.stock / 100000, r.diff / 100000, r.recorded / 100000, r.items])} /><PrintButton onClick={() => printTable("مطابقة المخزون", `حتى ${to.split("-").reverse().join("/")} · ${method}`, head, rows.map((r) => [r.account.code, r.account.name.ar, { text: fmt(r.ledger), align: "end" as const }, { text: fmt(r.stock), align: "end" as const }, { text: fmt(r.diff), align: "end" as const }, { text: fmt(r.recorded), align: "end" as const }, r.items]), ["", "الإجمالي", { text: fmt(sum.ledger), align: "end" }, { text: fmt(sum.stock), align: "end" }, { text: fmt(sum.diff), align: "end" }, { text: fmt(sum.recorded), align: "end" }, ""])} /></>}>
         <Input label="حتى تاريخ" type="date" dir="ltr" className="w-44" value={to} onChange={(e) => setTo(e.target.value || today())} />
-        <Button variant="secondary" icon={<RefreshCw />} loading={sync.busy} onClick={() => runSync(db)}>ترحيل الحركات الآن</Button>
-        {can && off && !pending && to === today() ? <Button icon={<Scale />} onClick={() => setAsk(true)}>قيد تسوية الفرق</Button> : null}
-        <span className="flex-1" />
-        <ExportButton file="مطابقة-المخزون" head={head} rows={() => rows.map((r) => [r.account.code, r.account.name.ar, r.ledger / 100000, r.stock / 100000, r.diff / 100000, r.recorded / 100000, r.items])} />
-        <PrintButton onClick={() => printTable("مطابقة المخزون", `حتى ${to.split("-").reverse().join("/")} · ${method}`, head, rows.map((r) => [r.account.code, r.account.name.ar, { text: fmt(r.ledger), align: "end" as const }, { text: fmt(r.stock), align: "end" as const }, { text: fmt(r.diff), align: "end" as const }, { text: fmt(r.recorded), align: "end" as const }, r.items]), ["", "الإجمالي", { text: fmt(sum.ledger), align: "end" }, { text: fmt(sum.stock), align: "end" }, { text: fmt(sum.diff), align: "end" }, { text: fmt(sum.recorded), align: "end" }, ""])} />
-      </div>
+      </Toolbar>
       <div className={cn("flex items-center gap-2 rounded-xl border px-3 py-2.5 text-[14px] font-semibold", pending || off ? "border-warn/50 text-warn" : "border-ok/40 text-ok")}>
         {pending || off ? <TriangleAlert className="size-4.5" /> : <CheckCircle2 className="size-4.5" />}
         {pending ? `يوجد ${pending} حركة مخزنية لم تترحل بعد. اضغط ترحيل الحركات الآن.` : off ? "يوجد فرق بين المخازن والدفتر" : "المخازن والدفتر متطابقين"}

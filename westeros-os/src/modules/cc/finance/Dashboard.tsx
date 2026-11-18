@@ -14,9 +14,11 @@ import { CHANNELS } from "./sales";
 import { incomeStatement, kpis, netByCode } from "./statements";
 import { inTransit, postedMoves, stockRecon } from "./sync";
 import { addMonths, monthEnd } from "./treasury";
-import { BranchSelect, fmt, periodLabel, periodOf, PeriodPicker, today, type Period } from "./ui";
+import { BranchSelect, fmt, periodLabel, periodOf, PeriodPicker, today, type Period, GroupTitle, Toolbar } from "./ui";
 import { useFinance } from "./useFinance";
 
+/** a share of sales with its amount under it; with no sales in the period the amount stands alone */
+const share = (bp: number | null, amount: number, extra = "") => (bp == null ? { value: fmt(amount), sub: "لا توجد مبيعات في الفترة" } : { value: pc(bp), sub: extra || fmt(amount) });
 const pc = (bp: number | null) => (bp == null ? "—" : `${(bp / 100).toFixed(1)}%`);
 const delta = (now: number, was: number) => (was ? `${now >= was ? "▲" : "▼"} ${Math.abs(((now - was) / Math.abs(was)) * 100).toFixed(1)}% عن الفترة السابقة` : "");
 const points = (now: number | null, was: number | null) => (now == null || was == null ? "" : `${now >= was ? "▲" : "▼"} ${(Math.abs(now - was) / 100).toFixed(1)} نقطة عن الفترة السابقة`);
@@ -70,29 +72,36 @@ export default function Dashboard() {
 
   if (!fin.loading && !fin.accounts.length) return <Card><EmptyState icon={<ListTree />} title="ابدأ بشجرة الحسابات" body="حمّل الشجرة الجاهزة لمطعم أو استوردها من إكسل، وبعدها تظهر المؤشرات هنا." action={<Link to="/finance/chart"><Button>افتح شجرة الحسابات</Button></Link>} /></Card>;
 
-  const tiles: { label: string; value: string; sub?: string; icon: JSX.Element; tone?: Tone; show: boolean }[] = [
-    { label: "المبيعات", value: fmt(now.sales), sub: compare ? delta(now.sales, was.sales) : "", icon: <TrendingUp />, show: true },
-    { label: "مجمل الربح", value: fmt(now.gross), sub: `${pc(now.grossBp)} من المبيعات`, icon: <CircleDollarSign />, tone: "ok", show: profit },
-    { label: "صافي الربح", value: fmt(now.net), sub: [`${pc(now.netBp)} من المبيعات`, compare ? delta(now.net, was.net) : ""].filter(Boolean).join(" · "), icon: <Scale />, tone: now.net < 0 ? "danger" : "ok", show: profit },
-    { label: "تكلفة الطعام", value: pc(now.foodCostBp), sub: compare ? points(now.foodCostBp, was.foodCostBp) || fmt(now.cogs) : fmt(now.cogs), icon: <Utensils />, tone: "brass", show: true },
-    { label: "الرواتب والأجور", value: pc(now.payrollBp), sub: fmt(now.payroll), icon: <Users />, tone: "info", show: profit },
-    { label: "الإيجار", value: pc(now.rentBp), sub: fmt(now.rent), icon: <Percent />, tone: "info", show: profit },
-    { label: "الهالك وعجز الجرد", value: pc(now.wasteBp), sub: fmt(now.waste), icon: <Package />, tone: "danger", show: true },
-    { label: "النقدية والبنوك", value: fmt(now.cash), sub: "الرصيد في نهاية الفترة", icon: <Banknote />, show: true },
-    { label: "مستحق للموردين", value: fmt(now.payables), sub: "الرصيد في نهاية الفترة", icon: <Truck />, tone: "warn", show: true },
-    { label: "قيمة المخزون", value: fmt(now.stock), sub: "الرصيد في نهاية الفترة", icon: <Package />, tone: "brass", show: true },
-    { label: "نقطة التعادل في الشهر", value: now.breakEven == null ? "—" : fmt(now.breakEven), sub: "المبيعات اللي تغطي المصروفات", icon: <HandCoins />, tone: "neutral", show: profit },
+  const tiles: { g: "p" | "c" | "b"; label: string; value: string; sub?: string; icon: JSX.Element; tone?: Tone; show: boolean }[] = [
+    { g: "p", label: "المبيعات", value: fmt(now.sales), sub: compare ? delta(now.sales, was.sales) : "", icon: <TrendingUp />, show: true },
+    { g: "p", label: "مجمل الربح", value: fmt(now.gross), sub: now.grossBp == null ? "" : `${pc(now.grossBp)} من المبيعات`, icon: <CircleDollarSign />, tone: "ok", show: profit },
+    { g: "p", label: "صافي الربح", value: fmt(now.net), sub: [now.netBp == null ? "" : `${pc(now.netBp)} من المبيعات`, compare ? delta(now.net, was.net) : ""].filter(Boolean).join(" · "), icon: <Scale />, tone: now.net < 0 ? "danger" : "ok", show: profit },
+    { g: "p", label: "تكلفة الطعام", ...share(now.foodCostBp, now.cogs, compare ? points(now.foodCostBp, was.foodCostBp) : ""), icon: <Utensils />, tone: "brass", show: true },
+    { g: "c", label: "الرواتب والأجور", ...share(now.payrollBp, now.payroll), icon: <Users />, tone: "info", show: profit },
+    { g: "c", label: "الإيجار", ...share(now.rentBp, now.rent), icon: <Percent />, tone: "info", show: profit },
+    { g: "c", label: "الهالك وعجز الجرد", ...share(now.wasteBp, now.waste), icon: <Package />, tone: "danger", show: true },
+    { g: "b", label: "النقدية والبنوك", value: fmt(now.cash), sub: "", icon: <Banknote />, show: true },
+    { g: "b", label: "مستحق للموردين", value: fmt(now.payables), sub: "", icon: <Truck />, tone: "warn", show: true },
+    { g: "b", label: "قيمة المخزون", value: fmt(now.stock), sub: "", icon: <Package />, tone: "brass", show: true },
+    { g: "c", label: "نقطة التعادل في الشهر", value: now.breakEven == null ? "0.00" : fmt(now.breakEven), sub: now.breakEven == null ? "تتحسب مع أول مبيعات ومصروفات" : "المبيعات اللي تغطي المصروفات", icon: <HandCoins />, tone: "neutral", show: profit },
   ];
   return (
     <div className="grid gap-4">
-      <div className="flex flex-wrap items-end gap-2">
+      <Toolbar note={periodLabel(period)}>
         <PeriodPicker value={period} onChange={setPeriod} startMonth={fin.settings.yearStartMonth} />
         <BranchSelect fin={fin} value={branch} onChange={setBranch} />
-        <span className="pb-2.5 text-[13px] text-muted">{periodLabel(period)}</span>
-      </div>
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {tiles.filter((t) => t.show).map((t, i) => <StatTile key={t.label} index={i} label={t.label} value={<span className="num" dir="ltr">{t.value}</span>} sub={t.sub} icon={t.icon} tone={t.tone} />)}
-      </div>
+      </Toolbar>
+      {([["p", "المبيعات والربح", "lg:grid-cols-4"], ["c", "أهم المصروفات", "lg:grid-cols-4"], ["b", "الأرصدة في نهاية الفترة", "lg:grid-cols-3"]] as const).map(([g, title, cols]) => {
+        const list = tiles.filter((t) => t.show && t.g === g);
+        return list.length ? (
+          <section key={g} className="grid gap-2.5">
+            <GroupTitle>{title}</GroupTitle>
+            <div className={cn("grid grid-cols-2 gap-3", list.length >= 3 ? cols : "", list.length % 2 ? "max-lg:[&>*:last-child]:col-span-2" : "")}>
+              {list.map((t, i) => <StatTile key={t.label} index={i} label={t.label} value={<span className="num" dir="ltr">{t.value}</span>} sub={t.sub} icon={t.icon} tone={t.tone} />)}
+            </div>
+          </section>
+        ) : null;
+      })}
       <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
         <Card className="grid content-start gap-3 p-4">
           <h2 className="text-[16px] font-bold">المبيعات آخر ستة شهور</h2>

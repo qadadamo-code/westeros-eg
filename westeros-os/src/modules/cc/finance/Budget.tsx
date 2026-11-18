@@ -13,7 +13,7 @@ import { fiscalYear } from "./journal";
 import { useFinPerms } from "./perms";
 import { monthEnd } from "./treasury";
 import { MAX_LEVEL } from "./tree";
-import { BranchSelect, Confirm, fmt, fromText, PrintButton, printTable, today, toText } from "./ui";
+import { BranchSelect, Confirm, fmt, fromText, PrintButton, printTable, today, toText, Toolbar } from "./ui";
 import { useFinance, type Fin } from "./useFinance";
 
 const err = (e: unknown) => String((e as Error)?.message ?? e);
@@ -34,11 +34,10 @@ export default function Budget() {
   const years = [thisYear + 1, thisYear, thisYear - 1, thisYear - 2];
   return (
     <div className="grid gap-4">
-      <div className="flex flex-wrap items-end gap-2">
-        <Segmented label="الموازنة" value={tab} onChange={setTab} options={[{ value: "versus", label: "الفعلي مقابل الموازنة" }, ...(perms.has("budget") ? [{ value: "edit" as const, label: "إعداد الموازنة" }] : [])]} />
+      <Toolbar lead={<Segmented size="sm" className="max-sm:grid max-sm:w-full max-sm:grid-cols-2 max-sm:[&>button]:h-10" label="الموازنة" value={tab} onChange={setTab} options={[{ value: "versus", label: "الفعلي مقابل الموازنة" }, ...(perms.has("budget") ? [{ value: "edit" as const, label: "إعداد الموازنة" }] : [])]} />}>
         <Select label="السنة المالية" className="w-40" value={String(year)} onChange={(e) => setYear(Number(e.target.value))} options={years.map((y) => ({ value: String(y), label: fin.settings.yearStartMonth === 1 ? String(y) : `${y}/${y + 1}` }))} />
         <BranchSelect fin={fin} value={branch} onChange={setBranch} label="موازنة" all="المطعم كله" />
-      </div>
+      </Toolbar>
       {tab === "edit" && perms.has("budget") ? <Editor key={`${year}|${branch}|${doc?.id ?? ""}`} fin={fin} year={year} branch={branch || null} months={months} data={budgetOf(doc)} row={doc} /> : <Versus fin={fin} year={year} branch={branch || null} months={months} data={doc ? budgetOf(doc) : null} onEdit={perms.has("budget") ? () => setTab("edit") : undefined} />}
     </div>
   );
@@ -62,16 +61,12 @@ function Versus({ fin, year, branch, months, data, onEdit }: { fin: Fin; year: n
   if (!data) return <Card className="grid gap-2 p-6 text-center"><p className="text-[15px] font-semibold">لا توجد موازنة لهذه السنة</p><p className="text-[13.5px] text-muted">اعمل موازنة السنة من تبويب إعداد الموازنة، وبعدها تظهر المقارنة هنا شهر بشهر.</p>{onEdit ? <div><Button onClick={onEdit}>إعداد الموازنة</Button></div> : null}</Card>;
   return (
     <>
-      <div className="flex flex-wrap items-end gap-2">
+      <Toolbar more={<><ExportButton file="الفعلي-مقابل-الموازنة" head={["الكود", ...head]} rows={() => [...r.rows.map((x) => [x.code, x.label, x.budget / 100000, x.actual / 100000, x.diff / 100000, pct(x.actual, x.budget)]), ...totals.map(([l, t]) => ["", l, t.budget / 100000, t.actual / 100000, (t.actual - t.budget) / 100000, pct(t.actual, t.budget)])]} /><PrintButton onClick={() => printTable(title, sub, head, [...r.rows.map((x) => [{ text: `${x.code} ${x.label}`, indent: x.level - 1, bold: !x.postable }, ...[fmt(x.budget), fmt(x.actual), fmt(x.diff), pct(x.actual, x.budget)].map((t) => ({ text: t, align: "end" as const }))]), ...totals.map(([l, t]) => [{ text: l, bold: true }, ...[fmt(t.budget), fmt(t.actual), fmt(t.actual - t.budget), pct(t.actual, t.budget)].map((x) => ({ text: x, align: "end" as const, bold: true }))])])} /></>}>
         <Select label="من شهر" className="w-36" value={from} onChange={(e) => setFrom(e.target.value)} options={opts} />
         <Select label="إلى شهر" className="w-36" value={to} onChange={(e) => setTo(e.target.value)} options={opts.filter((o) => o.value >= from)} />
         <Select label="التفصيل" className="w-40" value={level} onChange={(e) => setLevel(e.target.value)} options={Array.from({ length: MAX_LEVEL - 1 }, (_, i) => ({ value: String(i + 2), label: `حتى المستوى ${i + 2}` }))} />
-        <div className="ms-auto flex gap-2">
-          <ExportButton file="الفعلي-مقابل-الموازنة" head={["الكود", ...head]} rows={() => [...r.rows.map((x) => [x.code, x.label, x.budget / 100000, x.actual / 100000, x.diff / 100000, pct(x.actual, x.budget)]), ...totals.map(([l, t]) => ["", l, t.budget / 100000, t.actual / 100000, (t.actual - t.budget) / 100000, pct(t.actual, t.budget)])]} />
-          <PrintButton onClick={() => printTable(title, sub, head, [...r.rows.map((x) => [{ text: `${x.code} ${x.label}`, indent: x.level - 1, bold: !x.postable }, ...[fmt(x.budget), fmt(x.actual), fmt(x.diff), pct(x.actual, x.budget)].map((t) => ({ text: t, align: "end" as const }))]), ...totals.map(([l, t]) => [{ text: l, bold: true }, ...[fmt(t.budget), fmt(t.actual), fmt(t.actual - t.budget), pct(t.actual, t.budget)].map((x) => ({ text: x, align: "end" as const, bold: true }))])])} />
-        </div>
-      </div>
-      <div className="grid gap-2 sm:grid-cols-4">
+      </Toolbar>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {totals.map(([l, t, more]) => { const diff = t.actual - t.budget, good = more ? diff >= 0 : diff <= 0; return <Card key={l} className="p-3"><div className="text-[12.5px] text-muted">{l}</div><div className="num text-[18px] font-bold" dir="ltr">{fmt(t.actual)}</div><div className={cn("num text-[12.5px]", !t.budget ? "text-muted" : good ? "text-ok" : "text-danger")} dir="ltr">{t.budget ? `${diff >= 0 ? "+" : ""}${fmt(diff)} عن ${fmt(t.budget)}` : "بدون موازنة"}</div></Card>; })}
       </div>
       <Card className="overflow-hidden">
@@ -135,14 +130,11 @@ function Editor({ fin, year, branch, months, data, row }: { fin: Fin; year: numb
   };
   return (
     <>
-      <div className="flex flex-wrap items-end gap-2">
-        <p className="min-w-0 flex-1 text-[13.5px] text-muted">اكتب رقم السنة للحساب ويتوزع على الشهور بالتساوي، أو افتح الحساب واكتب كل شهر لوحده. الإيرادات تكتب بالموجب.</p>
+      <Toolbar actions={<><Button variant="outline" icon={<Copy />} onClick={() => setAsk(true)}>من فعلي السنة الماضية</Button><Button icon={<Save />} loading={busy} disabled={!dirty} onClick={save}>حفظ الموازنة</Button></>} more={<><ExportButton file={`موازنة-${year}`} head={["الكود", "الحساب", "السنة", ...months.map(label)]} rows={() => accounts.map((a) => [a.code, a.name.ar, yearTotal(lines[a.id]) / 100000, ...months.map((m) => (lines[a.id]?.[m] ?? 0) / 100000)])} /></>}>
         <Input label="زيادة %" dir="ltr" inputMode="decimal" className="w-24" value={percent} onChange={(e) => setPercent(e.target.value)} />
-        <Button variant="outline" icon={<Copy />} onClick={() => setAsk(true)}>من فعلي السنة الماضية</Button>
-        <ExportButton file={`موازنة-${year}`} head={["الكود", "الحساب", "السنة", ...months.map(label)]} rows={() => accounts.map((a) => [a.code, a.name.ar, yearTotal(lines[a.id]) / 100000, ...months.map((m) => (lines[a.id]?.[m] ?? 0) / 100000)])} />
-        <Button icon={<Save />} loading={busy} disabled={!dirty} onClick={save}>حفظ الموازنة</Button>
-      </div>
-      <div className="grid gap-2 sm:grid-cols-4">
+      </Toolbar>
+      <p className="text-[13.5px] text-muted">اكتب رقم السنة للحساب ويتوزع على الشهور بالتساوي، أو افتح الحساب واكتب كل شهر لوحده. الإيرادات تكتب بالموجب.</p>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {[["الإيرادات", total("revenue")], ["تكلفة المبيعات", total("cogs")], ["المصروفات", total("expense")], ["صافي الربح المتوقع", net]].map(([l, v]) => <Card key={l as string} className="p-3"><div className="text-[12.5px] text-muted">{l}</div><div className={cn("num text-[18px] font-bold", (v as number) < 0 && "text-danger")} dir="ltr">{fmt(v as number)}</div></Card>)}
       </div>
       {accounts.length ? (["revenue", "cogs", "expense"] as const).map((type) => (

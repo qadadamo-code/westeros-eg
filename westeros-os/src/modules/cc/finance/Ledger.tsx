@@ -9,7 +9,7 @@ import { fmtDay } from "../lib";
 import { SOURCE_LABEL } from "./Journal";
 import { entryRef, KIND_LABEL, statement } from "./journal";
 import { isDebit, typeInfo } from "./tree";
-import { AccountSelect, Amount, BranchSelect, fmt, periodLabel, periodOf, PeriodPicker, PrintButton, printTable, type Period } from "./ui";
+import { AccountSelect, Amount, BranchSelect, fmt, periodLabel, periodOf, PeriodPicker, PrintButton, printTable, type Period, Toolbar } from "./ui";
 import { useFinance } from "./useFinance";
 
 export default function Ledger() {
@@ -34,17 +34,12 @@ export default function Ledger() {
   const sub = acc ? `${acc.code} · ${acc.name.ar} · ${periodLabel(period)}${branch ? ` · ${fin.branchName(branch)}` : ""}` : "";
   return (
     <div className="grid gap-4">
-      <div className="flex flex-wrap items-end gap-2">
+      <Toolbar more={<>{s && acc ? <><ExportButton file={`كشف-حساب-${acc.code}`} head={head} rows={() => [[period.from ?? "", "", "", "رصيد افتتاحي", "", "", Math.round(s.opening / 1000) / 100], ...s.rows.map((r) => [r.entry.date, entryRef(r.entry), kind(r.entry), text(r), Math.round(r.debit / 1000) / 100, Math.round(r.credit / 1000) / 100, Math.round(r.balance / 1000) / 100])]} /><PrintButton onClick={() => printTable("كشف حساب", sub, head, [["", "", "", "رصيد افتتاحي", "", "", { text: fmt(s.opening), align: "end" }], ...s.rows.map((r) => [fmtDay(r.entry.date), entryRef(r.entry), kind(r.entry), text(r), { text: r.debit ? fmt(r.debit) : "", align: "end" as const }, { text: r.credit ? fmt(r.credit) : "", align: "end" as const }, { text: fmt(r.balance), align: "end" as const }])], ["", "", "", "الإجمالي والرصيد الختامي", { text: fmt(s.debit), align: "end" }, { text: fmt(s.credit), align: "end" }, { text: fmt(s.closing), align: "end" }])} /></> : null}</>}>
         <AccountSelect fin={fin} label="الحساب" leaf={false} className="w-72" value={id} onChange={(v) => setParams(v ? { account: v } : {}, { replace: true })} />
         <PeriodPicker value={period} onChange={setPeriod} startMonth={fin.settings.yearStartMonth} />
         <BranchSelect fin={fin} value={branch} onChange={setBranch} />
         {fin.centres.length ? <BranchSelectLike label="مركز التكلفة" value={centre} onChange={setCentre} options={fin.centres.map((c) => ({ value: c.id, label: c.name.ar }))} /> : null}
-        <span className="flex-1" />
-        {s && acc ? <>
-          <ExportButton file={`كشف-حساب-${acc.code}`} head={head} rows={() => [[period.from ?? "", "", "", "رصيد افتتاحي", "", "", Math.round(s.opening / 1000) / 100], ...s.rows.map((r) => [r.entry.date, entryRef(r.entry), kind(r.entry), text(r), Math.round(r.debit / 1000) / 100, Math.round(r.credit / 1000) / 100, Math.round(r.balance / 1000) / 100])]} />
-          <PrintButton onClick={() => printTable("كشف حساب", sub, head, [["", "", "", "رصيد افتتاحي", "", "", { text: fmt(s.opening), align: "end" }], ...s.rows.map((r) => [fmtDay(r.entry.date), entryRef(r.entry), kind(r.entry), text(r), { text: r.debit ? fmt(r.debit) : "", align: "end" as const }, { text: r.credit ? fmt(r.credit) : "", align: "end" as const }, { text: fmt(r.balance), align: "end" as const }])], ["", "", "", "الإجمالي والرصيد الختامي", { text: fmt(s.debit), align: "end" }, { text: fmt(s.credit), align: "end" }, { text: fmt(s.closing), align: "end" }])} />
-        </> : null}
-      </div>
+      </Toolbar>
       {!acc || !s ? <Card className="p-6"><EmptyState icon={<FileText />} title="اختر حساب لعرض كشفه" body="اختر أي حساب من القائمة، أو اضغط على الحساب من شجرة الحسابات." /></Card> : (
         <>
           <div className="grid gap-3 sm:grid-cols-4">

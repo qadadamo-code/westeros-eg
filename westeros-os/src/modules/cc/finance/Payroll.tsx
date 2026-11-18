@@ -12,7 +12,7 @@ import { EntryView } from "./Journal";
 import { advanceBalances, cancelPayroll, EMPLOYEE, employeeOf, giveAdvance, grossOf, lineOf, netOf, payPayroll, PAYROLL, payrollOf, payrollProblem, payrollTotals, runPayroll, saveEmployee, type PayLine } from "./payroll";
 import { useActor, useFinPerms } from "./perms";
 import { MONEY_LABEL, moneyAccounts } from "./treasury";
-import { BranchSelect, Confirm, fmt, fromText, PrintButton, printTable, toText, today } from "./ui";
+import { BranchSelect, Confirm, fmt, fromText, PrintButton, printTable, toText, today, Toolbar } from "./ui";
 import { useFinance, type Fin } from "./useFinance";
 
 const err = (e: unknown) => String((e as Error)?.message ?? e);
@@ -41,12 +41,8 @@ export default function Payroll() {
   const owed = [...advances.values()].reduce((s, v) => s + v, 0);
   return (
     <div className="grid gap-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <Segmented label="الرواتب" value={tab} onChange={setTab} options={[{ value: "runs", label: "كشوف الرواتب" }, { value: "staff", label: "الموظفون والسلف" }]} />
-        <span className="flex-1" />
-        {can ? <><Button icon={<HandCoins />} disabled={!active.length} onClick={() => setRun(true)}>كشف رواتب شهر</Button><Button variant="outline" icon={<Plus />} onClick={() => setEdit("new")}>موظف جديد</Button></> : null}
-      </div>
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+      <Toolbar lead={<Segmented size="sm" className="max-sm:grid max-sm:w-full max-sm:grid-cols-2 max-sm:[&>button]:h-10" label="الرواتب" value={tab} onChange={setTab} options={[{ value: "runs", label: "كشوف الرواتب" }, { value: "staff", label: "الموظفون والسلف" }]} />} actions={<>{can ? <><Button icon={<HandCoins />} disabled={!active.length} onClick={() => setRun(true)}>كشف رواتب شهر</Button><Button variant="outline" icon={<Plus />} onClick={() => setEdit("new")}>موظف جديد</Button></> : null}</>} />
+      <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
         {[["موظفون على رأس العمل", String(active.length), ""], ["تكلفة الرواتب في الشهر", fmt(monthly), ""], ["رواتب مستحقة لم تصرف", fmt(unpaid), unpaid ? "text-brass" : ""], ["سلف على الموظفين", fmt(owed), ""]].map(([l, v, c]) => <Card key={l} className="p-3"><div className="text-[12.5px] text-muted">{l}</div><div className={cn("num text-[18px] font-bold", c)} dir="ltr">{v}</div></Card>)}
       </div>
 
@@ -232,7 +228,7 @@ function RunView({ fin, doc, can, canCancel, onClose, onEntry }: { fin: Fin; doc
       <Button variant="ghost" onClick={onClose}>إغلاق</Button></div>}>
       <div className="grid gap-3 text-[14px]">
         <div className="flex flex-wrap items-center gap-3"><Badge tone={st.tone}>{st.text}</Badge>{p.paidOn ? <span className="text-muted">اتصرف {fmtDay(p.paidOn)} من {fin.byId.get(p.paidFrom ?? "")?.name.ar ?? ""}</span> : null}<span className="text-muted">سجله {p.by || "—"}</span></div>
-        <div className="grid gap-2 sm:grid-cols-4">{[["إجمالي الرواتب", t.gross], ["تأمينات حصة الشركة", t.insEmployer], ["استقطاعات (تأمينات، ضريبة، سلف)", t.insEmployee + t.tax + t.advance], ["الصافي للموظفين", t.net]].map(([l, v]) => <div key={l as string} className="rounded-xl border border-line p-2.5"><div className="text-[12.5px] text-muted">{l}</div><div className="num text-[16px] font-bold" dir="ltr">{fmt(v as number)}</div></div>)}</div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{[["إجمالي الرواتب", t.gross], ["تأمينات حصة الشركة", t.insEmployer], ["استقطاعات (تأمينات، ضريبة، سلف)", t.insEmployee + t.tax + t.advance], ["الصافي للموظفين", t.net]].map(([l, v]) => <div key={l as string} className="rounded-xl border border-line p-2.5"><div className="text-[12.5px] text-muted">{l}</div><div className="num text-[16px] font-bold" dir="ltr">{fmt(v as number)}</div></div>)}</div>
         <div className="max-h-[46vh] overflow-auto thin-scrollbar rounded-xl border border-line"><table className="w-full">
           <thead className="sticky top-0 bg-surface"><tr className="text-[12.5px] text-muted">{head.slice(0, 7).map((h, i) => <th key={h} className={cn("border-b border-line px-3 py-2 font-semibold", i >= 2 ? "text-end" : "text-start")}>{h}</th>)}</tr></thead>
           <tbody>{rows.map((r, i) => <tr key={i} className="border-t border-line/60"><td className="px-3 py-1.5 font-semibold">{r[0]}</td><td className="px-3 py-1.5">{r[1]}</td>{r.slice(2).map((v, k) => <td key={k} className={cn("num px-3 py-1.5 text-end", k === 4 && "font-bold")} dir="ltr">{fmt(v as number, "—")}</td>)}</tr>)}</tbody>

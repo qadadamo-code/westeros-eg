@@ -11,7 +11,7 @@ import { entryRef, fiscalYear } from "./journal";
 import { EntryView } from "./Journal";
 import { useFinPerms } from "./perms";
 import { MONEY_LABEL, moneyAccounts } from "./treasury";
-import { fmt, PrintButton, printTable, today } from "./ui";
+import { fmt, PrintButton, printTable, today, Toolbar } from "./ui";
 import { useFinance, type Fin } from "./useFinance";
 import { liabilityByMonth, settleVat, vatRows, type VatRow } from "./vat";
 
@@ -38,13 +38,10 @@ export default function Tax() {
   const cells = (r: VatRow) => [label(r.month), r.output, r.input, r.net, r.carryIn, r.payable, r.settled ? "متسوي" : "مفتوح"] as const;
   return (
     <div className="grid gap-4">
-      <div className="flex flex-wrap items-end gap-2">
+      <Toolbar more={<><ExportButton file={`ضريبة-القيمة-المضافة-${year}`} head={[...head]} rows={() => list.map((r) => cells(r).map((c, i) => (i >= 1 && i <= 5 ? (c as number) / 100000 : c)))} /><PrintButton onClick={() => printTable("إقرار ضريبة القيمة المضافة", String(year), [...head], list.map((r) => cells(r).map((c, i) => (i >= 1 && i <= 5 ? { text: fmt(c as number, "—"), align: "end" as const } : String(c)))), ["الإجمالي", { text: fmt(sum.output), align: "end", bold: true }, { text: fmt(sum.input), align: "end", bold: true }, { text: fmt(sum.output - sum.input), align: "end", bold: true }, "", { text: fmt(sum.payable), align: "end", bold: true }, ""])} /></>}>
         <Select label="السنة" className="w-36" value={String(year)} onChange={(e) => setYear(Number(e.target.value))} options={years.map((y) => ({ value: String(y), label: String(y) }))} />
-        <span className="flex-1" />
-        <ExportButton file={`ضريبة-القيمة-المضافة-${year}`} head={[...head]} rows={() => list.map((r) => cells(r).map((c, i) => (i >= 1 && i <= 5 ? (c as number) / 100000 : c)))} />
-        <PrintButton onClick={() => printTable("إقرار ضريبة القيمة المضافة", String(year), [...head], list.map((r) => cells(r).map((c, i) => (i >= 1 && i <= 5 ? { text: fmt(c as number, "—"), align: "end" as const } : String(c)))), ["الإجمالي", { text: fmt(sum.output), align: "end", bold: true }, { text: fmt(sum.input), align: "end", bold: true }, { text: fmt(sum.output - sum.input), align: "end", bold: true }, "", { text: fmt(sum.payable), align: "end", bold: true }, ""])} />
-      </div>
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+      </Toolbar>
+      <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
         {[["ضريبة المخرجات (على المبيعات)", sum.output, ""], ["ضريبة المدخلات (على المشتريات)", sum.input, ""], ["المستحق عن السنة", sum.payable, sum.payable ? "text-brass" : ""], ["رصيد دائن للشهر القادم", credit, credit ? "text-ok" : ""]].map(([l, v, c]) => <Card key={l as string} className="p-3"><div className="text-[12.5px] text-muted">{l}</div><div className={cn("num text-[18px] font-bold", c as string)} dir="ltr">{fmt(v as number)}</div></Card>)}
       </div>
       {list.length ? (

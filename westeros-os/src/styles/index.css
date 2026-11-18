@@ -181,6 +181,16 @@
   /* numbers: mono, tabular, isolated so they read LTR inside Arabic */
   .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
   .ltr { direction: ltr; unicode-bidi: isolate; }
+  /* finance toolbars on a phone: two filters to a row, each filling its cell */
+  @media (max-width: 639.98px) {
+    .fin-filters > * { min-width: 0; }
+    .fin-filters :is(button, input) { width: 100% !important; }
+    .fin-filters > .fin-wide, .fin-filters > :last-child:nth-child(odd) { grid-column: 1 / -1; }
+    .fin-filters.fin-closed > :not(.fin-wide) { display: none !important; }
+    .fin-filters.fin-closed:not(:has(> .fin-wide)) { display: none; }
+  }
+  /* a form laid on a grid: every field fills its cell */
+  .fin-fill :is(button, input) { width: 100% !important; }
   .no-scrollbar { scrollbar-width: none; }
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .thin-scrollbar { scrollbar-width: thin; scrollbar-color: var(--sf-line-strong) transparent; }

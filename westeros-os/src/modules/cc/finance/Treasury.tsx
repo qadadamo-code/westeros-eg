@@ -17,7 +17,7 @@ import { EntryView, ToolsDialog } from "./Journal";
 import { useActor, useFinPerms } from "./perms";
 import { autoMatch, BANK_RECON, bankRecon, CASH_COUNT, countedTotal, DENOMINATIONS, METHODS, MONEY_LABEL, moneyAccounts, PREPAID, prepaidSchedule, tafqeet, VOUCHER_LABEL, voucherProblem, type BankReconData, type PrepaidData, type StatementLine, type VoucherInput, type VoucherType } from "./treasury";
 import { addMoneyAccount, ensureBranchTills, postCashCount, runPrepaid, saveBankRecon, savePrepaid, saveVoucher } from "./treasuryOps";
-import { AccountSelect, Amount, BranchSelect, Confirm, esc, fmt, fromText, periodLabel, periodOf, PeriodPicker, printDoc, PrintButton, printTable, sheetDay, toText, today, type Period } from "./ui";
+import { AccountSelect, Amount, BranchSelect, Confirm, esc, fmt, fromText, periodLabel, periodOf, PeriodPicker, printDoc, PrintButton, printTable, sheetDay, toText, today, type Period, Toolbar } from "./ui";
 import { useFinance, type Fin } from "./useFinance";
 
 const err = (e: unknown) => String((e as Error)?.message ?? e);
@@ -75,11 +75,7 @@ export default function Treasury() {
 
   return (
     <div className="grid gap-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <Segmented label="الخزينة والبنوك" value={tab} onChange={setTab} options={[{ value: "accounts", label: "الخزائن والبنوك" }, { value: "vouchers", label: "السندات والمصروفات" }, { value: "prepaid", label: "مقدمة ومتكررة" }, { value: "bank", label: "تسوية البنك" }]} />
-        <span className="flex-1" />
-        {can ? VOUCHER_KINDS.map((t) => <Button key={t} variant={t === "receipt" ? "primary" : "secondary"} icon={ICON[t]} onClick={() => setVoucher({ type: t })}>{t === "transfer" ? "تحويل" : VOUCHER_LABEL[t]}</Button>) : null}
-      </div>
+      <Toolbar lead={<Segmented size="sm" className="max-sm:grid max-sm:w-full max-sm:grid-cols-2 max-sm:[&>button]:h-10" label="الخزينة والبنوك" value={tab} onChange={setTab} options={[{ value: "accounts", label: "الخزائن والبنوك" }, { value: "vouchers", label: "السندات والمصروفات" }, { value: "prepaid", label: "مقدمة ومتكررة" }, { value: "bank", label: "تسوية البنك" }]} />} actions={<>{can ? VOUCHER_KINDS.map((t) => <Button key={t} variant={t === "receipt" ? "primary" : "secondary"} icon={ICON[t]} onClick={() => setVoucher({ type: t })}>{t === "transfer" ? "تحويل" : VOUCHER_LABEL[t]}</Button>) : null}</>} />
 
       {tab === "accounts" ? (
         <>
@@ -221,14 +217,11 @@ function Vouchers({ fin, onOpen }: { fin: Fin; onOpen: (e: FinEntry) => void }) 
   ];
   return (
     <div className="grid gap-3">
-      <div className="flex flex-wrap items-end gap-2">
-        <Input label="بحث" className="w-52" placeholder="رقم، طرف، بيان، مرجع" value={q} onChange={(e) => setQ(e.target.value)} />
+      <Toolbar collapse more={<><ExportButton file="السندات" head={["النوع", "رقم السند", "رقم القيد", "التاريخ", "الطرف", "البيان", "طريقة الدفع", "مرجع", "المبلغ", "الحالة"]} rows={() => rows.map((e) => [VOUCHER_LABEL[e.kind as VoucherType], Number(e.meta?.voucherNo) || "", entryRef(e), e.date, String(e.meta?.party ?? ""), e.memo, String(e.meta?.method ?? ""), String(e.meta?.ref ?? ""), amountOf(e) / 100000, STATUS_LABEL[e.status]])} /><PrintButton onClick={() => printTable("السندات والمصروفات", periodLabel(period), ["السند", "التاريخ", "الطرف", "البيان", "المبلغ"], rows.map((e) => [`${VOUCHER_LABEL[e.kind as VoucherType]} ${e.meta?.voucherNo ?? ""}`, fmtDay(e.date), String(e.meta?.party ?? ""), e.memo, { text: fmt(amountOf(e)), align: "end" as const }]))} /></>}>
+        <Input label="بحث" wrapClassName="fin-wide" className="w-52" placeholder="رقم، طرف، بيان، مرجع" value={q} onChange={(e) => setQ(e.target.value)} />
         <PeriodPicker value={period} onChange={setPeriod} startMonth={fin.settings.yearStartMonth} />
         <Select label="النوع" className="w-48" value={kind} onChange={(e) => setKind(e.target.value)} options={[{ value: "", label: "الكل" }, ...VOUCHER_KINDS.map((k) => ({ value: k, label: VOUCHER_LABEL[k] }))]} />
-        <span className="flex-1" />
-        <ExportButton file="السندات" head={["النوع", "رقم السند", "رقم القيد", "التاريخ", "الطرف", "البيان", "طريقة الدفع", "مرجع", "المبلغ", "الحالة"]} rows={() => rows.map((e) => [VOUCHER_LABEL[e.kind as VoucherType], Number(e.meta?.voucherNo) || "", entryRef(e), e.date, String(e.meta?.party ?? ""), e.memo, String(e.meta?.method ?? ""), String(e.meta?.ref ?? ""), amountOf(e) / 100000, STATUS_LABEL[e.status]])} />
-        <PrintButton onClick={() => printTable("السندات والمصروفات", periodLabel(period), ["السند", "التاريخ", "الطرف", "البيان", "المبلغ"], rows.map((e) => [`${VOUCHER_LABEL[e.kind as VoucherType]} ${e.meta?.voucherNo ?? ""}`, fmtDay(e.date), String(e.meta?.party ?? ""), e.memo, { text: fmt(amountOf(e)), align: "end" as const }]))} />
-      </div>
+      </Toolbar>
       <div className="flex flex-wrap gap-x-6 gap-y-1 text-[14px]"><span>المقبوضات <b><Amount value={sum("receipt")} zero="0.00" /></b></span><span>المدفوعات <b><Amount value={sum("payment")} zero="0.00" /></b></span><span>المصروفات <b><Amount value={sum("expense")} zero="0.00" /></b></span><span>التحويلات <b><Amount value={sum("transfer")} zero="0.00" /></b></span></div>
       <Card className="overflow-hidden"><Table columns={columns} rows={rows} rowKey={(e) => e.id} onRowClick={onOpen} empty={<EmptyState compact icon={<Receipt />} title="لا توجد سندات في هذه الفترة" />} /></Card>
     </div>
@@ -442,16 +435,12 @@ function BankRecon({ fin, can }: { fin: Fin; can: boolean }) {
   const unmatched = statement.filter((s) => !s.match);
   return (
     <div className="grid gap-4">
-      <div className="flex flex-wrap items-end gap-2">
+      <Toolbar actions={<>{can ? <Button variant="secondary" onClick={() => save(false)}>حفظ</Button> : null}{can ? <Button disabled={r.difference !== 0 || !balance.trim()} onClick={() => setAsk(true)}>إقفال التسوية</Button> : null}</>} more={<>{can ? <ExcelImport fields={[{ key: "التاريخ", aliases: ["date", "تاريخ"] }, { key: "البيان", aliases: ["description", "الوصف"] }, { key: "مدين", aliases: ["debit", "سحب", "مسحوبات"] }, { key: "دائن", aliases: ["credit", "إيداع", "ايداع"] }]} run={fromSheet} skipNote="سطر بدون تاريخ أو بدون مبلغ. الاعتماد يطابق السطور مع القيود ويعلم على المتطابق فقط، ولا يعمل قيود." /> : null}</>}>
         <Select label="الحساب البنكي" className="w-64" value={accountId} onChange={(e) => setAccountId(e.target.value)} options={banks.map((a) => ({ value: a.id, label: a.name.ar }))} />
         <Input label="تاريخ كشف البنك" type="date" dir="ltr" className="w-44" value={date} onChange={(e) => setDate(e.target.value || today())} />
         <Input label="رصيد كشف البنك (ج.م)" dir="ltr" inputMode="decimal" className="w-44" value={balance} onChange={(e) => setBalance(e.target.value)} />
-        <span className="flex-1" />
-        {can ? <ExcelImport fields={[{ key: "التاريخ", aliases: ["date", "تاريخ"] }, { key: "البيان", aliases: ["description", "الوصف"] }, { key: "مدين", aliases: ["debit", "سحب", "مسحوبات"] }, { key: "دائن", aliases: ["credit", "إيداع", "ايداع"] }]} run={fromSheet} skipNote="سطر بدون تاريخ أو بدون مبلغ. الاعتماد يطابق السطور مع القيود ويعلم على المتطابق فقط، ولا يعمل قيود." /> : null}
-        {can ? <Button variant="secondary" onClick={() => save(false)}>حفظ</Button> : null}
-        {can ? <Button disabled={r.difference !== 0 || !balance.trim()} onClick={() => setAsk(true)}>إقفال التسوية</Button> : null}
-      </div>
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+      </Toolbar>
+      <div className="grid grid-cols-2 gap-2 lg:grid-cols-5 max-lg:[&>*:last-child:nth-child(odd)]:col-span-2">
         {[["رصيد الدفتر", r.book], ["رصيد كشف البنك", data.statementBalance], ["إيداعات لم تظهر في البنك", r.depositsInTransit], ["مدفوعات لم تصرف", r.outstanding], ["الفرق", r.difference]].map(([label, v], i) => (
           <Card key={label as string} className={cn("p-3", i === 4 && (v ? "border-danger/60" : "border-ok/50"))}><div className="text-[12.5px] text-muted">{label}</div><div className={cn("text-[18px] font-bold", i === 4 && (v ? "text-danger" : "text-ok"))}><Amount value={v as number} zero="0.00" /></div></Card>
         ))}

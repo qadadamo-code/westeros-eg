@@ -12,7 +12,7 @@ import { entryRef } from "./journal";
 import { EntryView } from "./Journal";
 import { useActor, useFinPerms } from "./perms";
 import { MONEY_LABEL, moneyAccounts } from "./treasury";
-import { BranchSelect, Confirm, fmt, fromText, PrintButton, printTable, toText, today } from "./ui";
+import { BranchSelect, Confirm, fmt, fromText, PrintButton, printTable, toText, today, Toolbar } from "./ui";
 import { useFinance, type Fin } from "./useFinance";
 
 const err = (e: unknown) => String((e as Error)?.message ?? e);
@@ -48,14 +48,10 @@ export default function Assets() {
   };
   return (
     <div className="grid gap-4">
-      <div className="flex flex-wrap items-end gap-2">
+      <Toolbar actions={<>{can ? <Button icon={<Plus />} onClick={() => setEdit("new")}>أصل جديد</Button> : null}</>} more={<><ExportButton file="سجل-الأصول-الثابتة" head={[...head]} rows={() => list.map((d) => cells(d).map((c, i) => (i >= 5 && i <= 7 ? (c as number) / 100000 : c)))} /><PrintButton onClick={() => printTable("سجل الأصول الثابتة", fmtDay(today()), [...head], list.map((d) => cells(d).map((c, i) => (i >= 5 && i <= 7 ? { text: fmt(c as number), align: "end" as const } : String(c)))))} /></>}>
         <Select label="النوع" className="w-56" value={type} onChange={(e) => setType(e.target.value)} options={[{ value: "", label: "كل الأنواع" }, ...ASSET_TYPES.map((t) => ({ value: t.key, label: t.label }))]} />
-        <span className="flex-1" />
-        <ExportButton file="سجل-الأصول-الثابتة" head={[...head]} rows={() => list.map((d) => cells(d).map((c, i) => (i >= 5 && i <= 7 ? (c as number) / 100000 : c)))} />
-        <PrintButton onClick={() => printTable("سجل الأصول الثابتة", fmtDay(today()), [...head], list.map((d) => cells(d).map((c, i) => (i >= 5 && i <= 7 ? { text: fmt(c as number), align: "end" as const } : String(c)))))} />
-        {can ? <Button icon={<Plus />} onClick={() => setEdit("new")}>أصل جديد</Button> : null}
-      </div>
-      <div className="grid gap-2 sm:grid-cols-4">
+      </Toolbar>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {[["تكلفة الأصول في الخدمة", sum.cost], ["مجمع الإهلاك", sum.acc], ["القيمة الدفترية", sum.cost - sum.acc]].map(([l, v]) => <Card key={l as string} className="p-3"><div className="text-[12.5px] text-muted">{l}</div><div className="num text-[18px] font-bold" dir="ltr">{fmt(v as number)}</div></Card>)}
         <Card className={cn("flex items-center gap-2 p-3", dueSum && "border-brass/50 bg-brass/10")}>
           <div className="min-w-0 flex-1"><div className="text-[12.5px] text-muted">إهلاك مستحق حتى {label(month)}</div><div className="num text-[18px] font-bold" dir="ltr">{fmt(dueSum)}</div></div>

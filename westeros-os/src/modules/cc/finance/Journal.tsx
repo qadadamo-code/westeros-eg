@@ -13,7 +13,7 @@ import { fmtAt, fmtDay } from "../lib";
 import { amountOf, entryProblem, entryRef, KIND_LABEL, STATUS_LABEL, totalsOf } from "./journal";
 import { approveEntry, RECURRING, rejectEntry, removeDraft, reverseEntry, runRecurring, saveDraft, saveRecurring, saveTemplate, submitEntry, TEMPLATE, type RecurringData, type TemplateData } from "./journalOps";
 import { useActor, useFinPerms } from "./perms";
-import { AccountSelect, Amount, BranchSelect, fmt, fromText, periodLabel, periodOf, PeriodPicker, PrintButton, printTable, toText, today, type Period } from "./ui";
+import { AccountSelect, Amount, BranchSelect, fmt, fromText, periodLabel, periodOf, PeriodPicker, PrintButton, printTable, toText, today, type Period, Toolbar } from "./ui";
 import { useFinance, type Fin } from "./useFinance";
 
 const err = (e: unknown) => String((e as Error).message ?? e);
@@ -89,24 +89,15 @@ export default function Journal() {
 
   return (
     <div className="grid gap-4">
-      <div className="flex flex-wrap items-end gap-2">
-        <Input label="بحث" className="w-52" icon={<Search />} placeholder="رقم، بيان أو مبلغ" value={q} onChange={(e) => setQ(e.target.value)} />
+      <Toolbar collapse actions={<>{canEnter ? <Button icon={<Plus />} onClick={() => setForm({ row: null })}>قيد جديد</Button> : null}{pending ? <Button variant="soft" onClick={() => setStatus("pending")}>ينتظر الاعتماد: <span className="num">{pending}</span></Button> : null}</>} more={<>{canEnter ? <Button variant="secondary" icon={<FilePlus2 />} onClick={() => setTools("templates")}>قوالب القيود</Button> : null}{canEnter ? <Button variant="secondary" icon={<Repeat />} onClick={() => setTools("recurring")}>قيود متكررة</Button> : null}<ExportButton file="دفتر-اليومية" head={["رقم القيد", "التاريخ", "النوع", "الحالة", "البيان", "كود الحساب", "اسم الحساب", "مدين", "دائن", "بيان السطر", "الفرع", "المستخدم"]} rows={exportRows} /><PrintButton onClick={print} /></>}>
+        <Input label="بحث" wrapClassName="fin-wide" className="w-48" icon={<Search />} placeholder="رقم، بيان أو مبلغ" value={q} onChange={(e) => setQ(e.target.value)} />
         <PeriodPicker value={period} onChange={setPeriod} startMonth={fin.settings.yearStartMonth} />
-        <Select label="النوع" className="w-36" value={kind} onChange={(e) => setKind(e.target.value)} options={[{ value: "", label: "كل الأنواع" }, ...Object.entries(KIND_LABEL).map(([value, label]) => ({ value, label }))]} />
-        <Select label="الحالة" className="w-40" value={status} onChange={(e) => setStatus(e.target.value)} options={[{ value: "", label: "كل الحالات" }, ...Object.entries(STATUS_LABEL).map(([value, label]) => ({ value, label }))]} />
-        <AccountSelect fin={fin} label="الحساب" className="w-56" value={account} onChange={setAccount} placeholder="كل الحسابات" />
+        <Select label="النوع" className="w-32" value={kind} onChange={(e) => setKind(e.target.value)} options={[{ value: "", label: "كل الأنواع" }, ...Object.entries(KIND_LABEL).map(([value, label]) => ({ value, label }))]} />
+        <Select label="الحالة" className="w-36" value={status} onChange={(e) => setStatus(e.target.value)} options={[{ value: "", label: "كل الحالات" }, ...Object.entries(STATUS_LABEL).map(([value, label]) => ({ value, label }))]} />
+        <AccountSelect fin={fin} label="الحساب" className="w-48" value={account} onChange={setAccount} placeholder="كل الحسابات" />
         <BranchSelect fin={fin} value={branch} onChange={setBranch} />
         {users.length > 1 ? <Select label="المستخدم" className="w-40" value={user} onChange={(e) => setUser(e.target.value)} options={[{ value: "", label: "الكل" }, ...users.map((u) => ({ value: u, label: u }))]} /> : null}
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        {canEnter ? <Button icon={<Plus />} onClick={() => setForm({ row: null })}>قيد جديد</Button> : null}
-        {canEnter ? <Button variant="secondary" icon={<FilePlus2 />} onClick={() => setTools("templates")}>قوالب القيود</Button> : null}
-        {canEnter ? <Button variant="secondary" icon={<Repeat />} onClick={() => setTools("recurring")}>قيود متكررة</Button> : null}
-        {pending ? <Button variant="soft" onClick={() => setStatus("pending")}>ينتظر الاعتماد: <span className="num">{pending}</span></Button> : null}
-        <span className="flex-1" />
-        <ExportButton file="دفتر-اليومية" head={["رقم القيد", "التاريخ", "النوع", "الحالة", "البيان", "كود الحساب", "اسم الحساب", "مدين", "دائن", "بيان السطر", "الفرع", "المستخدم"]} rows={exportRows} />
-        <PrintButton onClick={print} />
-      </div>
+      </Toolbar>
       <Card className="overflow-hidden">
         <Table columns={columns} rows={rows} rowKey={(e) => e.id} onRowClick={open} empty={<EmptyState compact icon={<BookOpen />} title="لا توجد قيود" body="القيود التلقائية تظهر هنا مع أول حركة، والقيود اليدوية من زر قيد جديد." />} />
       </Card>

@@ -7,7 +7,7 @@ import { Card, Select, Switch } from "@/ui";
 import { ExportButton } from "../ui";
 import { trialBalance } from "./journal";
 import { MAX_LEVEL } from "./tree";
-import { Amount, BranchSelect, fmt, periodLabel, periodOf, PeriodPicker, PrintButton, printTable, type Period } from "./ui";
+import { Amount, BranchSelect, fmt, periodLabel, periodOf, PeriodPicker, PrintButton, printTable, type Period, Toolbar } from "./ui";
 import { useFinance } from "./useFinance";
 
 export default function TrialBalance() {
@@ -25,16 +25,13 @@ export default function TrialBalance() {
   const sub = `${periodLabel(period)} · ${branch ? fin.branchName(branch) : "كل الفروع"}`;
   return (
     <div className="grid gap-4">
-      <div className="flex flex-wrap items-end gap-2">
+      <Toolbar more={<><ExportButton file="ميزان-المراجعة" head={head} rows={() => t.rows.map((r) => [r.account.code, r.account.name.ar, ...cols.map((c) => Math.round(r[c] / 1000) / 100)])} /><PrintButton onClick={() => printTable("ميزان المراجعة", sub, head, t.rows.map((r) => [r.account.code, { text: r.account.name.ar, indent: level === "leaves" ? 0 : r.level - 1, bold: !r.account.postable }, ...cols.map((c) => ({ text: r[c] ? fmt(r[c]) : "", align: "end" as const }))]), ["", "الإجمالي", ...cols.map((c) => ({ text: fmt(t.sum[c]), align: "end" as const }))])} /></>}>
         <PeriodPicker value={period} onChange={setPeriod} startMonth={fin.settings.yearStartMonth} />
         <BranchSelect fin={fin} value={branch} onChange={setBranch} />
         <Select label="المستوى" className="w-48" value={level} onChange={(e) => setLevel(e.target.value)} options={[{ value: "leaves", label: "الحسابات النهائية فقط" }, ...Array.from({ length: MAX_LEVEL }, (_, i) => ({ value: String(i + 1), label: `حتى المستوى ${i + 1}` }))]} />
         <Select label="العرض" className="w-44" value={mode} onChange={(e) => setMode(e.target.value as typeof mode)} options={[{ value: "full", label: "افتتاحي وحركة وختامي" }, { value: "balances", label: "بالأرصدة" }, { value: "totals", label: "بالمجاميع" }]} />
         <div className="pb-1"><Switch checked={hideZero} onChange={setHideZero} label="إخفاء الحسابات بدون حركة" /></div>
-        <span className="flex-1" />
-        <ExportButton file="ميزان-المراجعة" head={head} rows={() => t.rows.map((r) => [r.account.code, r.account.name.ar, ...cols.map((c) => Math.round(r[c] / 1000) / 100)])} />
-        <PrintButton onClick={() => printTable("ميزان المراجعة", sub, head, t.rows.map((r) => [r.account.code, { text: r.account.name.ar, indent: level === "leaves" ? 0 : r.level - 1, bold: !r.account.postable }, ...cols.map((c) => ({ text: r[c] ? fmt(r[c]) : "", align: "end" as const }))]), ["", "الإجمالي", ...cols.map((c) => ({ text: fmt(t.sum[c]), align: "end" as const }))])} />
-      </div>
+      </Toolbar>
       <div className={cn("flex items-center gap-2 rounded-xl border px-3 py-2.5 text-[14px] font-semibold", t.balanced ? "border-ok/40 text-ok" : "border-danger/50 text-danger")}>
         {t.balanced ? <CheckCircle2 className="size-4.5" /> : <TriangleAlert className="size-4.5" />}
         {t.balanced ? "الميزان متوازن: مجموع المدين يساوي مجموع الدائن" : "الميزان غير متوازن، راجع القيود"}

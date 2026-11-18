@@ -1,6 +1,6 @@
 /** Shared pieces of the finance screens: amounts, the period picker, the account picker, printing a table. */
-import { useEffect, useMemo, type ReactNode } from "react";
-import { Printer } from "lucide-react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { ChevronDown, Ellipsis, ListFilter, Printer } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { major, MONEY_MASK, moneyHidden, UNITS_PER_MAJOR, type Units } from "@/lib/money";
 import { Button, Dialog, Input, Select } from "@/ui";
@@ -49,7 +49,7 @@ export function periodOf(preset: string, startMonth = 1, now = today()): Period 
 
 export function PeriodPicker({ value, onChange, startMonth = 1, className }: { value: Period; onChange: (p: Period) => void; startMonth?: number; className?: string }) {
   return (
-    <div className={cn("flex flex-wrap items-end gap-2", className)}>
+    <div className={cn("flex flex-wrap items-end gap-2 max-sm:contents", className)}>
       <Select label="الفترة" className="w-44" value={value.preset} options={PRESETS.map((p) => ({ value: p.id, label: p.label }))}
         onChange={(e) => onChange(e.target.value === "custom" ? { preset: "custom", from: value.from ?? today(), to: value.to ?? today() } : periodOf(e.target.value, startMonth))} />
       {value.preset === "custom" ? (
@@ -60,6 +60,35 @@ export function PeriodPicker({ value, onChange, startMonth = 1, className }: { v
       ) : null}
     </div>
   );
+}
+/**
+ * صف الأدوات فوق كل شاشة: the filters lead and the buttons close the row, both on one baseline.
+ * On a phone the filters sit two to a row and the secondary buttons (`more`) fold under one button, so the list is never pushed off the screen.
+ * `fold` keeps `more` folded on a wide screen too, for a screen with many buttons. `collapse` folds a long row of filters
+ * on a phone under one button, leaving the search box (`fin-wide`) in sight.
+ */
+export function Toolbar({ lead, children, actions, more, fold, collapse, note, className }: { lead?: ReactNode; children?: ReactNode; collapse?: boolean; actions?: ReactNode; more?: ReactNode; fold?: boolean; note?: ReactNode; className?: string }) {
+  const [open, setOpen] = useState(false);
+  const [filters, setFilters] = useState(false);
+  return (
+    <div className={cn("flex flex-wrap items-end gap-x-3 gap-y-2.5", className)}>
+      {lead ? <div className="min-w-0 max-w-full max-sm:order-0 max-sm:w-full">{lead}</div> : null}
+      {children ? <div className={cn("fin-filters grid min-w-0 grid-cols-2 items-end gap-2 max-sm:order-2 max-sm:w-full sm:flex sm:flex-wrap", collapse && !filters && "fin-closed")}>{children}</div> : null}
+      {note ? <div className="pb-2.5 text-[13px] text-muted max-sm:order-3 max-sm:w-full max-sm:pb-0">{note}</div> : null}
+      {actions || more || (children && collapse) ? (
+        <div className={cn("ms-auto flex flex-wrap items-center justify-end gap-2 max-sm:w-full max-sm:justify-start", actions ? "max-sm:order-1" : "max-sm:order-3", !actions && !more && "sm:hidden")}>
+          {actions}
+          {children && collapse ? <Button type="button" variant={filters ? "soft" : "secondary"} icon={<ListFilter />} aria-expanded={filters} className="sm:hidden" onClick={() => setFilters((v) => !v)}>تصفية</Button> : null}
+          {more ? <Button type="button" variant="secondary" icon={<Ellipsis />} aria-expanded={open} className={cn(!fold && "sm:hidden")} onClick={() => setOpen((v) => !v)}>المزيد<ChevronDown className={cn("size-4 transition-transform", open && "rotate-180")} /></Button> : null}
+          {more ? <div className={cn("flex-wrap items-center justify-end gap-2 max-sm:justify-start", open ? "flex w-full" : "hidden", !fold && "sm:contents")}>{more}</div> : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+/** a small heading over a group of cards or fields */
+export function GroupTitle({ children, className }: { children: ReactNode; className?: string }) {
+  return <h2 className={cn("flex items-center gap-2 text-[13px] font-bold text-muted after:h-px after:flex-1 after:bg-line", className)}>{children}</h2>;
 }
 export const periodLabel = (p: Period) => (p.from || p.to ? `${p.from ? p.from.split("-").reverse().join("/") : "البداية"} إلى ${p.to ? p.to.split("-").reverse().join("/") : "اليوم"}` : "كل الفترات");
 

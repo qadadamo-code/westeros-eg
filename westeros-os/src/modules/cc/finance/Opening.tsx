@@ -1,19 +1,19 @@
 /** الأرصدة الافتتاحية: the balance of every balance-sheet account on the first day, saved as one opening entry. */
-import { useMemo, useState } from "react";
-import { Scale } from "lucide-react";
+import { Fragment, useMemo, useState } from "react";
+import { Scale, Search } from "lucide-react";
 import { useDb } from "@/data/hooks";
 import type { FinLine } from "@/data/financeTypes";
 import { cn } from "@/lib/cn";
 import { major } from "@/lib/money";
-import { Button, Card, Input, useToast } from "@/ui";
+import { Button, Card, Input, Select, Switch, useToast } from "@/ui";
 import { ExcelImport, type ImportPlan } from "../catalog/Import";
 import { ExportButton } from "../ui";
 import { sheetCode, sheetNumber } from "../xlsx";
 import { periodStatus } from "./journal";
 import { OPENING, saveOpening } from "./journalOps";
 import { useActor, useFinPerms } from "./perms";
-import { typeInfo } from "./tree";
-import { fmt, fromText, toText, today } from "./ui";
+import { TYPES, typeInfo } from "./tree";
+import { fmt, fromText, toText, today, Toolbar } from "./ui";
 import { useFinance } from "./useFinance";
 
 export default function Opening() {
@@ -27,6 +27,9 @@ export default function Opening() {
   const [date, setDate] = useState(cur?.date ?? fin.settings.startDate ?? today());
   const [vals, setVals] = useState<Record<string, { debit: string; credit: string }>>(() => Object.fromEntries((cur?.lines ?? []).map((l) => [l.account, { debit: toText(l.debit), credit: toText(l.credit) }])));
   const [busy, setBusy] = useState(false);
+  const [q, setQ] = useState("");
+  const [kind, setKind] = useState("");
+  const [filled, setFilled] = useState(false);
   const lines: FinLine[] = leaves.map((a) => ({ account: a.id, debit: fromText(vals[a.id]?.debit ?? ""), credit: fromText(vals[a.id]?.credit ?? "") })).filter((l) => l.debit || l.credit);
   const debit = lines.reduce((s, l) => s + l.debit, 0);
   const credit = lines.reduce((s, l) => s + l.credit, 0);
@@ -58,36 +61,38 @@ export default function Opening() {
     if (!dry) setVals(next);
     return plan;
   };
+  const shown = leaves.filter((a) => (!kind || a.type === kind) && (!q.trim() || a.code.startsWith(q.trim()) || a.name.ar.includes(q.trim())) && (!filled || vals[a.id]?.debit || vals[a.id]?.credit));
   return (
     <div className="grid gap-4">
-      <div className="flex flex-wrap items-end gap-2">
+      <Toolbar actions={<>{can && !locked ? <Button variant="secondary" icon={<Scale />} onClick={balance}>موازنة الفرق على حساب الأرصدة الافتتاحية</Button> : null}</>} more={<>{can && !locked ? <ExcelImport fields={[{ key: "كود الحساب", aliases: ["الكود", "code"] }, { key: "مدين", aliases: ["debit"] }, { key: "دائن", aliases: ["credit"] }]} run={fromSheet} skipNote="كود غير موجود، حساب تجميعي، أو بدون مبلغ. الاعتماد يملأ الخانات فقط، والحفظ من زر الحفظ." /> : null}<ExportButton file="الأرصدة-الافتتاحية" head={["كود الحساب", "اسم الحساب", "مدين", "دائن"]} rows={() => leaves.map((a) => [a.code, a.name.ar, fromText(vals[a.id]?.debit ?? "") / 100000 || "", fromText(vals[a.id]?.credit ?? "") / 100000 || ""])} /></>}>
         <Input label="تاريخ الأرصدة الافتتاحية" type="date" dir="ltr" className="w-48" value={date} disabled={locked} onChange={(e) => setDate(e.target.value)} />
-        {can && !locked ? <Button variant="secondary" icon={<Scale />} onClick={balance}>موازنة الفرق على حساب الأرصدة الافتتاحية</Button> : null}
-        <span className="flex-1" />
-        {can && !locked ? <ExcelImport fields={[{ key: "كود الحساب", aliases: ["الكود", "code"] }, { key: "مدين", aliases: ["debit"] }, { key: "دائن", aliases: ["credit"] }]} run={fromSheet} skipNote="كود غير موجود، حساب تجميعي، أو بدون مبلغ. الاعتماد يملأ الخانات فقط، والحفظ من زر الحفظ." /> : null}
-        <ExportButton file="الأرصدة-الافتتاحية" head={["كود الحساب", "اسم الحساب", "مدين", "دائن"]} rows={() => leaves.map((a) => [a.code, a.name.ar, fromText(vals[a.id]?.debit ?? "") / 100000 || "", fromText(vals[a.id]?.credit ?? "") / 100000 || ""])} />
-      </div>
+        <Input label="بحث" icon={<Search />} placeholder="كود أو اسم" className="w-48" value={q} onChange={(e) => setQ(e.target.value)} />
+        <Select label="النوع" className="w-40" value={kind} onChange={(e) => setKind(e.target.value)} options={[{ value: "", label: "كل الأنواع" }, ...TYPES.filter((t) => leaves.some((a) => a.type === t.id)).map((t) => ({ value: t.id, label: t.ar }))]} />
+        <div className="pb-1"><Switch checked={filled} onChange={setFilled} label="المكتوب فقط" /></div>
+      </Toolbar>
       <p className="text-[13.5px] text-muted">رصيد المخزون الافتتاحي لا يدخل من هنا: السيستم يحسبه لوحده من أرصدة المخازن في تاريخ بداية القيود التلقائية.</p>
       {locked ? <p className="rounded-xl border border-line px-3 py-2.5 text-[14px] text-muted">شهر الأرصدة الافتتاحية مقفول. افتح الشهر أولا لتعديلها.</p> : null}
       <Card className="overflow-hidden">
         <div className="overflow-x-auto thin-scrollbar">
           <table className="w-full text-[14px]">
-            <thead><tr className="text-[12.5px] text-muted"><th className="border-b border-line px-3 py-2.5 text-start font-semibold">الكود</th><th className="border-b border-line px-3 py-2.5 text-start font-semibold">الحساب</th><th className="border-b border-line px-3 py-2.5 text-start font-semibold">النوع</th><th className="w-40 border-b border-line px-3 py-2.5 text-start font-semibold">مدين</th><th className="w-40 border-b border-line px-3 py-2.5 text-start font-semibold">دائن</th></tr></thead>
+            <thead><tr className="text-[12.5px] text-muted"><th className="border-b border-line px-3 py-2.5 text-start font-semibold">الحساب</th><th className="w-28 border-b border-line px-2 py-2.5 text-start font-semibold sm:w-44 sm:px-3">مدين</th><th className="w-28 border-b border-line px-2 py-2.5 text-start font-semibold sm:w-44 sm:px-3">دائن</th></tr></thead>
             <tbody>
-              {leaves.map((a) => (
-                <tr key={a.id} className="border-t border-line/60">
-                  <td className="num px-3 py-1.5 text-muted" dir="ltr">{a.code}</td>
-                  <td className="px-3 py-1.5">{a.name.ar}<span className="block text-[12px] text-muted">{fin.ix.path(a.code).slice(1, -1).map((p) => p.name.ar).join(" / ")}</span></td>
-                  <td className="px-3 py-1.5 text-muted">{typeInfo(a.type).ar}</td>
-                  <td className="px-3 py-1.5"><Input aria-label={`مدين ${a.name.ar}`} dir="ltr" inputMode="decimal" disabled={!can || locked} value={vals[a.id]?.debit ?? ""} onChange={(e) => set(a.id, "debit", e.target.value)} /></td>
-                  <td className="px-3 py-1.5"><Input aria-label={`دائن ${a.name.ar}`} dir="ltr" inputMode="decimal" disabled={!can || locked} value={vals[a.id]?.credit ?? ""} onChange={(e) => set(a.id, "credit", e.target.value)} /></td>
-                </tr>
+              {shown.map((a, i) => (
+                <Fragment key={a.id}>
+                  {i === 0 || shown[i - 1].type !== a.type ? <tr className="bg-surface-2"><td colSpan={3} className="px-3 py-2 text-[13.5px] font-bold text-brass-text">{typeInfo(a.type).ar}</td></tr> : null}
+                  <tr className="border-t border-line/60">
+                    <td className="px-3 py-1.5"><span className="num ml-2 text-[12.5px] text-muted max-sm:block" dir="ltr">{a.code}</span>{a.name.ar}<span className="block text-[12px] text-muted">{fin.ix.path(a.code).slice(1, -1).map((p) => p.name.ar).join(" / ")}</span></td>
+                    <td className="px-2 py-1.5 sm:px-3"><Input aria-label={`مدين ${a.name.ar}`} dir="ltr" inputMode="decimal" placeholder="0.00" disabled={!can || locked} value={vals[a.id]?.debit ?? ""} onChange={(e) => set(a.id, "debit", e.target.value)} /></td>
+                    <td className="px-2 py-1.5 sm:px-3"><Input aria-label={`دائن ${a.name.ar}`} dir="ltr" inputMode="decimal" placeholder="0.00" disabled={!can || locked} value={vals[a.id]?.credit ?? ""} onChange={(e) => set(a.id, "credit", e.target.value)} /></td>
+                  </tr>
+                </Fragment>
               ))}
+              {!shown.length ? <tr><td colSpan={3} className="px-3 py-8 text-center text-muted">لا توجد حسابات بهذا البحث.</td></tr> : null}
             </tbody>
           </table>
         </div>
       </Card>
-      <div className="sticky bottom-3 z-10 flex flex-wrap items-center gap-x-5 gap-y-2 rounded-2xl border border-line bg-surface px-4 py-3 text-[14px] shadow-lg">
+      <div className="sticky bottom-24 z-10 flex md:bottom-3 flex-wrap items-center gap-x-5 gap-y-2 rounded-2xl border border-line bg-surface px-4 py-3 text-[14px] shadow-lg">
         <span>مجموع المدين <b className="num" dir="ltr">{fmt(debit)}</b></span>
         <span>مجموع الدائن <b className="num" dir="ltr">{fmt(credit)}</b></span>
         <span className={cn("font-bold", diff ? "text-danger" : "text-ok")}>{diff ? <>الفرق <span className="num" dir="ltr">{fmt(Math.abs(diff))}</span></> : "متوازن"}</span>

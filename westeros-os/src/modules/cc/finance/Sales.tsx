@@ -13,7 +13,7 @@ import { useActor, useFinPerms } from "./perms";
 import { cancelDoc, CHANNELS, PAY_KEYS, postSalesDay, postSettlement, SALES_DAY, salesOf, salesProblem, salesTotals, SETTLEMENT, settlementOf, settlementProblem, settlementTotal, waitingAccounts, type SalesInput } from "./sales";
 import { netByCode } from "./statements";
 import { MONEY_LABEL, moneyAccounts } from "./treasury";
-import { AccountSelect, BranchSelect, Confirm, esc, fmt, fromText, PeriodPicker, periodOf, printDoc, PrintButton, printTable, toText, today, type Period } from "./ui";
+import { AccountSelect, BranchSelect, Confirm, esc, fmt, fromText, PeriodPicker, periodOf, printDoc, PrintButton, printTable, toText, today, type Period, Toolbar } from "./ui";
 import { useFinance, type Fin } from "./useFinance";
 
 const err = (e: unknown) => String((e as Error)?.message ?? e);
@@ -43,14 +43,11 @@ export default function Sales() {
   const cells = (d: FinDoc) => { const x = salesOf(d); return [d.code, fmtDay(d.date ?? ""), fin.branchName(d.branchId), d.name, x.orders || 0, x.net, x.vat, x.paid, x.diff, d.status === "posted" ? "مرحل" : "ملغي"] as const; };
   return (
     <div className="grid gap-4">
-      <div className="flex flex-wrap items-end gap-2">
-        <Segmented label="المبيعات" value={tab} onChange={setTab} options={[{ value: "days", label: "ملخصات المبيعات" }, { value: "settlements", label: "التسويات" }]} />
+      <Toolbar lead={<Segmented size="sm" className="max-sm:grid max-sm:w-full max-sm:grid-cols-2 max-sm:[&>button]:h-10" label="المبيعات" value={tab} onChange={setTab} options={[{ value: "days", label: "ملخصات المبيعات" }, { value: "settlements", label: "التسويات" }]} />} actions={<>{can ? <><Button icon={<Plus />} onClick={() => setAdd(true)}>مبيعات يوم</Button><Button variant="secondary" icon={<ArrowLeftRight />} onClick={() => setSettle({})}>تسوية</Button></> : null}</>}>
         <PeriodPicker value={period} onChange={setPeriod} startMonth={fin.settings.yearStartMonth} />
         <BranchSelect fin={fin} value={branch} onChange={setBranch} />
-        <span className="flex-1" />
-        {can ? <><Button icon={<Plus />} onClick={() => setAdd(true)}>مبيعات يوم</Button><Button variant="secondary" icon={<ArrowLeftRight />} onClick={() => setSettle({})}>تسوية</Button></> : null}
-      </div>
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+      </Toolbar>
+      <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
         {[["المبيعات بدون ضريبة", fmt(sum.net), ""], ["ضريبة المبيعات", fmt(sum.vat), ""], ["متوسط الطلب", sum.orders ? fmt(Math.round(sum.net / sum.orders)) : "—", ""], [sum.diff < 0 ? "عجز الخزينة" : "زيادة الخزينة", fmt(Math.abs(sum.diff)), sum.diff < 0 ? "text-danger" : ""]].map(([l, v, c]) => <Card key={l} className="p-3"><div className="text-[12.5px] text-muted">{l}</div><div className={cn("num text-[18px] font-bold", c)} dir="ltr">{v}</div></Card>)}
       </div>
       {waiting.length ? (

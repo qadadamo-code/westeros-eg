@@ -10,7 +10,7 @@ import { amountOf, entryRef } from "./journal";
 import { EntryView } from "./Journal";
 import { saveSettings } from "./ops";
 import { useActor, useFinPerms } from "./perms";
-import { AccountSelect, Amount, Confirm, fmt, fromText, periodOf, PeriodPicker, today, type Period } from "./ui";
+import { AccountSelect, Amount, Confirm, fmt, fromText, periodOf, PeriodPicker, today, type Period, Toolbar } from "./ui";
 import { useFinance, type Fin } from "./useFinance";
 
 const err = (e: unknown) => String((e as Error)?.message ?? e);
@@ -61,11 +61,8 @@ function List({ fin }: { fin: Fin }) {
   };
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2">
-        <p className="min-w-0 flex-1 text-[13.5px] text-muted">مركز التكلفة يجاوب على سؤال: المصروف ده راح على أي قسم؟ تختاره على سطر القيد أو السند، وتشوف كل مركز في تقرير مراكز التكلفة.</p>
-        {can && missing.length ? <Button variant="outline" onClick={suggest}>إضافة المراكز المقترحة</Button> : null}
-        {can ? <Button icon={<Plus />} onClick={() => setEdit("new")}>مركز جديد</Button> : null}
-      </div>
+      <Toolbar actions={<>{can && missing.length ? <Button variant="outline" onClick={suggest}>إضافة المراكز المقترحة</Button> : null}{can ? <Button icon={<Plus />} onClick={() => setEdit("new")}>مركز جديد</Button> : null}</>} />
+      <p className="text-[13.5px] text-muted">مركز التكلفة يجاوب على سؤال: المصروف ده راح على أي قسم؟ تختاره على سطر القيد أو السند، وتشوف كل مركز في تقرير مراكز التكلفة.</p>
       {rows.length ? (
         <Card className="overflow-hidden">
           <div className="overflow-x-auto thin-scrollbar">

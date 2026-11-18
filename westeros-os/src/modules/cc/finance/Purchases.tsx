@@ -15,7 +15,7 @@ import { useActor, useFinPerms } from "./perms";
 import { AGE_BUCKETS, daysLate, supplierBook, paySplit, PURCHASE, PURCHASE_RETURN, purchaseOf, purchaseProblem, purchaseTotals, supplierOf, type PurchaseLine } from "./purchases";
 import { paySupplier, postPurchase, postReturn, saveSupplier } from "./purchaseOps";
 import { METHODS, MONEY_LABEL, moneyAccounts } from "./treasury";
-import { AccountSelect, BranchSelect, esc, fmt, fromText, printDoc, PrintButton, printTable, toText, today } from "./ui";
+import { AccountSelect, BranchSelect, esc, fmt, fromText, printDoc, PrintButton, printTable, toText, today, Toolbar } from "./ui";
 import { useFinance, type Fin } from "./useFinance";
 
 const err = (e: unknown) => String((e as Error)?.message ?? e);
@@ -45,12 +45,8 @@ export default function Purchases() {
   const openEntry = (id: string | null | undefined) => { const e = fin.entries.find((x) => x.id === id); if (e) setView(e); };
   return (
     <div className="grid gap-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <Segmented label="المشتريات" value={tab} onChange={setTab} options={[{ value: "suppliers", label: "الموردون" }, { value: "invoices", label: "فواتير الشراء" }, { value: "returns", label: "المرتجعات" }, { value: "ageing", label: "أعمار الديون" }]} />
-        <span className="flex-1" />
-        {can ? <><Button icon={<FileText />} onClick={() => setInvoice({})}>فاتورة شراء</Button><Button variant="secondary" icon={<Undo2 />} onClick={() => setRet({})}>مرتجع</Button><Button variant="outline" icon={<Plus />} onClick={() => setSupplier("new")}>مورد جديد</Button></> : null}
-      </div>
-      <div className="grid gap-2 sm:grid-cols-3">
+      <Toolbar lead={<Segmented size="sm" className="max-sm:grid max-sm:w-full max-sm:grid-cols-2 max-sm:[&>button]:h-10" label="المشتريات" value={tab} onChange={setTab} options={[{ value: "suppliers", label: "الموردون" }, { value: "invoices", label: "فواتير الشراء" }, { value: "returns", label: "المرتجعات" }, { value: "ageing", label: "أعمار الديون" }]} />} actions={<>{can ? <><Button icon={<FileText />} onClick={() => setInvoice({})}>فاتورة شراء</Button><Button variant="secondary" icon={<Undo2 />} onClick={() => setRet({})}>مرتجع</Button><Button variant="outline" icon={<Plus />} onClick={() => setSupplier("new")}>مورد جديد</Button></> : null}</>} />
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 max-sm:[&>*:last-child:nth-child(odd)]:col-span-2">
         {[["مستحق للموردين", owed, ""], ["متأخر عن ميعاده", overdue, overdue ? "text-danger" : ""], ["يستحق خلال 7 أيام", soon, soon ? "text-brass" : ""]].map(([l, v, c]) => <Card key={l as string} className="p-3"><div className="text-[12.5px] text-muted">{l}</div><div className={cn("num text-[18px] font-bold", c as string)} dir="ltr">{fmt(v as number)}</div></Card>)}
       </div>
 

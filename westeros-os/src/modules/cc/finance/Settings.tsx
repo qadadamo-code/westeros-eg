@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { Plus, RefreshCw, Trash2 } from "lucide-react";
 import { useDb, useLive } from "@/data/hooks";
 import type { FinCosting, FinLinkRule, FinSettingsData } from "@/data/financeTypes";
-import { Button, Card, Input, Select, Switch, useToast } from "@/ui";
+import { Button, Card, Input, Segmented, Select, Switch, useToast } from "@/ui";
 import { lineUnit, listsOf, STORE_TYPES } from "../lib";
 import { DEFAULT_TREE } from "./chart";
 import { saveSettings } from "./ops";
@@ -49,6 +49,8 @@ export default function Settings() {
   const started = fin.entries.some((e) => e.sourceType?.startsWith(STOCK_SOURCE));
   const [rule, setRule] = useState<FinLinkRule>({ key: "stock.raw", scope: "storeType", id: "", account: "" });
   const [q, setQ] = useState("");
+  const [tab, setTab] = useState<"general" | "costing" | "links" | "rules">("general");
+  const [grp, setGrp] = useState("");
   const save = async (patch: Partial<FinSettingsData>, title = "تم الحفظ") => {
     try { await saveSettings(db, patch); toast({ tone: "success", title }); } catch (e) { toast({ tone: "error", title: "تعذر الحفظ", description: String((e as Error).message ?? e) }); }
   };
@@ -67,11 +69,13 @@ export default function Settings() {
   const scopeName = (r: FinLinkRule) => scopeOptions(r.scope).find((o) => o.value === r.id)?.label ?? "—";
   const stdRows = useMemo(() => items.filter((i) => i.active && (!q.trim() || i.name.ar.includes(q.trim()) || i.sku.includes(q.trim()))).slice(0, 60), [items, q]);
 
+  const openGroup = grouped.find((g) => g.title === grp) ?? grouped[0];
   return (
     <div className="grid gap-4">
-      <Card className="grid gap-4 p-4">
+      <Segmented label="الإعدادات" className="max-sm:grid max-sm:w-full max-sm:grid-cols-2 sm:w-fit" value={tab} onChange={setTab} options={[{ value: "general", label: "السنة والبداية" }, { value: "costing", label: "تكلفة المخزون" }, { value: "links", label: "ربط الحسابات" }, { value: "rules", label: "ربط خاص" }]} />
+      {tab === "general" ? <Card className="grid gap-4 p-4">
         <h2 className="text-[16px] font-bold">السنة المالية ونقطة البداية</h2>
-        <div className="flex flex-wrap items-end gap-3">
+        <div className="fin-fill grid items-start gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Select label="بداية السنة المالية" className="w-44" disabled={!can} value={String(s.yearStartMonth)} options={MONTHS.map((m, i) => ({ value: String(i + 1), label: `1 ${m}` }))} onChange={(e) => save({ yearStartMonth: Number(e.target.value) })} />
           <Input label="تاريخ بداية القيود التلقائية" type="date" dir="ltr" className="w-52" disabled={!can || started} value={s.startDate ?? ""} onChange={(e) => save({ startDate: e.target.value || null })}
             hint={started ? "بدأ الترحيل من هذا التاريخ، لا يتغير بعد أول قيد تلقائي" : "حركات المخازن والتصنيع من هذا اليوم تعمل قيودها لوحدها. ما قبله يدخل رصيد افتتاحي للمخزون مرة واحدة."} />
@@ -84,9 +88,9 @@ export default function Settings() {
           <span className="text-[13.5px] text-muted">{sync.at ? `آخر ترحيل ${fmtAt(sync.at)}${sync.posted ? `، ${sync.posted} قيد جديد` : ""}` : "الترحيل يعمل لوحده مع كل حركة"}</span>
         </div>
         {sync.problems.length ? <ul className="grid gap-1 rounded-xl border border-danger/50 px-3 py-2.5 text-[14px] text-danger">{sync.problems.map((p) => <li key={p}>{p}</li>)}</ul> : null}
-      </Card>
+      </Card> : null}
 
-      <Card className="grid gap-3 p-4">
+      {tab === "costing" ? <Card className="grid gap-3 p-4">
         <h2 className="text-[16px] font-bold">طريقة تكلفة المخزون في القيود</h2>
         <div className="grid gap-2 sm:grid-cols-2">
           {COSTING.map((c) => (
@@ -126,27 +130,30 @@ export default function Settings() {
             <p className="text-[13px] text-muted">صنف بدون تكلفة معيارية يتحرك بالمتوسط المرجح.</p>
           </div>
         ) : null}
-      </Card>
+      </Card> : null}
 
-      <Card className="grid gap-4 p-4">
+      {tab === "links" ? <Card className="grid gap-4 p-4">
         <div>
           <h2 className="text-[16px] font-bold">ربط الحسابات</h2>
           <p className="text-[13.5px] text-muted">الحساب الذي ترحل عليه كل حركة في السيستم. يأتي معبأ من الشجرة الجاهزة وتغير أي ربط منه.</p>
         </div>
-        {grouped.map((g) => (
-          <section key={g.title} className="grid gap-2">
-            <h3 className="text-[14px] font-bold text-primary">{g.title}</h3>
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {g.keys.map((k) => (
-                <AccountSelect key={k} fin={fin} label={KEY_LABEL[k] ?? k} leaf={false} placeholder="غير مربوط" value={idOf(s.links[k])}
-                  onChange={(id) => { if (!can) return; const code = fin.byId.get(id)?.code; void save({ links: { ...s.links, [k]: code ?? "" } }); }} />
-              ))}
-            </div>
-          </section>
-        ))}
-      </Card>
+        <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="مجموعات الربط">
+          {grouped.map((g) => {
+            const on = g.title === openGroup?.title;
+            return <button key={g.title} type="button" role="tab" aria-selected={on} onClick={() => setGrp(g.title)} className={`inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-[13.5px] font-semibold transition-colors ${on ? "bg-brass-soft text-brass-text ring-1 ring-brass/40" : "bg-surface-2 text-muted hover:text-ink"}`}>{g.title}<span className="num text-[11.5px] opacity-70">{g.keys.length}</span></button>;
+          })}
+        </div>
+        {openGroup ? (
+          <div className="grid gap-x-3 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
+            {openGroup.keys.map((k) => (
+              <AccountSelect key={k} fin={fin} label={KEY_LABEL[k] ?? k} leaf={false} placeholder="غير مربوط" value={idOf(s.links[k])}
+                onChange={(id) => { if (!can) return; const code = fin.byId.get(id)?.code; void save({ links: { ...s.links, [k]: code ?? "" } }); }} />
+            ))}
+          </div>
+        ) : null}
+      </Card> : null}
 
-      <Card className="grid gap-3 p-4">
+      {tab === "rules" ? <Card className="grid gap-3 p-4">
         <div>
           <h2 className="text-[16px] font-bold">ربط خاص</h2>
           <p className="text-[13.5px] text-muted">حساب مختلف لنوع مخزن أو فئة خام أو مخزن أو صنف بعينه. الأدق يغلب: الصنف ثم المخزن ثم الفئة ثم نوع المخزن ثم الربط العام.</p>
@@ -177,7 +184,7 @@ export default function Settings() {
             <Button icon={<Plus />} disabled={!rule.id || !rule.account} onClick={async () => { await save({ rules: [...s.rules.filter((r) => !(r.key === rule.key && r.scope === rule.scope && r.id === rule.id)), rule] }, "تم إضافة الربط"); setRule({ ...rule, id: "", account: "" }); }}>إضافة ربط</Button>
           </div>
         ) : null}
-      </Card>
+      </Card> : null}
     </div>
   );
 }
