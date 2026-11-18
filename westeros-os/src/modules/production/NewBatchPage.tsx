@@ -446,7 +446,12 @@ function ChickenForm({ prod, onDone, initial, chosen }: { prod: Prod; onDone: ()
       return [...r, { productId: id, weightKg: 0, count: 0, lines: p?.lines ?? [], packaging: p?.packaging ?? [] }];
     });
   const set = (id: string, patch: Partial<ChickenRow>) => setRows((r) => r.map((x) => (x.productId === id ? { ...x, ...patch } : x)));
-  const draft: BatchDraft = { method: "chicken", itemId: rawId || null, chickenKg, outputs: rows.map((r) => ({ productId: r.productId, weightKg: r.weightKg, count: Math.round(r.count), lines: scaleLines(linesOf(r), r.weightKg), packaging: scaleLines(packagingOf(r), r.weightKg) })) };
+  // Cost Control: storage packaging of a counted product (متبل قبل/بعد العد) = recipe quantity × pieces made; of a product
+  // made by weight = recipe quantity × output kilos. Every packaging quantity is rounded up to a whole number.
+  const modeOf = (r: ChickenRow) => prod.productById.get(r.productId)?.chickenMode ?? "weight";
+  const packByOf = (r: ChickenRow) => (fixed && modeOf(r) !== "weight" ? Math.round(r.count) : r.weightKg);
+  const packOf = (r: ChickenRow) => scaleLines(packagingOf(r), packByOf(r), fixed);
+  const draft: BatchDraft = { method: "chicken", itemId: rawId || null, chickenKg, outputs: rows.map((r) => ({ productId: r.productId, weightKg: r.weightKg, count: Math.round(r.count), lines: scaleLines(linesOf(r), r.weightKg), packaging: packOf(r) })) };
   const built = useMemo(() => buildBatch(draft, ctx), [JSON.stringify(draft), ctx]); // eslint-disable-line react-hooks/exhaustive-deps
   const MODE = { weight: L("بالوزن", "By weight"), pre_count: L("متبل قبل العد", "Marinated before counting"), post_count: L("متبل بعد العد", "Marinated after counting") };
   return (
@@ -479,7 +484,7 @@ function ChickenForm({ prod, onDone, initial, chosen }: { prod: Prod; onDone: ()
                 {mode !== "weight" ? <Num big label={L("العدد الناتج", "Count")} suffix={L("قطعة", "pcs")} value={r.count} onChange={(v) => set(r.productId, { count: v })} /> : null}
               </div>
               <LinesEditor readOnly={fixed} title={L("التتبيلة والمكونات", "Marinade & ingredients")} hint={L("لكامل وزن هذا المنتج", "For this product's whole weight")} lines={linesOf(r)} onChange={(l) => set(r.productId, { lines: l })} by={r.weightKg} items={recipeItems(prod, p.recipeType, p.stockItemId)} itemById={prod.itemById} unitCost={prod.unitCost} />
-              <LinesEditor readOnly={fixed} title={L("باكيج التخزين", "Storage packaging")} lines={packagingOf(r)} onChange={(l) => set(r.productId, { packaging: l })} by={r.weightKg} items={packagingItems(prod)} itemById={prod.itemById} unitCost={prod.unitCost} />
+              <LinesEditor readOnly={fixed} title={L("باكيج التخزين", "Storage packaging")} hint={fixed ? (mode === "weight" ? "على الوزن الناتج، بالتقريب لأعلى لأقرب عدد صحيح. يدخل في التكلفة فقط" : "على العدد الناتج، بالتقريب لأعلى لأقرب عدد صحيح. يدخل في التكلفة فقط") : undefined} lines={packagingOf(r)} onChange={(l) => set(r.productId, { packaging: l })} by={packByOf(r)} whole={fixed} items={packagingItems(prod)} itemById={prod.itemById} unitCost={prod.unitCost} />
             </div>
           </Block>
         );
