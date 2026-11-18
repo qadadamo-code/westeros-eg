@@ -35,6 +35,7 @@ export const modules: ModuleDef[] = Object.entries(found)
     if (!m.default?.id) throw new Error(`${file} must default-export defineModule({...})`);
     return m.default;
   })
+  .filter((m) => !m.hidden)
   .sort((a, b) => (a.nav?.order ?? 999) - (b.nav?.order ?? 999));
 
 {

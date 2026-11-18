@@ -24,6 +24,7 @@ import type {
   StorageLocation, Supplier, SupplierInvoice, SupplierItem, SupplierPayment,
 } from "./inventoryTypes";
 import type { Camera, PeopleCount, RadioClip, SupportTicket, OpsSettings, OpsAck } from "@/modules/ops/types";
+import type { FinAccount, FinCentre, FinDoc, FinEntry, FinSettings } from "./financeTypes";
 import type { ChecklistRun, ChecklistTemplate, MfgBatch, MfgProduct, MfgSettings } from "./productionTypes";
 import type { AccountingSettings, BankStatementLine, CashAccount, CashTransfer, CostCentre, Expense, GlAccount, JournalDraft, RecurringExpense } from "./accountingTypes";
 
@@ -1112,6 +1113,12 @@ export interface Collections {
   checklistRuns: ChecklistRun;
   /* Cost Control requests (0022_cost_control.sql) */
   stockRequests: StockRequest;
+  /* الحسابات: Cost Control finance (financeTypes.ts) */
+  finAccounts: FinAccount;
+  finEntries: FinEntry;
+  finCentres: FinCentre;
+  finSettings: FinSettings;
+  finDocs: FinDoc;
 }
 export type CollectionName = keyof Collections;
 export type RowOf<C extends CollectionName> = Collections[C];
@@ -1220,5 +1227,10 @@ export const TABLE_NAMES: { [C in CollectionName]: string } = {
   checklistTemplates: "checklist_templates",
   checklistRuns: "checklist_runs",
   stockRequests: "stock_requests",
+  finAccounts: "fin_accounts",
+  finEntries: "fin_entries",
+  finCentres: "fin_cost_centres",
+  finSettings: "fin_settings",
+  finDocs: "fin_docs",
 };
 export const COLLECTIONS = Object.keys(TABLE_NAMES) as CollectionName[];

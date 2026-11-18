@@ -1,0 +1,136 @@
+/**
+ * الحسابات (Cost Control version): chart of accounts, journal, cost centres and the finance settings
+ * (supabase: fin_accounts · fin_entries · fin_cost_centres · fin_settings · fin_docs; src/modules/cc/finance).
+ * These tables are separate from the backup system's accounting tables (gl_accounts, ledger_entries …), which stay untouched.
+ * Money is Units (0.00001 EGP), days are "YYYY-MM-DD".
+ */
+import type { Units } from "@/lib/money";
+
+interface Row {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  restaurantId: string;
+}
+interface Loc {
+  ar: string;
+  en: string;
+}
+
+/** The six roots of the tree: 1 أصول · 2 التزامات · 3 حقوق ملكية · 4 إيرادات · 5 تكلفة المبيعات · 6 مصروفات */
+export type FinAccountType = "asset" | "liability" | "equity" | "revenue" | "cogs" | "expense";
+/** نوع الحساب الخاص: what the account stands for in the rest of the system */
+export type FinAccountKind = "general" | "cash" | "bank" | "wallet" | "inventory" | "supplier" | "customer" | "employee" | "tax" | "fixed_asset";
+export type FinCashflow = "operating" | "investing" | "financing";
+
+export interface FinAccount extends Row {
+  /** unique per restaurant; its length follows its level (1, 2, 4, 6, 8 digits) */
+  code: string;
+  name: Loc;
+  /** code of the parent; null for the six roots */
+  parentCode: string | null;
+  type: FinAccountType;
+  /** نهائي: takes journal lines. A parent (تجميعي) only sums its children. */
+  postable: boolean;
+  kind: FinAccountKind;
+  cashflow: FinCashflow | null;
+  /** null = every branch */
+  branchId: string | null;
+  /** a line on this account must name a cost centre */
+  requireCentre: boolean;
+  /** false = only the system posts here (stock accounts …) */
+  allowManual: boolean;
+  /** the key of the posting rule that relies on this account (FIN_KEYS); such an account is never deleted */
+  system: string | null;
+  /** what the account was opened for: a warehouse, a branch's till, a supplier … */
+  linkType: string | null;
+  linkId: string | null;
+  /** تنبيه when the balance (in the account's own direction) goes under / over these */
+  alertMin: Units | null;
+  alertMax: Units | null;
+  active: boolean;
+  note: string;
+}
+
+export interface FinLine {
+  /** account code */
+  account: string;
+  debit: Units;
+  credit: Units;
+  memo?: string;
+  centreId?: string | null;
+  branchId?: string | null;
+}
+
+export type FinEntryKind = "manual" | "auto" | "opening" | "adjust" | "closing" | "reversal" | "receipt" | "payment" | "transfer" | "expense";
+export type FinEntryStatus = "draft" | "pending" | "posted" | "rejected";
+
+export interface FinEntry extends Row {
+  /** serial inside the year, given when posted; 0 while a draft */
+  no: number;
+  year: number;
+  date: string;
+  kind: FinEntryKind;
+  status: FinEntryStatus;
+  memo: string;
+  lines: FinLine[];
+  branchId: string | null;
+  /** what produced an automatic entry (batch, stock move, supply request …); one entry per source */
+  sourceType: string | null;
+  sourceId: string | null;
+  /** the entry this one cancels / the entry that cancelled this one */
+  reverses: string | null;
+  reversedBy: string | null;
+  attachments: { name: string; url: string }[];
+  createdBy: string | null;
+  createdByName: string;
+  approvedBy: string | null;
+  postedAt: string | null;
+  reason: string;
+  /** voucher number, payee, payment method … */
+  meta: Record<string, unknown>;
+}
+
+export interface FinCentre extends Row {
+  code: string;
+  name: Loc;
+  parentId: string | null;
+  branchId: string | null;
+  active: boolean;
+}
+
+export type FinCosting = "last" | "average" | "fifo" | "standard";
+export type FinPeriodStatus = "open" | "closed" | "locked";
+
+export interface FinSettingsData {
+  /** first month of the financial year (1 = January) */
+  yearStartMonth: number;
+  /** automatic entries are made for movements from this day on; null = not started */
+  startDate: string | null;
+  /** "YYYY-MM" → status; a month not listed is open */
+  periods: Record<string, FinPeriodStatus>;
+  /** FIN_KEYS key → account code (ربط الحسابات) */
+  links: Record<string, string>;
+  costing: FinCosting;
+  /** manual entries above this wait for approval; null = never */
+  approvalLimit: Units | null;
+  /** توزيع مصروفات المطبخ المركزي على الفروع */
+  kitchenAllocation: "none" | "by_supply" | "by_sales" | "fixed";
+  kitchenShares: Record<string, number>;
+}
+
+/** One row per restaurant. */
+export interface FinSettings extends Row {
+  data: Partial<FinSettingsData>;
+}
+
+/** Everything else the finance section keeps (entry templates, recurring entries, budgets, fixed assets …), one row each. */
+export interface FinDoc extends Row {
+  kind: string;
+  code: string;
+  name: string;
+  branchId: string | null;
+  status: string;
+  date: string | null;
+  data: Record<string, unknown>;
+}

@@ -2,6 +2,7 @@
  * Cost Control version — shared rules. Everything here follows the "Cost Control System" document:
  * constants (section 4), the raw material card and its two results (3.1), and the units a stock line is typed in.
  */
+import { FINANCE_ON } from "./finance/flag";
 import type { CodeRange, MfgLists, MfgProduct, MfgSettings, MfgUnitDef, MfgUserType, RawSpec, StockItem, Units } from "@/data/types";
 
 export const DEFAULT_LISTS: MfgLists = {
@@ -130,6 +131,7 @@ export const SCREENS: { id: string; label: string }[] = [
   { id: "cc-constants", label: "ثوابت النظام" },
   { id: "cc-mfg", label: "التصنيع" },
   { id: "cc-users", label: "المستخدمين" },
+  ...(FINANCE_ON ? [{ id: "cc-finance", label: "الحسابات" }] : []),
 ];
 const ROLE_SCREENS: Record<MfgUserType["role"], string[]> = {
   kitchen: ["cc-summary", "cc-stores", "cc-catalog", "cc-mfg"],
@@ -150,6 +152,8 @@ const LEVELS: MfgUserType["role"][] = ["kitchen", "chef", "manager", "admin"];
  */
 export function roleForScreens(screens: string[], current: MfgUserType["role"]): MfgUserType["role"] {
   if (screens.includes("cc-users")) return "admin";
+  // الحسابات is read and written by the manager level and above
+  if (screens.includes("cc-finance")) return current === "admin" ? "manager" : LEVELS.indexOf(current) >= LEVELS.indexOf("manager") ? current : "manager";
   const min: MfgUserType["role"] = screens.some((x) => x === "cc-stores" || x === "cc-catalog" || x === "cc-constants") ? "chef" : "kitchen";
   const cur = current === "admin" ? "manager" : current;
   return LEVELS.indexOf(cur) >= LEVELS.indexOf(min) ? cur : min;

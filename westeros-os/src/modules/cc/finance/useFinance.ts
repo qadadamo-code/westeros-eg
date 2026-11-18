@@ -1,0 +1,31 @@
+/** Everything the finance screens read: the chart, the journal, cost centres, settings and the branches. */
+import { useMemo } from "react";
+import { useSession } from "@/auth/session";
+import { useLive } from "@/data/hooks";
+import { settingsOf } from "./ops";
+import { indexChart } from "./tree";
+
+export function useFinance() {
+  const { branchId, branches: mine } = useSession();
+  const accountsLive = useLive("finAccounts");
+  const accounts = accountsLive.data;
+  const entries = useLive("finEntries").data;
+  const centres = useLive("finCentres").data;
+  const settingsRow = useLive("finSettings").data[0];
+  const branches = useLive("branches").data;
+  return useMemo(() => {
+    const ix = indexChart(accounts);
+    const byId = new Map(accounts.map((x) => [x.id, x]));
+    const settings = settingsOf(settingsRow);
+    const branchById = new Map(branches.map((b) => [b.id, b]));
+    const sorted = [...branches].sort((a, b) => Number(b.isDefault) - Number(a.isDefault) || (a.code ?? 1e9) - (b.code ?? 1e9) || a.createdAt.localeCompare(b.createdAt));
+    return {
+      loading: accountsLive.loading, accounts, entries, centres, settings, ix, byId, branches: sorted,
+      branchName: (id: string | null | undefined) => branchById.get(id ?? "")?.name.ar ?? "كل الفروع",
+      branchId: branchId ?? mine.find((b) => b.isDefault)?.id ?? mine[0]?.id ?? null,
+      /** "1101 · النقدية" */
+      label: (id: string | null | undefined) => { const x = byId.get(id ?? ""); return x ? `${x.code} · ${x.name.ar}` : "—"; },
+    };
+  }, [accounts, entries, centres, settingsRow, branches, accountsLive.loading, branchId, mine]);
+}
+export type Fin = ReturnType<typeof useFinance>;

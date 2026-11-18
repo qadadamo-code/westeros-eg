@@ -1,0 +1,109 @@
+/** Shared pieces of the finance screens: amounts, the period picker, the account picker, printing a table. */
+import { useMemo, type ReactNode } from "react";
+import { Printer } from "lucide-react";
+import { cn } from "@/lib/cn";
+import { major, MONEY_MASK, moneyHidden, UNITS_PER_MAJOR, type Units } from "@/lib/money";
+import { Button, Input, Select } from "@/ui";
+import type { Fin } from "./useFinance";
+
+/** 1,250.00 (no currency: tables carry it in the header) */
+export const fmt = (u: Units, zero = "0.00") => (moneyHidden() ? MONEY_MASK : u === 0 ? zero : new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(u / UNITS_PER_MAJOR));
+/** what a number box shows for an amount */
+export const toText = (u: Units | null | undefined) => (u == null || u === 0 ? "" : String(Math.round((u / UNITS_PER_MAJOR) * 100) / 100));
+export const fromText = (s: string): Units => { const n = Number(String(s).replace(/,/g, "").trim()); return Number.isFinite(n) && s.trim() !== "" ? major(n) : 0; };
+
+export function Amount({ value, className, tone, zero = "—" }: { value: Units; className?: string; tone?: "auto"; zero?: string }) {
+  return <span dir="ltr" className={cn("num whitespace-nowrap", tone === "auto" && value < 0 && "text-danger", className)}>{fmt(value, zero)}</span>;
+}
+
+const pad = (n: number) => String(n).padStart(2, "0");
+export const dayOf = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+/** today in Cairo */
+export const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Cairo" }).format(new Date());
+
+export interface Period { preset: string; from: string | null; to: string | null }
+export const PRESETS: { id: string; label: string }[] = [
+  { id: "all", label: "كل الفترات" }, { id: "today", label: "اليوم" }, { id: "month", label: "هذا الشهر" }, { id: "last_month", label: "الشهر الماضي" },
+  { id: "quarter", label: "هذا الربع" }, { id: "year", label: "هذه السنة" }, { id: "last_year", label: "السنة الماضية" }, { id: "custom", label: "من تاريخ إلى تاريخ" },
+];
+/** The days a preset covers. The financial year starts on `startMonth` (1 = January). */
+export function periodOf(preset: string, startMonth = 1, now = today()): Period {
+  const [y, m] = now.split("-").map(Number);
+  const last = (yy: number, mm: number) => new Date(yy, mm, 0).getDate();
+  const fy = m >= startMonth ? y : y - 1;
+  const yearRange = (start: number): [string, string] => {
+    const endM = ((startMonth + 10) % 12) + 1;
+    const endY = startMonth === 1 ? start : start + 1;
+    return [`${start}-${pad(startMonth)}-01`, `${endY}-${pad(endM)}-${pad(last(endY, endM))}`];
+  };
+  switch (preset) {
+    case "today": return { preset, from: now, to: now };
+    case "month": return { preset, from: `${y}-${pad(m)}-01`, to: `${y}-${pad(m)}-${pad(last(y, m))}` };
+    case "last_month": { const d = new Date(y, m - 2, 1); const yy = d.getFullYear(), mm = d.getMonth() + 1; return { preset, from: `${yy}-${pad(mm)}-01`, to: `${yy}-${pad(mm)}-${pad(last(yy, mm))}` }; }
+    case "quarter": { const q = Math.floor((m - 1) / 3) * 3 + 1; return { preset, from: `${y}-${pad(q)}-01`, to: `${y}-${pad(q + 2)}-${pad(last(y, q + 2))}` }; }
+    case "year": { const [f, t] = yearRange(fy); return { preset, from: f, to: t }; }
+    case "last_year": { const [f, t] = yearRange(fy - 1); return { preset, from: f, to: t }; }
+    default: return { preset: "all", from: null, to: null };
+  }
+}
+
+export function PeriodPicker({ value, onChange, startMonth = 1, className }: { value: Period; onChange: (p: Period) => void; startMonth?: number; className?: string }) {
+  return (
+    <div className={cn("flex flex-wrap items-end gap-2", className)}>
+      <Select label="الفترة" className="w-44" value={value.preset} options={PRESETS.map((p) => ({ value: p.id, label: p.label }))}
+        onChange={(e) => onChange(e.target.value === "custom" ? { preset: "custom", from: value.from ?? today(), to: value.to ?? today() } : periodOf(e.target.value, startMonth))} />
+      {value.preset === "custom" ? (
+        <>
+          <Input label="من" type="date" dir="ltr" className="w-40" value={value.from ?? ""} onChange={(e) => onChange({ ...value, from: e.target.value || null })} />
+          <Input label="إلى" type="date" dir="ltr" className="w-40" value={value.to ?? ""} onChange={(e) => onChange({ ...value, to: e.target.value || null })} />
+        </>
+      ) : null}
+    </div>
+  );
+}
+export const periodLabel = (p: Period) => (p.from || p.to ? `${p.from ? p.from.split("-").reverse().join("/") : "البداية"} إلى ${p.to ? p.to.split("-").reverse().join("/") : "اليوم"}` : "كل الفترات");
+
+export function BranchSelect({ fin, value, onChange, label = "الفرع", all = "كل الفروع", className }: { fin: Fin; value: string; onChange: (id: string) => void; label?: string; all?: string | null; className?: string }) {
+  return <Select label={label} className={className ?? "w-44"} value={value} onChange={(e) => onChange(e.target.value)} options={[...(all ? [{ value: "", label: all }] : []), ...fin.branches.map((b) => ({ value: b.id, label: b.name.ar }))]} />;
+}
+
+/** اختيار حساب: by code or name; the list floats over the page. `leaf` shows only the accounts that take entries. */
+export function AccountSelect({ fin, value, onChange, label, leaf = true, filter, placeholder = "اختر الحساب", className, manualOnly }: {
+  fin: Fin; value: string; onChange: (id: string) => void; label?: ReactNode; leaf?: boolean; filter?: (a: Fin["accounts"][number]) => boolean; placeholder?: string; className?: string; manualOnly?: boolean;
+}) {
+  const options = useMemo(() => [
+    { value: "", label: placeholder },
+    ...fin.ix.ordered().filter((a) => (a.active || a.id === value) && (!leaf || a.postable) && (!manualOnly || a.allowManual || a.id === value) && (!filter || filter(a))).map((a) => ({ value: a.id, label: `${a.code} · ${a.name.ar}` })),
+  ], [fin.ix, value, leaf, filter, placeholder, manualOnly]);
+  return <Select label={label} aria-label={typeof label === "string" ? label : placeholder} className={className} value={value} onChange={(e) => onChange(e.target.value)} options={options} />;
+}
+
+const esc = (s: unknown) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+export interface PrintCell { text: string | number; align?: "start" | "end"; bold?: boolean; indent?: number }
+/** طباعة: opens the print dialog on a clean right-to-left page holding only this table. */
+export function printTable(title: string, subtitle: string, head: string[], rows: (PrintCell | string | number)[][], foot?: (PrintCell | string | number)[]) {
+  const cell = (c: PrintCell | string | number, tag = "td") => {
+    const x: PrintCell = typeof c === "object" ? c : { text: c };
+    return `<${tag} style="text-align:${x.align === "end" ? "left" : "right"};${x.bold ? "font-weight:700;" : ""}${x.indent ? `padding-right:${8 + x.indent * 14}px;` : ""}">${esc(x.text)}</${tag}>`;
+  };
+  const html = `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>${esc(title)}</title><style>
+    @page{size:A4;margin:14mm}body{font-family:Tajawal,Arial,sans-serif;color:#000;font-size:12px}h1{font-size:18px;margin:0 0 2px}p{margin:0 0 10px;color:#444}
+    table{width:100%;border-collapse:collapse}th,td{border:1px solid #999;padding:4px 8px}th{background:#eee;text-align:right}tfoot td{font-weight:700;background:#f5f5f5}
+  </style></head><body><h1>${esc(title)}</h1><p>${esc(subtitle)}</p><table><thead><tr>${head.map((h) => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((c) => cell(c)).join("")}</tr>`).join("")}</tbody>${foot ? `<tfoot><tr>${foot.map((c) => cell(c)).join("")}</tr></tfoot>` : ""}</table></body></html>`;
+  const frame = document.createElement("iframe");
+  frame.setAttribute("aria-hidden", "true");
+  frame.style.cssText = "position:fixed;inset-inline-end:0;bottom:0;width:0;height:0;border:0";
+  document.body.appendChild(frame);
+  const doc = frame.contentDocument!;
+  doc.open();
+  doc.write(html);
+  doc.close();
+  setTimeout(() => {
+    frame.contentWindow?.focus();
+    frame.contentWindow?.print();
+    setTimeout(() => frame.remove(), 60_000);
+  }, 150);
+}
+export function PrintButton({ onClick, size }: { onClick: () => void; size?: "sm" | "md" }) {
+  return <Button type="button" variant="secondary" size={size} icon={<Printer />} onClick={onClick}>طباعة</Button>;
+}

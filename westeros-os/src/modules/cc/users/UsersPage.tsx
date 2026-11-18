@@ -9,6 +9,7 @@ import { uuid } from "@/lib/id";
 import { PageHeader } from "@/shell/PageHeader";
 import { Badge, Button, Card, CardHeader, Dialog, IconButton, EmptyState, Input, Select, Switch, Table, useToast, type Column } from "@/ui";
 import { cn } from "@/lib/cn";
+import { FIN_PERMS, finPermsOf } from "../finance/perms";
 import { canRestore, nextUserCode, overlapping, rangeOf, roleForScreens, SCREENS, screensOf, seesPrices, userTypeOf, userTypesOf } from "../lib";
 import { useCc, type Cc } from "../useCc";
 
@@ -161,6 +162,20 @@ function UserTypes({ cc, members }: { cc: Cc; members: Membership[] }) {
                     </label>
                   ))}
                 </div>
+                {open.includes("cc-finance") ? (
+                  <div className="mt-2 rounded-lg border border-line p-2.5">
+                    <p className="mb-1.5 text-[13px] font-semibold text-muted">صلاحيات الحسابات</p>
+                    <div className="grid gap-1 sm:grid-cols-2">
+                      {FIN_PERMS.map((x) => (
+                        <label key={x.id} className="flex min-h-9 cursor-pointer items-center gap-2 rounded-md px-1.5 text-[13.5px] hover:bg-surface-2">
+                          <input type="checkbox" className="size-4 accent-[var(--color-brand,#F8BB18)]" checked={finPermsOf(t).includes(x.id)}
+                            onChange={(e) => void setType(t.id, { finance: FIN_PERMS.map((p) => p.id).filter((id) => (id === x.id ? e.target.checked : finPermsOf(t).includes(id))) })} />
+                          {x.label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
                 <label className="mt-2 flex min-h-11 cursor-pointer items-center gap-2.5 rounded-lg border border-line px-3 text-[14.5px] hover:bg-surface-2">
                   <input type="checkbox" className="size-4.5 accent-[var(--color-brand,#F8BB18)]" checked={seesPrices(t)} onChange={(e) => void setType(t.id, { seePrices: e.target.checked })} />
                   رؤية الأسعار والتكاليف

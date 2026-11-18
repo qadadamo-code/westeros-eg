@@ -54,6 +54,8 @@ export interface ModuleDef {
   /** palette/keyboard shortcut to open it, e.g. "g p" */
   shortcut?: string;
   status: "ready" | "soon";
+  /** not released yet: left out of the menu and the routes */
+  hidden?: boolean;
   /** placeholder page: what is coming, and which data is already there */
   features?: Localized[];
   data?: CollectionName[];
