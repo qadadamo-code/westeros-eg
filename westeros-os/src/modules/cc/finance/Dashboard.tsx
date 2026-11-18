@@ -28,6 +28,7 @@ export default function Dashboard() {
   const moves = useLive("stockMoves").data;
   const itemRows = useLive("stockItems").data;
   const locRows = useLive("storageLocations").data;
+  const docs = useLive("finDocs").data;
   const lists = listsOf(useLive("mfgSettings").data[0]);
   const [period, setPeriod] = useState<Period>(periodOf("month", fin.settings.yearStartMonth));
   const [branch, setBranch] = useState("");
@@ -47,8 +48,8 @@ export default function Dashboard() {
       stockDiff = pendingMoves ? 0 : stockRecon({ accounts: fin.accounts, entries: fin.entries, settings: fin.settings, moves, items, locations, lists, to: day }).reduce((s, r) => s + r.diff, 0);
       lateTransit = inTransit(moves).filter((t) => cairoDay(t.at) >= start && (Date.now() - Date.parse(t.at)) / 86_400_000 > fin.settings.transitDays).length;
     }
-    return finAlerts({ accounts: fin.accounts, entries: fin.entries, settings: fin.settings, today: day, stockDiff, pendingMoves, lateTransit });
-  }, [fin.accounts, fin.entries, fin.settings, moves, itemRows, locRows, lists]);
+    return finAlerts({ accounts: fin.accounts, entries: fin.entries, settings: fin.settings, today: day, stockDiff, pendingMoves, lateTransit, docs });
+  }, [fin.accounts, fin.entries, fin.settings, moves, itemRows, locRows, lists, docs]);
 
   const months = useMemo(() => {
     const cur = today().slice(0, 7);

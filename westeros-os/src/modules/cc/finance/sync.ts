@@ -18,7 +18,7 @@ export const STOCK_SOURCE = "stock:";
 /** where a stock entry came from, in words (refType of the movements) */
 export const STOCK_REF_LABEL: Record<string, string> = {
   mfg_batch: "تشغيلة تصنيع", mfg_batch_void: "إلغاء تشغيلة", stock_request: "طلب توريد", transfer: "تحويل مخزني", opening: "رصيد أول المدة لمخزن",
-  waste: "هالك مخزن", count: "جرد مخزن", receive: "استلام بضاعة", production: "تحضير", sale: "تكلفة مبيعات", start: "مخزون تاريخ البداية", revalue: "تسوية تقييم المخزون",
+  waste: "هالك مخزن", count: "جرد مخزن", receive: "استلام بضاعة", production: "تحضير", sale: "تكلفة مبيعات", start: "مخزون تاريخ البداية", revalue: "تسوية تقييم المخزون", fin_purchase: "استلام فاتورة شراء", fin_purchase_return: "خروج مرتجع مشتريات",
 };
 export const WAREHOUSE_LINK = "warehouse";
 

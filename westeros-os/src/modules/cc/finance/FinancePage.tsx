@@ -1,8 +1,9 @@
 /** الحسابات: the chart of accounts and, around it, the journal, the reports and the settings. */
 import { Navigate, Route, Routes } from "react-router-dom";
-import { Banknote, BookOpen, FileBarChart, Flag, Gauge, Landmark, ListTree, Lock, PiggyBank, Settings as Cog, Target } from "lucide-react";
+import { Armchair, Banknote, BookOpen, FileBarChart, Flag, Gauge, Landmark, ListTree, Lock, PiggyBank, Settings as Cog, Target, Truck } from "lucide-react";
 import { PageHeader } from "@/shell/PageHeader";
 import { RouteTabs } from "@/modules/marketing/ui";
+import Assets from "./Assets";
 import Budget from "./Budget";
 import Centres from "./Centres";
 import Chart from "./Chart";
@@ -10,6 +11,7 @@ import Close from "./Close";
 import Dashboard from "./Dashboard";
 import Journal from "./Journal";
 import Opening from "./Opening";
+import Purchases from "./Purchases";
 import { useFinPerms } from "./perms";
 import Reports, { ReportRedirect } from "./Reports";
 import Settings from "./Settings";
@@ -26,6 +28,8 @@ export default function FinancePage() {
         { to: "/finance/chart", label: "شجرة الحسابات", icon: <ListTree /> },
         { to: "/finance/journal", label: "القيود اليومية", icon: <BookOpen /> },
         { to: "/finance/treasury", label: "الخزينة والبنوك", icon: <Banknote /> },
+        { to: "/finance/purchases", label: "المشتريات والموردون", icon: <Truck /> },
+        { to: "/finance/assets", label: "الأصول الثابتة", icon: <Armchair /> },
         ...(reports ? [{ to: "/finance/reports", label: "التقارير", icon: <FileBarChart /> }] : []),
         { to: "/finance/centres", label: "مراكز التكلفة", icon: <Target /> },
         ...(perms.has("budget") || perms.has("profit") ? [{ to: "/finance/budget", label: "الموازنة", icon: <PiggyBank /> }] : []),
@@ -38,6 +42,8 @@ export default function FinancePage() {
         <Route path="chart" element={<Chart />} />
         <Route path="journal" element={<Journal />} />
         <Route path="treasury" element={<Treasury />} />
+        <Route path="purchases" element={<Purchases />} />
+        <Route path="assets" element={<Assets />} />
         {reports ? <Route path="reports/*" element={<Reports />} /> : null}
         <Route path="centres" element={<Centres />} />
         {perms.has("budget") || perms.has("profit") ? <Route path="budget" element={<Budget />} /> : null}

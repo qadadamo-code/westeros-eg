@@ -22,7 +22,7 @@ const TONE: Record<FinEntry["status"], Tone> = { draft: "neutral", pending: "war
 export const SOURCE_LABEL: Record<string, string> = {
   "mfg-batch": "تشغيلة تصنيع", "stock-move": "حركة مخزنية", "stock-count": "جرد مخزن", "stock-request": "طلب توريد", "stock-waste": "هالك مخزن",
   ...Object.fromEntries(Object.entries(STOCK_REF_LABEL).map(([k, v]) => [`${STOCK_SOURCE}${k}`, v])),
-  "opening-balance": "أرصدة افتتاحية", prepaid: "مصروف مقدم", "cash-count": "جرد خزينة", [RECURRING]: "قيد متكرر", voucher: "سند", expense: "مصروف", depreciation: "إهلاك", "year-close": "إقفال سنة",
+  "opening-balance": "أرصدة افتتاحية", prepaid: "مصروف مقدم", "cash-count": "جرد خزينة", [RECURRING]: "قيد متكرر", voucher: "سند", expense: "مصروف", depreciation: "إهلاك", "year-close": "إقفال سنة", purchase: "فاتورة شراء", "purchase-return": "مرتجع مشتريات", allocation: "توزيع مصروف", "kitchen-allocation": "توزيع المطبخ المركزي", "asset-buy": "شراء أصل", "asset-sale": "بيع أو استبعاد أصل", "sales-day": "مبيعات يوم", settlement: "تسوية تحصيل", payroll: "رواتب", "payroll-pay": "صرف رواتب", "vat-settle": "تسوية ضريبة",
 };
 
 type Draft = { key: number; account: string; debit: string; credit: string; memo: string; centreId: string; branchId: string };
