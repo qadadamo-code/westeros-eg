@@ -23,6 +23,8 @@ const OUTBOX_KEY = "sufra-os.outbox";
 /** tables in the Realtime publication (see migration) */
 const REALTIME: CollectionName[] = ["orders", "orderItems", "serviceCalls", "tables", "checks", "payments", "reservations", "menuItems", "conversations", "messages"];
 /** never select pin_hash (column privilege is revoked anyway) */
+/** rows per request: the API never returns more than this in one answer */
+const PAGE = 1000;
 const MEMBERSHIP_COLS = "id,restaurant_id,user_id,name,role,branch_ids,phone,email,color,has_pin,active,last_seen_at,created_at,updated_at";
 
 export const toSnake = (k: string) => k.replace(/[A-Z]/g, (c) => "_" + c.toLowerCase());
@@ -104,28 +106,44 @@ export class SupabaseAdapter implements Repo {
   /* ───────── reads ───────── */
 
   async list<C extends CollectionName>(c: C, q?: Query<RowOf<C>>): Promise<RowOf<C>[]> {
-    let req = this.table(c).select(c === "memberships" ? MEMBERSHIP_COLS : "*");
-    if (q?.where)
-      for (const [k, v] of Object.entries(q.where)) {
-        if (v === undefined) continue;
-        if (Array.isArray(v)) req = req.in(toSnake(k), v);
-        else if (v === null) req = req.is(toSnake(k), null);
-        else req = req.eq(toSnake(k), v as string | number | boolean);
-      }
-    if (q?.contains) for (const [k, v] of Object.entries(q.contains)) if (v !== undefined) req = req.contains(toSnake(k), [v]);
-    if (q?.gte) for (const [k, v] of Object.entries(q.gte)) if (v !== undefined) req = req.gte(toSnake(k), v);
-    if (q?.lte) for (const [k, v] of Object.entries(q.lte)) if (v !== undefined) req = req.lte(toSnake(k), v);
-    for (const o of q?.orderBy ?? []) req = req.order(toSnake(o.field), { ascending: o.dir !== "desc" });
-    if (q?.limit) req = req.limit(q.limit);
-    const { data, error } = await req;
-    if (error) {
+    const build = () => {
+      let req = this.table(c).select(c === "memberships" ? MEMBERSHIP_COLS : "*");
+      if (q?.where)
+        for (const [k, v] of Object.entries(q.where)) {
+          if (v === undefined) continue;
+          if (Array.isArray(v)) req = req.in(toSnake(k), v);
+          else if (v === null) req = req.is(toSnake(k), null);
+          else req = req.eq(toSnake(k), v as string | number | boolean);
+        }
+      if (q?.contains) for (const [k, v] of Object.entries(q.contains)) if (v !== undefined) req = req.contains(toSnake(k), [v]);
+      if (q?.gte) for (const [k, v] of Object.entries(q.gte)) if (v !== undefined) req = req.gte(toSnake(k), v);
+      if (q?.lte) for (const [k, v] of Object.entries(q.lte)) if (v !== undefined) req = req.lte(toSnake(k), v);
+      for (const o of q?.orderBy ?? []) req = req.order(toSnake(o.field), { ascending: o.dir !== "desc" });
+      return req;
+    };
+    const fail = (error: unknown) => {
       if (isNetworkError(error)) {
         this.setStatus({ online: false });
         return runQuery(this.cacheOf(c).values() as Iterable<RowOf<C>>, q);
       }
       throw error;
+    };
+    const first = await (q?.limit ? build().limit(q.limit) : build());
+    if (first.error) return fail(first.error);
+    let data = first.data as unknown as Record<string, unknown>[];
+    // The server hands back at most PAGE rows per request. A table that reached it is read again page by page in a
+    // fixed order, so a long journal or movement list is never cut short without anyone noticing.
+    if (!q?.limit && data.length >= PAGE) {
+      data = [];
+      for (let from = 0; ; from += PAGE) {
+        const page = await build().order("id").range(from, from + PAGE - 1);
+        if (page.error) return fail(page.error);
+        const rows = page.data as unknown as Record<string, unknown>[];
+        data.push(...rows);
+        if (rows.length < PAGE) break;
+      }
     }
-    const rows = (data as unknown as Record<string, unknown>[]).map((r) => rowFromDb<AnyRow>(r));
+    const rows = data.map((r) => rowFromDb<AnyRow>(r));
     this.remember(c, rows);
     this.setStatus({ online: true, lastSyncAt: nowIso(), error: null });
     return rows as unknown as RowOf<C>[];
