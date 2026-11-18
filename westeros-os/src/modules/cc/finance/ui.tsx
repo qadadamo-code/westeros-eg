@@ -118,3 +118,32 @@ export function Confirm({ open, onClose, onConfirm, title, description, confirmL
     </Dialog>
   );
 }
+
+/** Prints a free page (a voucher, a statement): right-to-left, black on white. */
+export function printDoc(title: string, body: string) {
+  const html = `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>${esc(title)}</title><style>
+    @page{size:A5 landscape;margin:12mm}body{font-family:Tajawal,Arial,sans-serif;color:#000;font-size:13px}h1{font-size:20px;margin:0;text-align:center}
+    .row{display:flex;justify-content:space-between;gap:16px;margin:8px 0}.box{border:1px solid #000;padding:6px 10px;border-radius:4px}.lbl{color:#444}.sign{margin-top:36px;display:flex;justify-content:space-between}
+    .sign span{border-top:1px solid #000;padding-top:4px;min-width:140px;text-align:center}
+  </style></head><body>${body}</body></html>`;
+  const frame = document.createElement("iframe");
+  frame.setAttribute("aria-hidden", "true");
+  frame.style.cssText = "position:fixed;inset-inline-end:0;bottom:0;width:0;height:0;border:0";
+  document.body.appendChild(frame);
+  const doc = frame.contentDocument!;
+  doc.open();
+  doc.write(html);
+  doc.close();
+  setTimeout(() => { frame.contentWindow?.focus(); frame.contentWindow?.print(); setTimeout(() => frame.remove(), 60_000); }, 150);
+}
+export { esc };
+/** a day typed in a sheet: 2026-11-18, 18/11/2026 or an Excel serial */
+export function sheetDay(s: string | undefined): string | null {
+  const t = String(s ?? "").trim();
+  if (/^\d{4}-\d{1,2}-\d{1,2}/.test(t)) { const [y, m, d] = t.split(/[-T ]/); return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`; }
+  const m = t.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/);
+  if (m) return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+  const n = Number(t);
+  if (Number.isFinite(n) && n > 30000 && n < 80000) return new Date(Math.round((n - 25569) * 86400000)).toISOString().slice(0, 10);
+  return null;
+}

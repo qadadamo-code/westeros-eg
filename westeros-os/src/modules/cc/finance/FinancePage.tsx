@@ -1,6 +1,6 @@
 /** الحسابات: the chart of accounts and, around it, the journal, the reports and the settings. */
 import { Navigate, Route, Routes } from "react-router-dom";
-import { BookOpen, FileText, Flag, Landmark, ListTree, PackageCheck, Scale, Settings as Cog } from "lucide-react";
+import { Banknote, BookOpen, FileText, Flag, Landmark, ListTree, PackageCheck, Scale, Settings as Cog } from "lucide-react";
 import { PageHeader } from "@/shell/PageHeader";
 import { RouteTabs } from "@/modules/marketing/ui";
 import Chart from "./Chart";
@@ -9,6 +9,7 @@ import Ledger from "./Ledger";
 import Opening from "./Opening";
 import Settings from "./Settings";
 import StockRecon from "./StockRecon";
+import Treasury from "./Treasury";
 import TrialBalance from "./TrialBalance";
 
 export default function FinancePage() {
@@ -18,6 +19,7 @@ export default function FinancePage() {
       <RouteTabs label="الحسابات" items={[
         { to: "/finance", end: true, label: "شجرة الحسابات", icon: <ListTree /> },
         { to: "/finance/journal", label: "القيود اليومية", icon: <BookOpen /> },
+        { to: "/finance/treasury", label: "الخزينة والبنوك", icon: <Banknote /> },
         { to: "/finance/ledger", label: "كشف حساب", icon: <FileText /> },
         { to: "/finance/trial", label: "ميزان المراجعة", icon: <Scale /> },
         { to: "/finance/opening", label: "الأرصدة الافتتاحية", icon: <Flag /> },
@@ -30,6 +32,7 @@ export default function FinancePage() {
         <Route path="ledger" element={<Ledger />} />
         <Route path="trial" element={<TrialBalance />} />
         <Route path="opening" element={<Opening />} />
+        <Route path="treasury" element={<Treasury />} />
         <Route path="stock" element={<StockRecon />} />
         <Route path="settings" element={<Settings />} />
         <Route path="*" element={<Navigate to="/finance" replace />} />

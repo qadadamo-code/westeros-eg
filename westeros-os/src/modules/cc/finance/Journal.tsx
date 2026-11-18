@@ -22,7 +22,7 @@ const TONE: Record<FinEntry["status"], Tone> = { draft: "neutral", pending: "war
 export const SOURCE_LABEL: Record<string, string> = {
   "mfg-batch": "تشغيلة تصنيع", "stock-move": "حركة مخزنية", "stock-count": "جرد مخزن", "stock-request": "طلب توريد", "stock-waste": "هالك مخزن",
   ...Object.fromEntries(Object.entries(STOCK_REF_LABEL).map(([k, v]) => [`${STOCK_SOURCE}${k}`, v])),
-  "opening-balance": "أرصدة افتتاحية", [RECURRING]: "قيد متكرر", voucher: "سند", expense: "مصروف", depreciation: "إهلاك", "year-close": "إقفال سنة",
+  "opening-balance": "أرصدة افتتاحية", prepaid: "مصروف مقدم", "cash-count": "جرد خزينة", [RECURRING]: "قيد متكرر", voucher: "سند", expense: "مصروف", depreciation: "إهلاك", "year-close": "إقفال سنة",
 };
 
 type Draft = { key: number; account: string; debit: string; credit: string; memo: string; centreId: string; branchId: string };
@@ -308,7 +308,7 @@ export function EntryView({ fin, entry: e, onClose, onEdit, onCopy, onOpen }: { 
 }
 
 /** قوالب القيود والقيود المتكررة: saved shapes of entries; a recurring one makes a draft every month on its day. */
-function ToolsDialog({ fin, mode, onClose, onUse }: { fin: Fin; mode: "templates" | "recurring"; onClose: () => void; onUse: (t: TemplateData) => void }) {
+export function ToolsDialog({ fin, mode, onClose, onUse }: { fin: Fin; mode: "templates" | "recurring"; onClose: () => void; onUse: (t: TemplateData) => void }) {
   const db = useDb();
   const { toast } = useToast();
   const docs = useLive("finDocs", { where: { kind: mode === "templates" ? TEMPLATE : RECURRING } }).data;
