@@ -44,15 +44,44 @@ describe("Cost Control: منتجات الدجاج", () => {
     expect(r.outputs[2].scaleDiffG).toBe(80 * 160 - 12000 - 400); // متبل قبل العد: minus the marinade
   });
   it("each product carries its recipe plus its share of the chicken, trimmings included", () => {
-    const gross = 20 / (19 + r.scaleDiffG / 1000);
-    expect(r.outputs[1].total).toBe(Math.round(EGP(225) * 2 * gross));
-    expect(r.outputs[0].total).toBe(Math.round(EGP(85) + EGP(225) * 5 * gross));
+    // each row uses its own scale difference
+    expect(r.outputs[1].total).toBe(Math.round(EGP(225) * 2 * (20 / 19)));
+    expect(r.outputs[0].total).toBe(Math.round(EGP(85) + EGP(225) * 5 * (20 / (19 + r.outputs[0].scaleDiffG / 1000))));
   });
   it("priced per kilo when made by weight, per piece when counted", () => {
     expect(r.outputs[1].per).toBe("kg");
     expect(r.outputs[1].unitCost).toBe(Math.round(r.outputs[1].total / 2));
     expect(r.outputs[0].per).toBe("pc");
     expect(r.outputs[0].unitCost).toBe(Math.round(r.outputs[0].total / 71));
+  });
+});
+
+describe("Cost Control: the document's chicken batch (20 kg, 21/10/2026)", () => {
+  const r = calcChicken({
+    chickenKg: 20,
+    chickenPerKg: EGP(225),
+    outputs: [
+      { mode: "post_count", weightKg: 5, count: 71, portionG: 70, lines: [line(650, 0)], packaging: [] }, // دجاج ستيك
+      { mode: "weight", weightKg: 2, count: 0, portionG: 0, lines: [], packaging: [] }, // دجاج فرم
+      // كوردن بلو: 375 g marinade, then 940 g and 235 g of other ingredients
+      { mode: "pre_count", weightKg: 5, count: 33, portionG: 160, lines: [{ ...line(375, 0), marinade: true }, line(940, 0), line(235, 0)], packaging: [] },
+      { mode: "post_count", weightKg: 4, count: 33, portionG: 120, lines: [line(400, 0)], packaging: [] }, // كرسبي
+      { mode: "weight", weightKg: 3, count: 0, portionG: 0, lines: [line(501, 0)], packaging: [] }, // بايتس
+    ],
+  });
+  it("debris 1 kg, 5%", () => {
+    expect(r.debrisKg).toBe(1);
+    expect(r.debrisBp).toBe(500);
+  });
+  it("scale differences −30, 0, −95, −40, 0: pre-count subtracts the marinade only", () => {
+    expect(r.outputs.map((o) => o.scaleDiffG)).toEqual([-30, 0, -95, -40, 0]);
+  });
+  it("دجاج فرم costs 473.7, 236.8 a kilo", () => {
+    expect(Math.round(r.outputs[1].total / 10_000) / 10).toBe(473.7);
+    expect(Math.round(r.outputs[1].unitCost / 10_000) / 10).toBe(236.8);
+  });
+  it("a recipe with no marinade item counts all of it as the marinade", () => {
+    expect(calcChicken({ chickenKg: 10, chickenPerKg: 0, outputs: [{ mode: "pre_count", weightKg: 5, count: 33, portionG: 160, lines: [line(375, 0)], packaging: [] }] }).outputs[0].scaleDiffG).toBe(-95);
   });
 });
 

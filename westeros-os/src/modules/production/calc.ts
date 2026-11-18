@@ -11,6 +11,8 @@ import type { Units } from "@/lib/money";
 export interface CalcLine {
   cost: Units;
   weightG: number;
+  /** the ingredient is a marinade (a manufactured item whose recipe is of the تتبيلة kind) */
+  marinade?: boolean;
 }
 
 const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
@@ -89,19 +91,29 @@ export interface ChickenResult {
   outputs: ChickenOutputResult[];
   total: Units;
 }
+/**
+ * وزن التتبيلة of one product: only its marinade lines, not the other ingredients (the document's cordon bleu: 33 × 160
+ * − 5000 − 375 = −95, where 375 g is the marinade and the other 1,175 g of the recipe are not subtracted). A recipe with
+ * no marinade item is written straight from its spices, so all of it is the marinade.
+ */
+export function marinadeWeightG(lines: CalcLine[]): number {
+  const marinade = lines.filter((l) => l.marinade);
+  return linesWeightG(marinade.length ? marinade : lines);
+}
 export function chickenScaleDiffG(o: Pick<ChickenOutputIn, "mode" | "weightKg" | "count" | "portionG" | "lines">): number {
   if (o.mode === "weight") return 0;
   const nominal = o.count * o.portionG - o.weightKg * 1000;
   // متبل قبل العد: the marinade is already in the counted piece
-  return r3(o.mode === "pre_count" ? nominal - linesWeightG(o.lines) : nominal);
+  return r3(o.mode === "pre_count" ? nominal - marinadeWeightG(o.lines) : nominal);
 }
 export function calcChicken(p: { chickenKg: number; chickenPerKg: Units; outputs: ChickenOutputIn[] }): ChickenResult {
   const netKg = r3(sum(p.outputs.map((o) => o.weightKg)));
   const diffs = p.outputs.map(chickenScaleDiffG);
   const scaleDiffG = r3(sum(diffs));
-  // every kilo that came out carries its share of the trimmings: وزن الدجاج ÷ (صافي الدجاج + هدر الميزان)
-  const gross = div(p.chickenKg, netKg + scaleDiffG / 1000);
   const outputs = p.outputs.map((o, i): ChickenOutputResult => {
+    // every kilo that came out carries its share of the trimmings: وزن الدجاج ÷ (صافي الدجاج + هدر الميزان) — the scale
+    // difference of this product's own row, as in the document (its دجاج فرم: 225 × 2 × 20 ÷ 19 = 473.7)
+    const gross = div(p.chickenKg, netKg + diffs[i] / 1000);
     const total = Math.round(linesCost(o.lines) + linesCost(o.packaging) + p.chickenPerKg * o.weightKg * gross);
     const per = o.mode === "weight" ? "kg" : "pc";
     return { scaleDiffG: diffs[i], total, per, unitCost: Math.round(div(total, per === "kg" ? o.weightKg : o.count)) };

@@ -432,9 +432,11 @@ function ChickenForm({ prod, onDone, initial, chosen }: { prod: Prod; onDone: ()
   const keep = fixed ? false : keepEdited;
   const linesOf = (r: ChickenRow) => (fixed ? prod.productById.get(r.productId)?.lines ?? [] : r.lines);
   const packagingOf = (r: ChickenRow) => (fixed ? prod.productById.get(r.productId)?.packaging ?? [] : r.packaging);
-  // the raw material this batch is cut from: any raw item, starting on the one named in the constants
+  // the raw material this batch is cut from. Cost Control: always the one fixed in ثوابت النظام › تعريف اللحوم
+  // (مادة الخام الواحدة), the chef cannot change it; the full system lets any raw item be picked.
   const raws = useMemo(() => prod.items.filter((i) => i.active && i.kind === "raw"), [prod.items]);
-  const [rawId, setRawId] = useState<string>(() => prod.settings?.chickenItemId ?? "");
+  const [pickedRaw, setRawId] = useState<string>(() => prod.settings?.chickenItemId ?? "");
+  const rawId = fixed ? (prod.settings?.chickenItemId ?? "") : pickedRaw;
   const chicken = rawId ? prod.itemById.get(rawId) : undefined;
   const toggle = (id: string) =>
     setRows((r) => {
@@ -456,9 +458,9 @@ function ChickenForm({ prod, onDone, initial, chosen }: { prod: Prod; onDone: ()
         />
       }
     >
-      <Block step={1} title={L("المادة الخام ووزنها", "Raw material & weight")} hint={chicken ? `${formatMoney(prod.unitCost(chicken.id) * 1000, { lang })} / ${L("كجم", "kg")}` : L("اختر المادة الخام التي ستُقطّع", "Pick the raw material being cut")}>
+      <Block step={1} title={L("المادة الخام ووزنها", "Raw material & weight")} hint={chicken ? `${fixed ? `${loc(chicken.name)} · ` : ""}${formatMoney(prod.unitCost(chicken.id) * 1000, { lang })} / ${L("كجم", "kg")}` : fixed ? "حدد مادة الخام الواحدة من ثوابت النظام › تعريف اللحوم" : L("اختر المادة الخام التي ستُقطّع", "Pick the raw material being cut")}>
         <div className="grid gap-3 sm:grid-cols-2">
-          <Select label={L("المادة الخام", "Raw material")} value={rawId} onChange={(e) => setRawId(e.target.value)} options={[{ value: "", label: L("اختر", "Choose") }, ...raws.map((i) => ({ value: i.id, label: loc(i.name) }))]} />
+          {fixed ? null : <Select label={L("المادة الخام", "Raw material")} value={rawId} onChange={(e) => setRawId(e.target.value)} options={[{ value: "", label: L("اختر", "Choose") }, ...raws.map((i) => ({ value: i.id, label: loc(i.name) }))]} />}
           <Num big label={L("الوزن قبل التجهيز", "Weight before prep")} suffix={L("كجم", "kg")} value={chickenKg} onChange={setChickenKg} />
         </div>
       </Block>
