@@ -48,6 +48,7 @@ export function buildBatch(d: BatchDraft, ctx: BuildCtx): BuiltBatch {
   const errors: BuildError[] = [];
   const unpriced: Localized[] = [];
   const inputs: MfgBatchInput[] = [];
+  const marinades = new Set([...ctx.products.values()].filter((p) => p.recipeType === "marinade").map((p) => p.stockItemId));
   const add = (l: DraftLine, role: MfgInputRole, outputIndex: number | null = null): CalcLine => {
     const it = ctx.items.get(l.itemId);
     if (!it || !pos(l.qty)) return { cost: 0, weightG: 0 };
@@ -56,7 +57,7 @@ export function buildBatch(d: BatchDraft, ctx: BuildCtx): BuiltBatch {
     const weightG = role === "packaging" || it.baseUnit === "pc" ? 0 : l.qty;
     if (unitCost <= 0 && !unpriced.some((n) => n.ar === it.name.ar)) unpriced.push(it.name);
     inputs.push({ itemId: l.itemId, name: it.name, role, qty: l.qty, weightG, unitCost, cost, outputIndex });
-    return { cost, weightG };
+    return { cost, weightG, marinade: marinades.has(l.itemId) };
   };
   const out = (p: MfgProduct, x: { weightKg: number | null; count: number | null; totalCost: Units; unitCost: Units; scaleDiffG?: number; unit?: "kg" | "pc" }): MfgBatchOutput => ({
     productId: p.id, stockItemId: p.stockItemId, name: p.name, unit: x.unit ?? p.unit, weightKg: x.weightKg, count: x.count, portionGrams: p.portionGrams, scaleDiffG: x.scaleDiffG ?? 0,
