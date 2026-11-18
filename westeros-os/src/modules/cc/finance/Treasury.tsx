@@ -97,7 +97,7 @@ export default function Treasury() {
                 return (
                   <Card key={a.id} className={cn("grid gap-2 p-4", (low || high) && "border-danger/60")}>
                     <div className="flex items-start justify-between gap-2">
-                      <button type="button" className="min-w-0 text-start" onClick={() => nav(`/finance/ledger?account=${a.id}`)}>
+                      <button type="button" className="min-w-0 text-start" onClick={() => nav(`/finance/reports/ledger?account=${a.id}`)}>
                         <span className="block truncate text-[15.5px] font-bold">{a.name.ar}</span>
                         <span className="num text-[12.5px] text-muted" dir="ltr">{a.code}</span>
                       </button>

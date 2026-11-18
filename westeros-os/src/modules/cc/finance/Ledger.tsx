@@ -17,8 +17,8 @@ export default function Ledger() {
   const nav = useNavigate();
   const [params, setParams] = useSearchParams();
   const id = params.get("account") ?? "";
-  const [period, setPeriod] = useState<Period>(periodOf("year", fin.settings.yearStartMonth));
-  const [branch, setBranch] = useState("");
+  const [period, setPeriod] = useState<Period>(() => (params.get("from") || params.get("to") ? { preset: "custom", from: params.get("from"), to: params.get("to") } : periodOf("year", fin.settings.yearStartMonth)));
+  const [branch, setBranch] = useState(params.get("branch") ?? "");
   const [centre, setCentre] = useState("");
   const acc = fin.byId.get(id);
   // a parent: its statement is the statement of all the leaves under it

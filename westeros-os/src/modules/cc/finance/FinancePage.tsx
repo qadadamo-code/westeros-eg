@@ -1,40 +1,44 @@
 /** الحسابات: the chart of accounts and, around it, the journal, the reports and the settings. */
 import { Navigate, Route, Routes } from "react-router-dom";
-import { Banknote, BookOpen, FileText, Flag, Landmark, ListTree, PackageCheck, Scale, Settings as Cog } from "lucide-react";
+import { Banknote, BookOpen, FileBarChart, Flag, Gauge, Landmark, ListTree, Settings as Cog, Target } from "lucide-react";
 import { PageHeader } from "@/shell/PageHeader";
 import { RouteTabs } from "@/modules/marketing/ui";
+import Centres from "./Centres";
 import Chart from "./Chart";
+import Dashboard from "./Dashboard";
 import Journal from "./Journal";
-import Ledger from "./Ledger";
 import Opening from "./Opening";
+import { useFinPerms } from "./perms";
+import Reports, { ReportRedirect } from "./Reports";
 import Settings from "./Settings";
-import StockRecon from "./StockRecon";
 import Treasury from "./Treasury";
-import TrialBalance from "./TrialBalance";
 
 export default function FinancePage() {
+  const perms = useFinPerms();
+  const reports = perms.has("reports");
   return (
     <div className="grid gap-5">
       <PageHeader icon={<Landmark />} title="الحسابات" />
       <RouteTabs label="الحسابات" items={[
-        { to: "/finance", end: true, label: "شجرة الحسابات", icon: <ListTree /> },
+        { to: "/finance", end: true, label: "المؤشرات", icon: <Gauge /> },
+        { to: "/finance/chart", label: "شجرة الحسابات", icon: <ListTree /> },
         { to: "/finance/journal", label: "القيود اليومية", icon: <BookOpen /> },
         { to: "/finance/treasury", label: "الخزينة والبنوك", icon: <Banknote /> },
-        { to: "/finance/ledger", label: "كشف حساب", icon: <FileText /> },
-        { to: "/finance/trial", label: "ميزان المراجعة", icon: <Scale /> },
+        ...(reports ? [{ to: "/finance/reports", label: "التقارير", icon: <FileBarChart /> }] : []),
+        { to: "/finance/centres", label: "مراكز التكلفة", icon: <Target /> },
         { to: "/finance/opening", label: "الأرصدة الافتتاحية", icon: <Flag /> },
-        { to: "/finance/stock", label: "مطابقة المخزون", icon: <PackageCheck /> },
         { to: "/finance/settings", label: "الإعدادات وربط الحسابات", icon: <Cog /> },
       ]} />
       <Routes>
-        <Route index element={<Chart />} />
+        <Route index element={<Dashboard />} />
+        <Route path="chart" element={<Chart />} />
         <Route path="journal" element={<Journal />} />
-        <Route path="ledger" element={<Ledger />} />
-        <Route path="trial" element={<TrialBalance />} />
-        <Route path="opening" element={<Opening />} />
         <Route path="treasury" element={<Treasury />} />
-        <Route path="stock" element={<StockRecon />} />
+        {reports ? <Route path="reports/*" element={<Reports />} /> : null}
+        <Route path="centres" element={<Centres />} />
+        <Route path="opening" element={<Opening />} />
         <Route path="settings" element={<Settings />} />
+        {["ledger", "trial", "stock"].map((r) => <Route key={r} path={r} element={<ReportRedirect to={r} />} />)}
         <Route path="*" element={<Navigate to="/finance" replace />} />
       </Routes>
     </div>

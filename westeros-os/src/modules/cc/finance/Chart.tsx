@@ -129,7 +129,7 @@ export default function Chart() {
                             {expanded.has(a.code) || filtering ? <ChevronDown className="size-4" /> : <ChevronLeft className="size-4" />}
                           </button>
                         ) : <span className="size-6 shrink-0" />}
-                        <button type="button" className="flex min-w-0 items-center gap-2 text-start" onClick={() => (a.postable ? nav(`/finance/ledger?account=${a.id}`) : toggle(a.code))}>
+                        <button type="button" className="flex min-w-0 items-center gap-2 text-start" onClick={() => (a.postable ? nav(`/finance/reports/ledger?account=${a.id}`) : toggle(a.code))}>
                           <span className="num shrink-0 text-muted" dir="ltr">{a.code}</span>
                           <span className={cn("truncate", !a.postable && "font-bold", lvl === 1 && "text-[15.5px]")}>{a.name.ar}</span>
                         </button>
@@ -147,7 +147,7 @@ export default function Chart() {
                       <Popover align="end" width="w-56" trigger={({ props }) => <IconButton label={`إجراءات ${a.name.ar}`} size="sm" {...props}><MoreVertical /></IconButton>}>
                         {(close) => (
                           <>
-                            {a.postable ? <MenuItem icon={<FileText />} onClick={() => { close(); nav(`/finance/ledger?account=${a.id}`); }}>كشف حساب</MenuItem> : null}
+                            {a.postable ? <MenuItem icon={<FileText />} onClick={() => { close(); nav(`/finance/reports/ledger?account=${a.id}`); }}>كشف حساب</MenuItem> : null}
                             {canEdit && lvl < MAX_LEVEL ? <MenuItem icon={<Plus />} onClick={() => { close(); setEdit({ row: null, parent: a.code }); }}>إضافة حساب فرعي</MenuItem> : null}
                             {canEdit ? <MenuItem icon={<Pencil />} onClick={() => { close(); setEdit({ row: a, parent: a.parentCode }); }}>تعديل</MenuItem> : null}
                             {canEdit && a.parentCode && !a.system ? <MenuItem icon={<Power />} onClick={() => { close(); void run(() => db.update("finAccounts", a.id, { active: !a.active }), a.active ? "تم إيقاف الحساب" : "تم تفعيل الحساب"); }}>{a.active ? "إيقاف" : "تفعيل"}</MenuItem> : null}

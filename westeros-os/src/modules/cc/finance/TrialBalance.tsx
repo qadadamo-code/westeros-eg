@@ -45,7 +45,7 @@ export default function TrialBalance() {
             <thead><tr className="text-[12.5px] text-muted">{head.map((h, i) => <th key={h} className={cn("border-b border-line px-3 py-2.5 font-semibold", i > 1 ? "text-end" : "text-start")}>{h}</th>)}</tr></thead>
             <tbody>
               {t.rows.map((r) => (
-                <tr key={r.account.id} className="cursor-pointer border-t border-line/60 hover:bg-surface-2" onClick={() => nav(`/finance/ledger?account=${r.account.id}`)}>
+                <tr key={r.account.id} className="cursor-pointer border-t border-line/60 hover:bg-surface-2" onClick={() => nav(`/finance/reports/ledger?account=${r.account.id}`)}>
                   <td className="num px-3 py-2 text-muted" dir="ltr">{r.account.code}</td>
                   <td className={cn("px-3 py-2", !r.account.postable && "font-bold")} style={{ paddingInlineStart: level === "leaves" ? 12 : 12 + (r.level - 1) * 18 }}>{r.account.name.ar}</td>
                   {cols.map((c) => <td key={c} className={cn("px-3 py-2 text-end", !r.account.postable && "font-bold")}><Amount value={r[c]} zero="" /></td>)}
