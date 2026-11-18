@@ -68,6 +68,7 @@ export const DEFAULT_TREE: SeedAccount[] = [
   a("2105", "التأمينات الاجتماعية", "Social insurance", { key: "social.insurance" }),
   a("2106", "إكراميات ورسوم خدمة مستحقة للموظفين", "Tips and service payable to staff", { key: "tips.payable" }),
   a("2107", "أرصدة عملاء مقدمة", "Customer deposits", { kind: "customer", key: "customer.deposits" }),
+  a("2108", "بضاعة مستلمة لم تصل فاتورتها", "Goods received not invoiced", { key: "purchases.accrued", auto: true }),
   a("22", "التزامات طويلة الأجل", "Long-term liabilities", { cashflow: "financing" }),
   a("2201", "قروض", "Loans", { cashflow: "financing", key: "loans" }),
 

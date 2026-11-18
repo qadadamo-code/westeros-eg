@@ -1,3 +1,4 @@
+import { StockSync } from "@/modules/cc/finance/SourceEntry";
 import { Suspense, useEffect, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
@@ -107,6 +108,7 @@ export function AppShell() {
         {lang === "ar" ? "تخطّى للمحتوى" : "Skip to content"}
       </a>
       <ShellCommands />
+      <StockSync />
       <Sidebar collapsed={collapsed} onToggle={toggle} />
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar title={title} />
@@ -136,6 +138,7 @@ export function BareLayout() {
   return (
     <div className="min-h-dvh bg-bg">
       <ShellCommands />
+      <StockSync />
       <ErrorBoundary lang={lang} resetKey={loc.pathname}>
         <Suspense fallback={<div className="p-6"><PageFallback /></div>}>
           <Outlet />

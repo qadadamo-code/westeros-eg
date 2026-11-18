@@ -7,7 +7,7 @@ import { DEFAULT_LINKS } from "./chart";
 import { accountProblem, ChartError, deleteProblem, indexChart, moveProblem, nextCode, seedRows, typeOfCode, usageOf } from "./tree";
 
 export const DEFAULT_SETTINGS: FinSettingsData = {
-  yearStartMonth: 1, startDate: null, periods: {}, links: DEFAULT_LINKS, costing: "last", approvalLimit: null, kitchenAllocation: "none", kitchenShares: {},
+  yearStartMonth: 1, startDate: null, periods: {}, links: DEFAULT_LINKS, costing: "last", approvalLimit: null, kitchenAllocation: "none", kitchenShares: {}, rules: [], stockByWarehouse: true, standardCosts: {}, transitDays: 3,
 };
 export const settingsOf = (row: FinSettings | null | undefined): FinSettingsData => ({ ...DEFAULT_SETTINGS, ...(row?.data ?? {}), links: { ...DEFAULT_LINKS, ...(row?.data?.links ?? {}) } });
 

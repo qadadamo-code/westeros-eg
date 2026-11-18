@@ -1,4 +1,5 @@
 /** طلب توريد: the list with each request's status, and a new request from a branch. */
+import { SourceEntry } from "../finance/SourceEntry";
 import { useMemo, useState } from "react";
 import { Plus, Truck } from "lucide-react";
 import { useSession } from "@/auth/session";
@@ -127,7 +128,7 @@ function RequestView({ cc, row, onClose }: { cc: Cc; row: StockRequest; onClose:
   const th = "px-3 py-2 text-start font-semibold";
   return (
     <Dialog open onClose={onClose} size="lg" title={`طلب توريد رقم ${row.number}`} description={`${fmtAt(row.at)} · موعد التوريد ${fmtDay(row.dueDate)}`}
-      footer={<div className="flex justify-end"><Button onClick={onClose}>إغلاق</Button></div>}>
+      footer={<div className="flex flex-wrap justify-end gap-2"><SourceEntry refId={row.id} /><Button onClick={onClose}>إغلاق</Button></div>}>
       <div className="grid gap-3">
         <div className="flex flex-wrap items-center gap-2 text-[14px]">
           <Badge tone={REQUEST_STATUS[row.status].tone}>{REQUEST_STATUS[row.status].ar}</Badge>

@@ -102,6 +102,15 @@ export interface FinCentre extends Row {
 export type FinCosting = "last" | "average" | "fifo" | "standard";
 export type FinPeriodStatus = "open" | "closed" | "locked";
 
+/** ربط خاص: overrides the general link of a posting key for one item, warehouse, raw category or warehouse type. The most specific wins. */
+export interface FinLinkRule {
+  key: string;
+  scope: "item" | "location" | "category" | "storeType";
+  id: string;
+  /** account code */
+  account: string;
+}
+
 export interface FinSettingsData {
   /** first month of the financial year (1 = January) */
   yearStartMonth: number;
@@ -117,6 +126,14 @@ export interface FinSettingsData {
   /** توزيع مصروفات المطبخ المركزي على الفروع */
   kitchenAllocation: "none" | "by_supply" | "by_sales" | "fixed";
   kitchenShares: Record<string, number>;
+  /** ربط حسب نوع المخزن أو فئة الصنف أو صنف أو مخزن بعينه */
+  rules: FinLinkRule[];
+  /** each warehouse gets its own stock account under the stock account of the item's kind */
+  stockByWarehouse: boolean;
+  /** التكلفة المعيارية: item id → cost of one base unit (costing = "standard") */
+  standardCosts: Record<string, Units>;
+  /** بضاعة بالطريق older than this many days is flagged */
+  transitDays: number;
 }
 
 /** One row per restaurant. */

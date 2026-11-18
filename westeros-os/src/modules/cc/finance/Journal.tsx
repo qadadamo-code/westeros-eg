@@ -1,4 +1,5 @@
 /** القيود اليومية: the journal, the entry form, and what can be done to an entry (approve, reject, reverse, copy, print). */
+import { STOCK_REF_LABEL, STOCK_SOURCE } from "./sync";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { BookOpen, Check, Copy, FilePlus2, Paperclip, Plus, Repeat, RotateCcw, Scale, Search, Trash2, X } from "lucide-react";
@@ -20,6 +21,7 @@ const TONE: Record<FinEntry["status"], Tone> = { draft: "neutral", pending: "war
 /** where an automatic entry came from, in words */
 export const SOURCE_LABEL: Record<string, string> = {
   "mfg-batch": "تشغيلة تصنيع", "stock-move": "حركة مخزنية", "stock-count": "جرد مخزن", "stock-request": "طلب توريد", "stock-waste": "هالك مخزن",
+  ...Object.fromEntries(Object.entries(STOCK_REF_LABEL).map(([k, v]) => [`${STOCK_SOURCE}${k}`, v])),
   "opening-balance": "أرصدة افتتاحية", [RECURRING]: "قيد متكرر", voucher: "سند", expense: "مصروف", depreciation: "إهلاك", "year-close": "إقفال سنة",
 };
 
@@ -239,6 +241,8 @@ export function EntryView({ fin, entry: e, onClose, onEdit, onCopy, onOpen }: { 
   const print = () => printTable(`${KIND_LABEL[e.kind]} رقم ${entryRef(e)}`, `التاريخ ${fmtDay(e.date)} · ${fin.branchName(e.branchId)} · ${e.memo}`, ["الحساب", "بيان السطر", "مدين", "دائن"],
     e.lines.map((l) => [fin.label(l.account), l.memo ?? "", { text: l.debit ? fmt(l.debit) : "", align: "end" as const }, { text: l.credit ? fmt(l.credit) : "", align: "end" as const }]), ["الإجمالي", "", { text: fmt(t.debit), align: "end" }, { text: fmt(t.credit), align: "end" }]);
   const editable = e.status === "draft" || e.status === "rejected";
+  // an entry a warehouse movement made is corrected from the movement itself (void the batch, count again …)
+  const fromStock = !!e.sourceType?.startsWith(STOCK_SOURCE) && e.sourceType !== `${STOCK_SOURCE}revalue`;
   return (
     <Dialog open onClose={onClose} size="xl" title={<span className="flex flex-wrap items-center gap-2">{KIND_LABEL[e.kind]} <span className="num" dir="ltr">{entryRef(e)}</span><Badge tone={TONE[e.status]}>{STATUS_LABEL[e.status]}</Badge>{e.reversedBy ? <Badge tone="neutral">معكوس</Badge> : null}</span>}
       footer={<div className="flex flex-wrap justify-end gap-2">
@@ -248,7 +252,7 @@ export function EntryView({ fin, entry: e, onClose, onEdit, onCopy, onOpen }: { 
         {editable && onEdit && perms.has("journal.enter") ? <Button variant="secondary" onClick={onEdit}>تعديل</Button> : null}
         {editable && perms.has("journal.enter") ? <Button variant="danger-soft" icon={<Trash2 />} loading={busy} onClick={() => run(() => removeDraft(db, e.id), "تم حذف المسودة")}>حذف</Button> : null}
         {e.status === "pending" && actor.canApprove ? <><Button variant="danger-soft" onClick={() => { setText(""); setAsk("reject"); }}>رفض</Button><Button icon={<Check />} loading={busy} onClick={() => run(() => approveEntry(db, e.id, actor), "تم اعتماد وترحيل القيد")}>اعتماد وترحيل</Button></> : null}
-        {e.status === "posted" && !e.reversedBy && e.kind !== "reversal" && actor.canApprove ? <Button variant="danger-soft" icon={<RotateCcw />} onClick={() => { setText(""); setDate(today()); setAsk("reverse"); }}>قيد عكسي</Button> : null}
+        {e.status === "posted" && !e.reversedBy && e.kind !== "reversal" && !fromStock && actor.canApprove ? <Button variant="danger-soft" icon={<RotateCcw />} onClick={() => { setText(""); setDate(today()); setAsk("reverse"); }}>قيد عكسي</Button> : null}
       </div>}>
       <div className="grid gap-4">
         <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-[14px] sm:grid-cols-4">
@@ -258,6 +262,7 @@ export function EntryView({ fin, entry: e, onClose, onEdit, onCopy, onOpen }: { 
           <div><dt className="text-[12.5px] text-muted">وقت التسجيل</dt><dd className="num">{fmtAt(e.postedAt ?? e.createdAt)}</dd></div>
           {e.sourceType && SOURCE_LABEL[e.sourceType] ? <div><dt className="text-[12.5px] text-muted">المصدر</dt><dd>{SOURCE_LABEL[e.sourceType]}</dd></div> : null}
           <div className="col-span-2 sm:col-span-3"><dt className="text-[12.5px] text-muted">البيان</dt><dd>{e.memo || "—"}</dd></div>
+          {fromStock ? <div className="col-span-2 text-[13px] text-muted sm:col-span-4">قيد تلقائي من حركة مخزنية. لا يعكس من هنا، يتصحح من مصدره (إلغاء التشغيلة، جرد جديد، حركة عكسية).</div> : null}
           {e.reason ? <div className="col-span-2 sm:col-span-4"><dt className="text-[12.5px] text-muted">سبب الرفض</dt><dd className="text-danger">{e.reason}</dd></div> : null}
         </dl>
         {other ? <button type="button" className="w-fit text-[13.5px] font-semibold text-primary underline-offset-2 hover:underline" onClick={() => onOpen?.(other)}>{e.reversedBy ? "القيد العكسي" : "القيد الأصلي"}: <span className="num" dir="ltr">{entryRef(other)}</span></button> : null}

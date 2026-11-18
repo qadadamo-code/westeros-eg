@@ -3,7 +3,7 @@ import { useMemo, type ReactNode } from "react";
 import { Printer } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { major, MONEY_MASK, moneyHidden, UNITS_PER_MAJOR, type Units } from "@/lib/money";
-import { Button, Input, Select } from "@/ui";
+import { Button, Dialog, Input, Select } from "@/ui";
 import type { Fin } from "./useFinance";
 
 /** 1,250.00 (no currency: tables carry it in the header) */
@@ -106,4 +106,15 @@ export function printTable(title: string, subtitle: string, head: string[], rows
 }
 export function PrintButton({ onClick, size }: { onClick: () => void; size?: "sm" | "md" }) {
   return <Button type="button" variant="secondary" size={size} icon={<Printer />} onClick={onClick}>طباعة</Button>;
+}
+
+/** تأكيد قبل أي حركة لا ترجع بضغطة */
+export function Confirm({ open, onClose, onConfirm, title, description, confirmLabel = "تأكيد", loading, danger, children }: { open: boolean; onClose: () => void; onConfirm: () => void; title: string; description?: ReactNode; confirmLabel?: string; loading?: boolean; danger?: boolean; children?: ReactNode }) {
+  return (
+    <Dialog open={open} onClose={onClose} size="sm" title={title}
+      footer={<div className="flex justify-end gap-2"><Button variant="ghost" onClick={onClose}>إلغاء</Button><Button variant={danger ? "danger" : "primary"} loading={loading} onClick={onConfirm}>{confirmLabel}</Button></div>}>
+      {description ? <p className="text-[14.5px]">{description}</p> : null}
+      {children}
+    </Dialog>
+  );
 }

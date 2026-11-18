@@ -120,3 +120,16 @@ export function dayBefore(day: string): string {
   return d.toISOString().slice(0, 10);
 }
 export { balanceOf };
+
+const cairo = new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Cairo" });
+/** the Cairo day of a moment */
+export const cairoDay = (iso: string) => cairo.format(new Date(iso));
+/** `date` when its month is open, else the first day of the next open month. */
+export function openDate(settings: Pick<FinSettingsData, "periods">, date: string): string {
+  let d = date;
+  for (let i = 0; i < 60 && periodStatus(settings, d) !== "open"; i++) {
+    const [y, m] = d.split("-").map(Number);
+    d = m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, "0")}-01`;
+  }
+  return d;
+}

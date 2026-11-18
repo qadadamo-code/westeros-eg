@@ -1,4 +1,5 @@
 /** سجل التشغيلات: every batch with its number, chef, cost and expiry — search by batch number, open, reprint, void. */
+import { SourceEntry } from "@/modules/cc/finance/SourceEntry";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Ban, ClipboardList, Printer, Search } from "lucide-react";
@@ -110,6 +111,7 @@ function BatchDialog({ batch, prod, onClose }: { batch: MfgBatch | null; prod: P
           <div className="flex flex-wrap items-center justify-between gap-2">
             {b.status === "done" && can("production.manage") ? <Button variant="danger-soft" icon={<Ban />} onClick={() => setVoiding(true)}>{L("إلغاء التشغيلة", "Void batch")}</Button> : <span />}
             <div className="flex gap-2">
+              <SourceEntry refId={b.id} />
               <Button variant="ghost" onClick={onClose}>{L("إغلاق", "Close")}</Button>
               {b.status === "done" ? <Button icon={<Printer />} onClick={() => setLabel(true)}>{L("طباعة الستيكر", "Print sticker")}</Button> : null}
             </div>

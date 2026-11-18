@@ -82,6 +82,7 @@ export async function reverseEntry(db: Db, id: string, opts: { date: string; mem
   if (!e || e.status !== "posted") throw new JournalError("يعكس القيد المرحل فقط");
   if (e.reversedBy) throw new JournalError("القيد معكوس بالفعل");
   if (e.kind === "reversal") throw new JournalError("القيد العكسي لا يعكس. اعمل قيد جديد.");
+  if (e.sourceType?.startsWith("stock:") && e.sourceType !== "stock:revalue") throw new JournalError("قيد تلقائي من حركة مخزنية، يتصحح من مصدره وليس بقيد عكسي");
   if (!actor.canApprove) throw new JournalError("ليس لديك صلاحية عكس القيود");
   const lines = reversed(e.lines);
   const problem = entryProblem({ date: opts.date, lines }, c.byId, c.settings);

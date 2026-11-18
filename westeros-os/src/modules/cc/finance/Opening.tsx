@@ -23,7 +23,7 @@ export default function Opening() {
   const actor = useActor();
   const can = useFinPerms().has("journal.enter");
   const cur = fin.entries.find((e) => e.kind === "opening" && e.sourceType === OPENING && !e.reversedBy) ?? null;
-  const leaves = useMemo(() => fin.ix.ordered().filter((a) => a.postable && typeInfo(a.type).statement === "balance" && (a.active || cur?.lines.some((l) => l.account === a.id))), [fin.ix, cur]);
+  const leaves = useMemo(() => fin.ix.ordered().filter((a) => a.postable && typeInfo(a.type).statement === "balance" && (a.allowManual || !!cur?.lines.some((l) => l.account === a.id)) && (a.active || cur?.lines.some((l) => l.account === a.id))), [fin.ix, cur]);
   const [date, setDate] = useState(cur?.date ?? fin.settings.startDate ?? today());
   const [vals, setVals] = useState<Record<string, { debit: string; credit: string }>>(() => Object.fromEntries((cur?.lines ?? []).map((l) => [l.account, { debit: toText(l.debit), credit: toText(l.credit) }])));
   const [busy, setBusy] = useState(false);
@@ -67,6 +67,7 @@ export default function Opening() {
         {can && !locked ? <ExcelImport fields={[{ key: "كود الحساب", aliases: ["الكود", "code"] }, { key: "مدين", aliases: ["debit"] }, { key: "دائن", aliases: ["credit"] }]} run={fromSheet} skipNote="كود غير موجود، حساب تجميعي، أو بدون مبلغ. الاعتماد يملأ الخانات فقط، والحفظ من زر الحفظ." /> : null}
         <ExportButton file="الأرصدة-الافتتاحية" head={["كود الحساب", "اسم الحساب", "مدين", "دائن"]} rows={() => leaves.map((a) => [a.code, a.name.ar, fromText(vals[a.id]?.debit ?? "") / 100000 || "", fromText(vals[a.id]?.credit ?? "") / 100000 || ""])} />
       </div>
+      <p className="text-[13.5px] text-muted">رصيد المخزون الافتتاحي لا يدخل من هنا: السيستم يحسبه لوحده من أرصدة المخازن في تاريخ بداية القيود التلقائية.</p>
       {locked ? <p className="rounded-xl border border-line px-3 py-2.5 text-[14px] text-muted">شهر الأرصدة الافتتاحية مقفول. افتح الشهر أولا لتعديلها.</p> : null}
       <Card className="overflow-hidden">
         <div className="overflow-x-auto thin-scrollbar">
