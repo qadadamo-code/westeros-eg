@@ -46,7 +46,7 @@ export function LabelDialog({ batch, onClose, justSaved }: { batch: MfgBatch | n
     const outs = all ? batch.outputs : [output];
     const ns = outs.map(copiesOf);
     try {
-      await printLabels(batch, outs, size, ns, shift);
+      await printLabels(batch, outs, size, ns, shift, outs.map((o) => products.find((p) => p.id === o.productId)?.code));
       await countLabels(db, batch.id, ns.reduce((a, n) => a + n, 0));
     } finally {
       setBusy(false);

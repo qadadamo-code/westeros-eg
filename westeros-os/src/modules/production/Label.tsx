@@ -84,17 +84,28 @@ const t2 = (iso: string) => new Date(iso).toLocaleTimeString("en-GB", { timeZone
 export type LabelBatch = Pick<MfgBatch, "number" | "madeAt" | "chefName" | "chefCode">;
 
 /** كود المسح: the link of the batch in سجل التشغيلات, so scanning the sticker opens the run it came from. */
-export function batchLink(number: string): string {
+export function batchLink(number: string, sticker?: { product: string; index: number }): string {
   const origin = typeof location === "undefined" ? "" : location.origin;
-  return `${origin}${import.meta.env.BASE_URL}${COST_CONTROL_ONLY ? "manufacturing/log" : "production/batches"}?b=${encodeURIComponent(number)}`;
+  // the product code and the sticker's number let a supply receipt count each sticker once (طلب توريد)
+  const more = sticker ? `&p=${encodeURIComponent(sticker.product)}&s=${sticker.index}` : "";
+  return `${origin}${import.meta.env.BASE_URL}${COST_CONTROL_ONLY ? "manufacturing/log" : "production/batches"}?b=${encodeURIComponent(number)}${more}`;
+}
+
+/** The lengths of a sticker: millimetres on screen, a share of the page on paper (`fit`), so it fills the label. */
+export function stickerMm(size: LabelSize, fit?: boolean) {
+  const u = size.h / 40; // 1u = 1mm on the 60×40 label
+  return (n: number) => (fit ? `calc(var(--lw) * ${Math.round((n * u * 100000) / size.w) / 100000})` : `${Math.round(n * u * 1000) / 1000}mm`);
+}
+/** The outer box of a sticker (white, black ink, the label's size, moved by the printer's shift on paper). */
+export function stickerBox(size: LabelSize, mm: (n: number) => string, fit?: boolean, shift?: LabelShift): CSSProperties {
+  return { ...(fit ? ({ "--lw": `min(100vw, ${Math.round((size.w * 100000) / size.h) / 1000}vh)` } as CSSProperties) : null), width: fit ? "var(--lw)" : `${size.w}mm`, height: fit ? `calc(var(--lw) * ${Math.round((size.h * 100000) / size.w) / 100000})` : `${size.h}mm`, boxSizing: "border-box", padding: `${mm(1.2)} ${mm(2)}`, ...(fit && shift && (shift.x || shift.y) ? { transform: `translate(calc(var(--lw) * ${Math.round((shift.x * 100000) / size.w) / 100000}), calc(var(--lw) * ${Math.round((shift.y * 100000) / size.w) / 100000}))` } : null), background: "#fff", color: "#000", fontFamily: "'Tajawal','IBM Plex Sans Arabic',system-ui,sans-serif", display: "flex", flexDirection: "column", overflow: "hidden" };
 }
 
 /** Sized in millimetres; all type scales with the label height so the three sizes share one layout. */
-export function BatchLabel({ batch, output, size, index, of, fit, shift }: { batch: LabelBatch; output: MfgBatchOutput; size: LabelSize; index?: number; of?: number; fit?: boolean; shift?: LabelShift }) {
-  const u = size.h / 40; // 1u = 1mm on the 60×40 label
+export function BatchLabel({ batch, output, size, index, of, fit, shift, productCode }: { batch: LabelBatch; output: MfgBatchOutput; size: LabelSize; index?: number; of?: number; fit?: boolean; shift?: LabelShift; productCode?: string }) {
   // on paper (`fit`) every length is a share of the page (--lw: the widest the sticker can be inside it), so the sticker fills the label whatever paper size the printer driver reports
-  const mm = (n: number) => (fit ? `calc(var(--lw) * ${Math.round((n * u * 100000) / size.w) / 100000})` : `${Math.round(n * u * 1000) / 1000}mm`);
-  const qr = qrMatrix(batchLink(batch.number), "L");
+  const mm = stickerMm(size, fit);
+  const qr = qrMatrix(batchLink(batch.number, productCode && index ? { product: productCode, index } : undefined), "L");
   const qty = output.unit === "pc" ? `${output.count ?? 0} قطعة` : `${Math.round((output.weightKg ?? 0) * 1000) / 1000} كجم`;
   // `big`: the lines read from a distance (dates, quantity) take the larger type; the chef's name keeps the small one
   const Line = ({ k, v, bold, big }: { k: string; v: ReactNode; bold?: boolean; big?: boolean }) => (
@@ -107,7 +118,7 @@ export function BatchLabel({ batch, output, size, index, of, fit, shift }: { bat
     <div
       dir="rtl"
       className="mfg-label"
-      style={{ ...(fit ? ({ "--lw": `min(100vw, ${Math.round((size.w * 100000) / size.h) / 1000}vh)` } as CSSProperties) : null), width: fit ? "var(--lw)" : `${size.w}mm`, height: fit ? `calc(var(--lw) * ${Math.round((size.h * 100000) / size.w) / 100000})` : `${size.h}mm`, boxSizing: "border-box", padding: `${mm(1.2)} ${mm(2)}`, ...(fit && shift && (shift.x || shift.y) ? { transform: `translate(calc(var(--lw) * ${Math.round((shift.x * 100000) / size.w) / 100000}), calc(var(--lw) * ${Math.round((shift.y * 100000) / size.w) / 100000}))` } : null), background: "#fff", color: "#000", fontFamily: "'Tajawal','IBM Plex Sans Arabic',system-ui,sans-serif", display: "flex", flexDirection: "column", overflow: "hidden" }}
+      style={stickerBox(size, mm, fit, shift)}
     >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `${mm(0.3)} solid #000`, paddingBottom: mm(0.5), gap: mm(1.5) }}>
         <span dir="ltr" style={{ fontSize: mm(3), fontWeight: 800, letterSpacing: "0.1em", lineHeight: 1.1 }}>WESTEROS</span>
@@ -139,7 +150,13 @@ export function BatchLabel({ batch, output, size, index, of, fit, shift }: { bat
 const ROOT_ID = "ws-label-root";
 
 /** Prints the stickers of each product of the batch (`copies`: one number for all, or one per product) through the browser's print dialog. */
-export function printLabels(batch: LabelBatch, outputs: MfgBatchOutput[], size: LabelSize, copies: number | number[], shift: LabelShift = savedLabelShift()): Promise<void> {
+export function printLabels(batch: LabelBatch, outputs: MfgBatchOutput[], size: LabelSize, copies: number | number[], shift: LabelShift = savedLabelShift(), productCodes?: (string | undefined)[]): Promise<void> {
+  const nOf = (oi: number) => Math.max(1, Math.min(200, Math.round(Array.isArray(copies) ? copies[oi] ?? 1 : copies)));
+  return printStickers(size, outputs.flatMap((o, oi) => Array.from({ length: nOf(oi) }, (_, i) => <BatchLabel key={`${oi}-${i}`} batch={batch} output={o} size={size} index={i + 1} of={nOf(oi)} fit shift={shift} productCode={productCodes?.[oi]} />)));
+}
+
+/** Prints one sticker per page (each one drawn with `fit`) through the browser's print dialog. */
+export function printStickers(size: LabelSize, stickers: ReactNode[]): Promise<void> {
   if (typeof document === "undefined") return Promise.resolve();
   document.getElementById(ROOT_ID)?.remove();
   document.getElementById(`${ROOT_ID}-css`)?.remove();
@@ -159,16 +176,15 @@ export function printLabels(batch: LabelBatch, outputs: MfgBatchOutput[], size: 
   document.head.appendChild(css);
   document.body.appendChild(host);
   const root = createRoot(host);
-  const nOf = (oi: number) => Math.max(1, Math.min(200, Math.round(Array.isArray(copies) ? copies[oi] ?? 1 : copies)));
   flushSync(() =>
     root.render(
       <>
-        {outputs.flatMap((o, oi) => Array.from({ length: nOf(oi) }, (_, i) => (
+        {stickers.slice(0, 400).map((node, i) => (
           // the page box: a moved sticker is cut at the page edge instead of spilling onto an extra (blank) label
-          <div key={`${oi}-${i}`} className="mfg-label-page" style={{ width: "100vw", height: `min(100vh, ${Math.round((size.h * 100000) / size.w) / 1000}vw)`, overflow: "hidden" }}>
-            <BatchLabel batch={batch} output={o} size={size} index={i + 1} of={nOf(oi)} fit shift={shift} />
+          <div key={i} className="mfg-label-page" style={{ width: "100vw", height: `min(100vh, ${Math.round((size.h * 100000) / size.w) / 1000}vw)`, overflow: "hidden" }}>
+            {node}
           </div>
-        )))}
+        ))}
       </>,
     ),
   );

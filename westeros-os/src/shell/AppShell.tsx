@@ -17,6 +17,8 @@ import { ShortcutsDialog } from "./ShortcutsDialog";
 import { Sidebar } from "./Sidebar";
 import { TopBar, useShellTitle } from "./TopBar";
 import { OpsShellExtras } from "@/modules/ops/shell";
+import { COST_CONTROL_ONLY } from "@/costControl";
+import { SupplyAlerts } from "@/modules/cc/stores/SupplyAlerts";
 
 const COLLAPSE_KEY = "sufra-os.sidebar";
 
@@ -127,6 +129,8 @@ export function AppShell() {
       {/* walkie-talkie runtime + floating PTT button + alert toasts (src/modules/ops) */}
       <OpsShellExtras />
       <ShortcutsDialog open={help} onClose={() => setHelp(false)} />
+      {/* طلبات التوريد: the message on opening for the employees they wait for */}
+      {COST_CONTROL_ONLY ? <SupplyAlerts /> : null}
     </div>
   );
 }

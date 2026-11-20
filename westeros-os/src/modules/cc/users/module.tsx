@@ -8,11 +8,11 @@ export default defineModule({
   status: "ready",
   icon: Users,
   title: { ar: "المستخدمين", en: "Users" },
-  description: { ar: "الشيفات وامناء المخازن والإدارة", en: "Chefs, warehouse keepers and managers" },
+  description: { ar: "الموظفين والأدوار والصلاحيات", en: "Employees, roles and permissions" },
   permission: "staff.manage",
   nav: { path: "/users", group: "admin", order: 10 },
   routes: [
-    { path: "/users", element: lazy(() => import("./UsersPage")) },
+    { path: "/users/*", element: lazy(() => import("./UsersPage")) },
     { path: "/settings/history", element: lazy(() => import("@/modules/settings/history/HistoryPage")), permission: "settings.view" },
   ],
 });

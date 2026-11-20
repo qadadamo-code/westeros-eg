@@ -21,7 +21,7 @@ type OutboxOp = { op: "insert" | "update" | "delete"; c: CollectionName; id: str
 
 const OUTBOX_KEY = "sufra-os.outbox";
 /** tables in the Realtime publication (see migration) */
-const REALTIME: CollectionName[] = ["orders", "orderItems", "serviceCalls", "tables", "checks", "payments", "reservations", "menuItems", "conversations", "messages"];
+const REALTIME: CollectionName[] = ["orders", "orderItems", "serviceCalls", "tables", "checks", "payments", "reservations", "menuItems", "conversations", "messages", "stockRequests"];
 /** never select pin_hash (column privilege is revoked anyway) */
 /** rows per request: the API never returns more than this in one answer */
 const PAGE = 1000;

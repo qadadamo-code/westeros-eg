@@ -99,7 +99,7 @@ export interface RawSpec {
 }
 
 /** طلب شراء / طلب توريد للفرع (Cost Control 2.4, 2.5). */
-export type StockRequestStatus = "in_progress" | "done" | "rejected" | "postponed";
+export type StockRequestStatus = "new" | "in_progress" | "done" | "rejected" | "postponed" | "sent";
 export interface StockRequestLine {
   itemId: string;
   name: Loc;
@@ -110,6 +110,25 @@ export interface StockRequestLine {
   locationId?: string | null;
   /** supply: the warehouse of the branch this line entered */
   toLocationId?: string | null;
+  /* طلب توريد (0041): sent by the responsible employee, received by the branch after scanning the stickers */
+  /** raw = مواد خام, made = منتج مصنع: decides who is notified */
+  kind?: "raw" | "made";
+  /** الكمية اللي اتبعتت (same unit as qty); unset = not sent yet */
+  sentQty?: number | null;
+  sentBy?: string | null;
+  sentByName?: string;
+  /** الكمية المستلمة after the scans */
+  receivedQty?: number | null;
+  /** the stickers scanned for this line (one entry per sticker, so a sticker is not counted twice) */
+  scans?: string[];
+}
+export interface StockRequestEvent {
+  at: string;
+  by: string | null;
+  name: string;
+  /** new | in_progress | postponed | sent | received | rejected */
+  action: string;
+  note?: string;
 }
 export interface StockRequest extends Row {
   kind: "purchase" | "supply";
@@ -130,6 +149,10 @@ export interface StockRequest extends Row {
   toLocationId?: string | null;
   /** set once the quantities were moved, so a request never moves stock twice */
   receivedAt?: string | null;
+  /** when the last line was sent (0041) */
+  sentAt?: string | null;
+  /** what happened to the request, in order (0041) */
+  history?: StockRequestEvent[];
 }
 
 export type LocationKind = "store" | "kitchen" | "bar" | "fridge" | "freezer" | "central";

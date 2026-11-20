@@ -7,7 +7,7 @@ import { formatMoney } from "@/lib/money";
 import { PageHeader } from "@/shell/PageHeader";
 import { BarList } from "@/modules/marketing/ui";
 import { BarChart, Card, CardHeader, Segmented, StatTile, type BarDatum } from "@/ui";
-import { num, toLine } from "../lib";
+import { num, requestOpen, toLine } from "../lib";
 import { useCc } from "../useCc";
 
 type Span = "day" | "week" | "month";
@@ -67,7 +67,7 @@ export default function SummaryPage() {
     () => prod.products.filter((p) => p.active).map((p) => ({ p, item: cc.itemById.get(p.stockItemId), qty: cc.onHand(p.stockItemId) })).filter((x) => x.item).sort((a, b) => b.qty - a.qty),
     [prod.products, cc],
   );
-  const open = (k: "purchase" | "supply") => requests.filter((r) => r.kind === k && r.status === "in_progress").length;
+  const open = (k: "purchase" | "supply") => requests.filter((r) => r.kind === k && requestOpen(r)).length;
   return (
     <div className="grid gap-5">
       <PageHeader icon={<BarChart3 />} title="الملخص" />

@@ -100,11 +100,15 @@ export const tempOfStoreType = (id: string): MfgProduct["storageTemp"] => (id ==
 export const fitsStore = (locType: string | null | undefined, itemType: string | null | undefined) => !storeType(locType) || !storeType(itemType) || locType === itemType;
 
 export const REQUEST_STATUS = {
-  done: { ar: "انتهت", tone: "ok" },
+  new: { ar: "جديد", tone: "neutral" },
   in_progress: { ar: "قيد التنفيذ", tone: "info" },
-  rejected: { ar: "مرفوضة", tone: "danger" },
-  postponed: { ar: "مؤجلة", tone: "warn" },
+  postponed: { ar: "مؤجل", tone: "warn" },
+  sent: { ar: "تم الإرسال", tone: "brass" },
+  done: { ar: "تم الاستلام", tone: "ok" },
+  rejected: { ar: "مرفوض", tone: "danger" },
 } as const;
+/** a request still open: not received and not refused */
+export const requestOpen = (r: { status: string; receivedAt?: string | null }) => !r.receivedAt && r.status !== "done" && r.status !== "rejected";
 
 export const num = (n: number, digits = 3) => new Intl.NumberFormat("en-US", { maximumFractionDigits: digits }).format(n);
 export const nowLocal = () => {
