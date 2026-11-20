@@ -7,9 +7,10 @@ import { useSession } from "@/auth/session";
 import { useDb } from "@/data/hooks";
 import type { MfgBatch, MfgInputRole } from "@/data/types";
 import { useT } from "@/i18n/i18n";
-import { formatMoney } from "@/lib/money";
+import { formatMoney, UNITS_PER_MAJOR } from "@/lib/money";
 import { BASE_NAME } from "@/modules/inventory/units";
 import { Badge, Button, Card, Dialog, EmptyState, Input, Select, Table, Textarea, useToast, type Column } from "@/ui";
+import { ExportButton } from "@/modules/cc/ui";
 import { LabelDialog } from "./LabelDialog";
 import { voidBatch } from "./ops";
 import { ExpiryBadge, fmtDateTime, fmtG, fmtKg, fmtPct, outQtyText } from "./ui";
@@ -22,11 +23,28 @@ export default function BatchesPage() {
   const [chef, setChef] = useState("");
   const [cat, setCat] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
+  // فئة الصنف المصنع: the batch's own category and the category of every product it made (one chicken run can make products of two categories)
+  const catsOf = (b: MfgBatch) => new Set([b.category, ...b.outputs.map((o) => prod.productById.get(o.productId)?.category ?? "")].filter(Boolean));
+  const usedCats = useMemo(() => {
+    const used = new Set(prod.batches.flatMap((b) => [...catsOf(b)]));
+    return prod.categories.filter((c) => used.has(c.id));
+  }, [prod.batches, prod.categories, prod.productById]); // eslint-disable-line react-hooks/exhaustive-deps
+  const exportRows = () => rows.map((b) => [
+    b.number,
+    b.outputs.map((o) => o.name.ar).join("، "),
+    [...catsOf(b)].map((c) => categoryName(prod.categories, c).ar).join("، "),
+    b.chefName,
+    fmtDateTime(b.madeAt, "ar"),
+    b.outputs.map((o) => outQtyText(o, "ar")).join(" + "),
+    Math.round((b.totalCost / UNITS_PER_MAJOR) * 100) / 100,
+    b.outputs[0] ? fmtDateTime(b.outputs.reduce((a, o) => (o.expiresAt < a ? o.expiresAt : a), b.outputs[0].expiresAt), "ar") : "",
+    b.status === "void" ? "ملغاة" : "سارية",
+  ]);
   const chefs = useMemo(() => [...new Map(prod.batches.map((b) => [b.chefId, b.chefName])).entries()], [prod.batches]);
   const rows = useMemo(() => {
     const n = q.trim().toLowerCase();
     return prod.batches.filter(
-      (b) => (!chef || b.chefId === chef) && (!cat || b.category === cat) && (!n || b.number.toLowerCase().includes(n) || b.chefName.toLowerCase().includes(n) || b.outputs.some((o) => o.name.ar.includes(n) || o.name.en.toLowerCase().includes(n))),
+      (b) => (!chef || b.chefId === chef) && (!cat || catsOf(b).has(cat)) && (!n || b.number.toLowerCase().includes(n) || b.chefName.toLowerCase().includes(n) || b.outputs.some((o) => o.name.ar.includes(n) || o.name.en.toLowerCase().includes(n))),
     );
   }, [prod.batches, q, chef, cat]);
   // a scanned sticker opens its batch: the link carries the batch number as ?b=
@@ -51,10 +69,11 @@ export default function BatchesPage() {
   ];
   return (
     <div className="grid gap-4">
-      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_200px_200px]">
+      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_200px_200px_auto]">
         <Input icon={<Search />} placeholder={L("ابحث برقم الباتش أو المنتج أو الشيف", "Search by batch number, product or chef")} value={q} onChange={(e) => setQ(e.target.value)} />
         <Select value={chef} onChange={(e) => setChef(e.target.value)} options={[{ value: "", label: L("كل الشيفات", "All chefs") }, ...chefs.map(([id, name]) => ({ value: id, label: name }))]} />
-        <Select value={cat} onChange={(e) => setCat(e.target.value)} options={[{ value: "", label: L("كل الأقسام", "All categories") }, ...prod.categories.map((c) => ({ value: c.id, label: loc(c.name) }))]} />
+        <Select value={cat} onChange={(e) => setCat(e.target.value)} options={[{ value: "", label: L("كل فئات الأصناف", "All categories") }, ...usedCats.map((c) => ({ value: c.id, label: loc(c.name) }))]} aria-label={L("فئة الصنف المصنع", "Product category")} />
+        <ExportButton file="سجل التشغيلات" head={["رقم الباتش", "المنتج", "فئة الصنف", "الشيف", "تاريخ الإنتاج", "الكمية", "التكلفة (جنيه)", "الصلاحية", "الحالة"]} rows={exportRows} />
       </div>
       <Card className="overflow-hidden">
         <Table columns={columns} rows={rows} rowKey={(b) => b.id} onRowClick={(b) => setOpenId(b.id)} loading={prod.loading} empty={<EmptyState compact icon={<ClipboardList />} title={prod.batches.length ? L("لا توجد نتيجة", "Nothing matches") : L("لا توجد تشغيلات بعد", "No batches yet")} />} />

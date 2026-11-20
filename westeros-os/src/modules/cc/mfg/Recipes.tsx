@@ -15,6 +15,8 @@ import { ReadOnly } from "../ui";
 import { useCc, type Cc } from "../useCc";
 
 type RecipeType = MfgProduct["recipeType"];
+/** a product that already has a recipe: it cannot get a second one */
+const hasRecipe = (p: MfgProduct) => p.recipeDefined || p.lines.length > 0;
 const clean = (l: MfgRecipeLine[]) => l.filter((x) => x.qty > 0);
 
 export default function Recipes() {
@@ -24,6 +26,8 @@ export default function Recipes() {
   const prod = cc.prod;
   const { can } = useSession();
   const [q, setQ] = useState("");
+  const [cat, setCat] = useState("");
+  const [rtype, setRtype] = useState<RecipeType | "">("");
   const [del, setDel] = useState<MfgProduct | null>(null);
   const [busy, setBusy] = useState(false);
   // حذف الوصفة: the product itself and its batches stay; only its ingredients and storage packaging are cleared
@@ -45,8 +49,11 @@ export default function Recipes() {
   const names = cc.lists.recipeNames;
   const rows = useMemo(() => {
     const n = q.trim().toLowerCase();
-    return prod.products.filter((p) => (p.recipeDefined || p.lines.length > 0) && searchHit(n, p.name.ar, p.code));
-  }, [prod.products, q]);
+    return prod.products.filter((p) => hasRecipe(p) && (!cat || p.category === cat) && (!rtype || p.recipeType === rtype) && searchHit(n, p.name.ar, p.code));
+  }, [prod.products, q, cat, rtype]);
+  // only the categories that have products, in the order of the constants
+  const cats = useMemo(() => prod.categories.filter((c) => prod.products.some((p) => p.category === c.id)), [prod.categories, prod.products]);
+  const free = prod.products.some((p) => p.active && !hasRecipe(p));
   const columns: Column<MfgProduct>[] = [
     { key: "code", header: "كود المنتج", cell: (p) => <span className="num text-muted">{p.code}</span> },
     { key: "name", header: "اسم المنتج", cell: (p) => <span className="font-semibold">{p.name.ar}</span> },
@@ -64,9 +71,11 @@ export default function Recipes() {
   ];
   return (
     <div className="grid gap-4">
-      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_190px_170px_auto]">
         <Input icon={<Search />} placeholder="ابحث باسم المنتج أو الكود" value={q} onChange={(e) => setQ(e.target.value)} />
-        {manage ? <Button icon={<Plus />} disabled={!prod.products.length} onClick={() => setOpen("new")}>تعريف وصفة</Button> : null}
+        <Select aria-label="فئة المنتج" value={cat} onChange={(e) => setCat(e.target.value)} options={[{ value: "", label: "كل الفئات" }, ...cats.map((c) => ({ value: c.id, label: c.name.ar }))]} />
+        <Select aria-label="نوع الوصفة" value={rtype} onChange={(e) => setRtype(e.target.value as RecipeType | "")} options={[{ value: "", label: "كل أنواع الوصفات" }, ...(["main", "sub", "marinade"] as const).map((t) => ({ value: t, label: names[t] }))]} />
+        {manage ? <Button icon={<Plus />} disabled={!free} title={free || !prod.products.length ? undefined : "كل المنتجات المصنعة لها وصفات"} onClick={() => setOpen("new")}>تعريف وصفة</Button> : null}
       </div>
       <Card className="overflow-hidden">
         <Table columns={columns} rows={rows} rowKey={(p) => p.id} dense onRowClick={(p) => setOpen(p)} empty={<EmptyState compact icon={<BookOpenCheck />} title="لا توجد وصفات معرفة" body={prod.products.length ? undefined : "أضف المنتجات المصنعة أولاً من قائمة المنتجات والخامات"} />} />
@@ -112,6 +121,8 @@ function RecipeDialog({ product, cc, readOnly, onClose }: { product: MfgProduct 
   const per = p && (p.method === "weight" || p.method === "portion") ? "العيارات لوجبة واحدة" : "العيارات لكل كيلو صافي";
   const save = async () => {
     if (!p) return;
+    // لا تكرار للوصفات: a new recipe for a product that already has one is refused (another device may have saved it meanwhile)
+    if (!product && hasRecipe(p)) return toast({ tone: "error", title: `${p.name.ar} له وصفة بالفعل`, description: "افتح وصفته من القائمة وعدّل عليها" });
     setBusy(true);
     try {
       await db.update("mfgProducts", p.id, { recipeType: type, lines: clean(lines), packaging: clean(packaging), mfgNotes: notes.trim(), recipeDefined: true });
@@ -128,7 +139,7 @@ function RecipeDialog({ product, cc, readOnly, onClose }: { product: MfgProduct 
       footer={<div className="flex justify-end gap-2"><Button variant="ghost" onClick={onClose}>{readOnly ? "إغلاق" : "إلغاء"}</Button>{readOnly ? null : <Button loading={busy} disabled={!p} onClick={save}>حفظ</Button>}</div>}>
       <fieldset disabled={readOnly} className="grid gap-4">
         <div className="grid gap-3 sm:grid-cols-3">
-          <Select label="اسم المنتج" disabled={!!product} value={pid} onChange={(e) => pick(e.target.value)} options={[{ value: "", label: "اختر من المنتجات المصنعة" }, ...prod.products.filter((x) => x.active).map((x) => ({ value: x.id, label: `${x.name.ar} · ${x.code}` }))]} />
+          <Select label="اسم المنتج" disabled={!!product} value={pid} onChange={(e) => pick(e.target.value)} options={[{ value: "", label: "اختر من المنتجات المصنعة" }, ...prod.products.filter((x) => x.active && (x.id === product?.id || !hasRecipe(x))).map((x) => ({ value: x.id, label: `${x.name.ar} · ${x.code}` }))]} />
           <ReadOnly label="اسم الشيف">{cc.staff?.name ?? "—"}</ReadOnly>
           <Select label="نوع الوصفة" value={type} onChange={(e) => changeType(e.target.value as RecipeType)} options={(["main", "sub", "marinade"] as const).map((t) => ({ value: t, label: names[t] }))} />
         </div>

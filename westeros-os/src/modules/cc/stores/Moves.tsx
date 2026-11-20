@@ -1,11 +1,12 @@
 /** 2.2 الحركات المخزنية: the list of movements and adding one (opening balance, damage, transfer). */
 import { useMemo, useState } from "react";
-import { ArrowLeftRight, Plus } from "lucide-react";
+import { ArrowLeftRight, Plus, X } from "lucide-react";
 import { useSession } from "@/auth/session";
 import { useDb, useLive } from "@/data/hooks";
 import type { MoveKind, StockMove } from "@/data/types";
 import { uuid } from "@/lib/id";
 import { applyMoves } from "@/modules/inventory/stock";
+import { ItemPicker } from "@/modules/production/ui";
 import { Badge, Button, Card, Dialog, EmptyState, Input, Select, Table, useToast, type Column } from "@/ui";
 import { fmtAt, fromLocal, lineUnit, nowLocal, num, toBaseQty, toLine } from "../lib";
 import { ExportButton, ReadOnly, StockLines, type QtyLine } from "../ui";
@@ -20,9 +21,20 @@ const KIND_LABEL: Partial<Record<MoveKind, string>> = {
 export default function Moves() {
   const cc = useCc();
   const { can } = useSession();
-  const moves = useLive("stockMoves", { orderBy: [{ field: "at", dir: "desc" }], limit: 300 }).data;
+  // الفلاتر: نوع الحركة، المخزون، المخزن. They go to the database so the latest 300 matching moves are shown, not 300 then filtered
+  const [kind, setKind] = useState<MoveKind | "">("");
+  const [itemId, setItemId] = useState("");
+  const [locId, setLocId] = useState("");
+  const where: { kind?: MoveKind; itemId?: string; locationId?: string } = {};
+  if (kind) where.kind = kind;
+  if (itemId) where.itemId = itemId;
+  if (locId) where.locationId = locId;
+  const live = useLive("stockMoves", { where, orderBy: [{ field: "at", dir: "desc" }], limit: 300 });
+  const moves = live.data;
   const [add, setAdd] = useState(false);
   const rows = useMemo(() => moves.filter((m) => KIND_LABEL[m.kind]), [moves]);
+  const picked = itemId ? cc.itemById.get(itemId) : undefined;
+  const filtered = !!(kind || itemId || locId);
   const locById = useMemo(() => new Map(cc.locations.map((l) => [l.id, l])), [cc.locations]);
   const exportRows = () => rows.map((m) => {
     const it = cc.itemById.get(m.itemId);
@@ -47,8 +59,29 @@ export default function Moves() {
           {can("inventory.count") ? <Button icon={<Plus />} onClick={() => setAdd(true)}>اضافة حركة مخزنية</Button> : null}
         </div>
       </div>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Select label="نوع الحركة" value={kind} onChange={(e) => setKind(e.target.value as MoveKind | "")} options={[{ value: "", label: "كل الأنواع" }, ...(Object.keys(KIND_LABEL) as MoveKind[]).map((k) => ({ value: k, label: KIND_LABEL[k]! }))]} />
+        <div className="grid gap-1.5">
+          <span className="text-[13px] font-semibold text-ink-2">المخزون</span>
+          {picked ? (
+            <div className="flex h-11 items-center justify-between gap-2 rounded-xl border border-primary/60 bg-surface px-3">
+              <span className="truncate font-semibold">{picked.name.ar} <span className="num text-[12.5px] text-muted">{picked.sku}</span></span>
+              <button type="button" aria-label="إلغاء فلتر المخزون" className="grid size-7 shrink-0 place-items-center rounded-lg text-muted hover:bg-surface-2 hover:text-ink" onClick={() => setItemId("")}><X className="size-4" /></button>
+            </div>
+          ) : (
+            <ItemPicker items={cc.all} onPick={(i) => setItemId(i.id)} placeholder="كل المخزون: اكتب الاسم أو الكود" />
+          )}
+        </div>
+        <Select label="المخزن" value={locId} onChange={(e) => setLocId(e.target.value)} options={[{ value: "", label: "كل المخازن" }, ...cc.locations.map((l) => ({ value: l.id, label: whName(cc, l) }))]} />
+      </div>
+      {filtered ? (
+        <div className="flex flex-wrap items-center gap-3 text-[13px] text-muted">
+          <span>{rows.length >= 300 ? "أحدث 300 حركة مطابقة" : `${rows.length} حركة مطابقة`}</span>
+          <button type="button" className="font-semibold text-primary hover:underline" onClick={() => (setKind(""), setItemId(""), setLocId(""))}>مسح الفلاتر</button>
+        </div>
+      ) : null}
       <Card className="overflow-hidden">
-        <Table columns={columns} rows={rows} rowKey={(m) => m.id} dense empty={<EmptyState compact icon={<ArrowLeftRight />} title="لا توجد حركات مخزنية" />} />
+        <Table columns={columns} rows={rows} rowKey={(m) => m.id} dense loading={live.loading} empty={<EmptyState compact icon={<ArrowLeftRight />} title={filtered ? "لا توجد حركات مطابقة للفلتر" : "لا توجد حركات مخزنية"} />} />
       </Card>
       {add ? <MoveDialog cc={cc} onClose={() => setAdd(false)} /> : null}
     </div>

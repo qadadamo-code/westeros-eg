@@ -88,15 +88,6 @@ function ByProduct({ prod, initial }: { prod: Prod; initial: MfgProduct | undefi
         </div>
         <Button variant="outline" icon={<RefreshCw />} onClick={() => setProductId("")}>تغيير الصنف</Button>
       </Card>
-      {p.mfgNotes?.trim() ? (
-        <div role="note" className="flex items-start gap-3 rounded-2xl border-2 border-[#F8BB18] bg-[#F8BB18]/20 p-4">
-          <TriangleAlert className="mt-0.5 size-6 shrink-0 text-warn" aria-hidden />
-          <div className="min-w-0">
-            <p className="text-[13.5px] font-bold text-warn">ملاحظات التصنيع</p>
-            <p className="whitespace-pre-wrap text-[16px] font-bold leading-relaxed" dir="auto">{p.mfgNotes.trim()}</p>
-          </div>
-        </div>
-      ) : null}
       {p.method === "weight" || p.method === "portion" ? (
         <SimpleForm key={key} method={p.method} prod={prod} onDone={again} initial={p} chosen />
       ) : p.method === "chicken" ? (
@@ -337,6 +328,21 @@ function RecipeSwitch({ value, onChange, empty }: { value: boolean; onChange: (v
   );
 }
 
+/** ملاحظات التصنيع: shown to the chef inside the ingredients box, right after the recipe ingredients, in a bright colour */
+function MfgNotes({ text, title }: { text?: string | null; title?: string }) {
+  const t = text?.trim();
+  if (!t) return null;
+  return (
+    <div role="note" className="flex items-start gap-3 rounded-2xl border-2 border-[#F8BB18] bg-[#F8BB18]/20 p-4">
+      <TriangleAlert className="mt-0.5 size-6 shrink-0 text-warn" aria-hidden />
+      <div className="min-w-0">
+        <p className="text-[13.5px] font-bold text-warn">ملاحظات التصنيع{title ? ` · ${title}` : ""}</p>
+        <p className="whitespace-pre-wrap text-[16px] font-bold leading-relaxed" dir="auto">{t}</p>
+      </div>
+    </div>
+  );
+}
+
 /* ───────── 1 + 2 · by weight / by portion ───────── */
 
 function SimpleForm({ method, prod, onDone, initial, chosen }: { method: Extract<MfgMethod, "weight" | "portion">; prod: Prod; onDone: () => void; initial?: MfgProduct; /** the product was chosen before the form: no product step */ chosen?: boolean }) {
@@ -399,6 +405,7 @@ function SimpleForm({ method, prod, onDone, initial, chosen }: { method: Extract
           <Block step={chosen ? 2 : 3} title={L("المكونات", "Ingredients")} hint={fixed ? "الكميات المطلوبة لهذه التشغيلة" : L("الكميات الفعلية التي دخلت هذه التشغيلة", "What actually went into this batch")}>
             <div className="grid gap-5">
               <LinesEditor readOnly={fixed} title={L("الوصفة", "Recipe")} lines={lines} onChange={setLines} by={meals} items={recipeItems(prod, p.recipeType, p.stockItemId)} itemById={prod.itemById} unitCost={prod.unitCost} />
+              {fixed ? <MfgNotes text={p.mfgNotes} /> : null}
               <LinesEditor readOnly={fixed} title={L("باكيج التخزين", "Storage packaging")} whole={wholePack} hint={fixed ? (method === "weight" ? "على الوزن الصافي بعد التجهيز، بالتقريب لأعلى لأقرب عدد صحيح. يدخل في التكلفة فقط" : "على العدد الصافي الناتج. يدخل في التكلفة فقط") : L("يدخل في التكلفة فقط", "Costed only")} lines={packaging} onChange={setPackaging} by={packBy} items={packagingItems(prod)} itemById={prod.itemById} unitCost={prod.unitCost} />
               {fixed ? (p.lines.length ? <p className="text-[12.5px] text-muted">الأرقام للعرض فقط. تعديل المكونات والباكيج يكون من الوصفات.</p> : <p className="text-[13px] font-semibold text-warn">الوصفة بدون مكونات، فالتكلفة هتطلع من غير مكونات. تقدر تضيفها من تبويب الوصفات.</p>) : <RecipeSwitch value={keep} onChange={setKeep} empty={!p.lines.length} />}
             </div>
@@ -484,6 +491,7 @@ function ChickenForm({ prod, onDone, initial, chosen }: { prod: Prod; onDone: ()
                 {mode !== "weight" ? <Num big label={L("العدد الناتج", "Count")} suffix={L("قطعة", "pcs")} value={r.count} onChange={(v) => set(r.productId, { count: v })} /> : null}
               </div>
               <LinesEditor readOnly={fixed} title={L("التتبيلة والمكونات", "Marinade & ingredients")} hint={L("لكامل وزن هذا المنتج", "For this product's whole weight")} lines={linesOf(r)} onChange={(l) => set(r.productId, { lines: l })} by={r.weightKg} items={recipeItems(prod, p.recipeType, p.stockItemId)} itemById={prod.itemById} unitCost={prod.unitCost} />
+              {fixed ? <MfgNotes text={p.mfgNotes} /> : null}
               <LinesEditor readOnly={fixed} title={L("باكيج التخزين", "Storage packaging")} hint={fixed ? (mode === "weight" ? "على الوزن الناتج، بالتقريب لأعلى لأقرب عدد صحيح. يدخل في التكلفة فقط" : "على العدد الناتج، بالتقريب لأعلى لأقرب عدد صحيح. يدخل في التكلفة فقط") : undefined} lines={packagingOf(r)} onChange={(l) => set(r.productId, { packaging: l })} by={packByOf(r)} whole={fixed} items={packagingItems(prod)} itemById={prod.itemById} unitCost={prod.unitCost} />
             </div>
           </Block>
@@ -519,6 +527,8 @@ function BurgerForm({ kind, categoryId, prod, onDone }: { kind: "beef" | "chicke
   const beef = kind === "beef";
   const list = useMemo(() => prod.products.filter((p) => p.active && p.method === "burger" && p.category === categoryId), [prod.products, categoryId]);
   const first = list[0];
+  // one run makes every burger product of the category: each product's notes, the same text shown once
+  const burgerNotes = [...new Map(list.filter((x) => x.mfgNotes?.trim()).map((x) => [x.mfgNotes!.trim(), { id: x.id, name: loc(x.name), text: x.mfgNotes!.trim() }])).values()];
   const meats = prod.settings?.meatTypes ?? [];
   const [meatTypeId, setMeatTypeId] = useState<string | null>(null);
   const [meatKg, setMeatKg] = useState(0);
@@ -609,6 +619,7 @@ function BurgerForm({ kind, categoryId, prod, onDone }: { kind: "beef" | "chicke
       <Block step={2} title={L("الخلطة", "Mix")} hint={fixed ? (beef ? `الكميات المطلوبة لإجمالي ${r3(mixKg)} كجم (الصافي + الدهن)` : `الكميات المطلوبة لإجمالي ${r3(mixKg)} كجم`) : L("كميات هذه التشغيلة", "Quantities of this batch")}>
         <div className="grid gap-5">
           <LinesEditor readOnly={fixed} title={L("مكونات الوصفة", "Recipe")} lines={lines} onChange={setLines} by={mixKg} items={recipeItems(prod, first?.recipeType ?? "main", first?.stockItemId)} itemById={prod.itemById} unitCost={prod.unitCost} />
+          {fixed ? burgerNotes.map((n) => <MfgNotes key={n.id} text={n.text} title={burgerNotes.length > 1 ? n.name : undefined} />) : null}
           <LinesEditor readOnly={fixed} title={L("باكيج التخزين", "Storage packaging")} hint={fixed ? "على إجمالي العدد الناتج. يدخل في التكلفة فقط" : L("يدخل في التكلفة فقط", "Costed only")} lines={packaging} onChange={setPackaging} by={packBy} items={packagingItems(prod)} itemById={prod.itemById} unitCost={prod.unitCost} />
           {fixed ? <p className="text-[12.5px] text-muted">الأرقام للعرض فقط. تعديل المكونات والباكيج يكون من الوصفات.</p> : <RecipeSwitch value={keep} onChange={setKeep} empty={!first?.lines.length} />}
         </div>
