@@ -1,4 +1,5 @@
 /** سجل التشغيلات: every batch with its number, chef, cost and expiry — search by batch number, open, reprint, void. */
+import { useArea } from "@/modules/cc/useAccess";
 import { SourceEntry } from "@/modules/cc/finance/SourceEntry";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -98,6 +99,8 @@ function BatchDialog({ batch, prod, onClose }: { batch: MfgBatch | null; prod: P
   const { L, lang, loc } = useT();
   const db = useDb();
   const { can, staff } = useSession();
+  // إلغاء التشغيلة = حذف in سجل التشغيلات (المستخدمين ← الأدوار)
+  const area = useArea();
   const { toast } = useToast();
   const [label, setLabel] = useState(false);
   const [voiding, setVoiding] = useState(false);
@@ -128,7 +131,7 @@ function BatchDialog({ batch, prod, onClose }: { batch: MfgBatch | null; prod: P
         description={`${b.outputs.map((o) => loc(o.name)).join("، ")} · ${loc(categoryName(prod.categories, b.category))}`}
         footer={
           <div className="flex flex-wrap items-center justify-between gap-2">
-            {b.status === "done" && can("production.manage") ? <Button variant="danger-soft" icon={<Ban />} onClick={() => setVoiding(true)}>{L("إلغاء التشغيلة", "Void batch")}</Button> : <span />}
+            {b.status === "done" && can("production.manage") && area.delete ? <Button variant="danger-soft" icon={<Ban />} onClick={() => setVoiding(true)}>{L("إلغاء التشغيلة", "Void batch")}</Button> : <span />}
             <div className="flex gap-2">
               <SourceEntry refId={b.id} />
               <Button variant="ghost" onClick={onClose}>{L("إغلاق", "Close")}</Button>

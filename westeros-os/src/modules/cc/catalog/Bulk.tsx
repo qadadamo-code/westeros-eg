@@ -2,6 +2,7 @@
  * التحديد في قوائم المنتجات والخامات: a checkbox on every row and one on the header (تحديد الكل for the rows shown),
  * then the action on what is ticked: تعديل (one row), نقل لفئة, حذف (one row or a group, after a confirmation).
  */
+import { useArea } from "../useAccess";
 import { useMemo, useState } from "react";
 import { FolderInput, Pencil, Trash2, X } from "lucide-react";
 import { Button, Dialog, Select, useToast, type Column } from "@/ui";
@@ -50,6 +51,8 @@ export function BulkBar({ count, noun, categories, onClear, onEdit, onMove, onDe
   onDelete: () => Promise<DeleteResult>;
 }) {
   const { toast } = useToast();
+  // تعديل and حذف of the tab (المستخدمين ← الأدوار)
+  const area = useArea();
   const [dialog, setDialog] = useState<"move" | "delete" | null>(null);
   const [to, setTo] = useState("");
   const [busy, setBusy] = useState(false);
@@ -88,9 +91,9 @@ export function BulkBar({ count, noun, categories, onClear, onEdit, onMove, onDe
       {count ? (
         <div className="flex flex-wrap items-center gap-2 rounded-xl border border-primary/40 bg-primary-soft/40 px-3 py-2">
           <span className="me-auto text-[14.5px] font-semibold">المحدد: <b className="num">{count}</b> {noun}</span>
-          {count === 1 ? <Button size="sm" variant="outline" icon={<Pencil />} onClick={onEdit}>تعديل</Button> : null}
-          <Button size="sm" variant="outline" icon={<FolderInput />} disabled={!categories.length} onClick={() => (setTo(categories[0]?.value ?? ""), setDialog("move"))}>نقل لفئة</Button>
-          <Button size="sm" variant="danger" icon={<Trash2 />} onClick={() => setDialog("delete")}>حذف</Button>
+          {count === 1 && area.edit ? <Button size="sm" variant="outline" icon={<Pencil />} onClick={onEdit}>تعديل</Button> : null}
+          {area.edit ? <Button size="sm" variant="outline" icon={<FolderInput />} disabled={!categories.length} onClick={() => (setTo(categories[0]?.value ?? ""), setDialog("move"))}>نقل لفئة</Button> : null}
+          {area.delete ? <Button size="sm" variant="danger" icon={<Trash2 />} onClick={() => setDialog("delete")}>حذف</Button> : null}
           <Button size="sm" variant="ghost" icon={<X />} onClick={onClear}>إلغاء التحديد</Button>
         </div>
       ) : null}

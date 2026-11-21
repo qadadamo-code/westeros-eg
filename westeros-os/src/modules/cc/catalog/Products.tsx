@@ -1,4 +1,5 @@
 /** 3.2 المنتجات المصنعة: the table of products, add and edit. The recipe itself is defined under التصنيع > الوصفات. */
+import { useArea } from "../useAccess";
 import { searchHit } from "@/lib/search";
 import { useMemo, useState } from "react";
 import { ChefHat, Plus, Search } from "lucide-react";
@@ -54,6 +55,7 @@ export default function Products() {
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("");
   const [edit, setEdit] = useState<MfgProduct | "new" | null>(null);
+  const area = useArea();
   const manage = can("production.manage");
   const rows = useMemo(() => {
     const n = q.trim().toLowerCase();
@@ -163,13 +165,13 @@ export default function Products() {
         <ExportButton file="المنتجات المصنعة" head={["كود المنتج", "اسم المنتج", "فئة المنتج", "وحدة التصنيع", "طريقة التخزين", "كمية وحدة التخزين", "نوع المخزن", "درجة حرارة التخزين", "صلاحية المنتج (يوم)", "وزن الحصة (جم)", "طريقة التصنيع"]}
           rows={() => rows.map((p) => [p.code, p.name.ar, categoryName(prod.categories, p.category).ar, p.mfgUnit ?? (p.unit === "kg" ? "كيلو" : "قطعة"), p.storageMethod, p.storageQty, storeTypeName(productStoreType(p)), storeTemp(productStoreType(p)), p.shelfLifeDays, p.portionGrams, methodLabel(p)])} />
         {manage ? <ExcelImport fields={FIELDS} run={importRows} skipNote="من غير كود، أو منتج جديد من غير اسم أو من غير فئة معرفة في ثوابت النظام." /> : null}
-        {manage ? <Button icon={<Plus />} onClick={() => setEdit("new")}>اضافة منتج</Button> : null}
+        {manage && area.add ? <Button icon={<Plus />} onClick={() => setEdit("new")}>اضافة منتج</Button> : null}
       </div>
       {manage ? <BulkBar count={sel.rows.length} noun="منتج" onClear={sel.clear} onEdit={() => setEdit(sel.rows[0])} categories={prod.categories.map((c) => ({ value: c.id, label: c.name.ar }))} onMove={move} onDelete={remove} /> : null}
       <Card className="overflow-hidden">
         <Table columns={columns} rows={rows} rowKey={(p) => p.id} dense onRowClick={(p) => setEdit(p)} empty={<EmptyState compact icon={<ChefHat />} title="لا توجد منتجات مصنعة" />} />
       </Card>
-      {edit ? <ProductDialog key={edit === "new" ? "new" : edit.id} product={edit === "new" ? null : edit} cc={cc} readOnly={!manage} onClose={() => setEdit(null)} /> : null}
+      {edit ? <ProductDialog key={edit === "new" ? "new" : edit.id} product={edit === "new" ? null : edit} cc={cc} readOnly={!manage || (edit === "new" ? !area.add : !area.edit)} onClose={() => setEdit(null)} /> : null}
     </div>
   );
 }

@@ -1,4 +1,5 @@
 /** 4- ثوابت النظام: the nine definitions of the document, in its order, then the lists its other sections refer to. */
+import { AreaGate, useArea } from "../useAccess";
 import { useState, type ReactNode } from "react";
 import { Plus, Settings2, Trash2, X } from "lucide-react";
 import { useDb, useLive } from "@/data/hooks";
@@ -13,6 +14,11 @@ import { useCc } from "../useCc";
 const BASE_LABEL: Record<MfgUnitDef["base"], string> = { g: "وزن (جرام)", ml: "حجم (مل)", pc: "عدد (قطعة)" };
 
 export default function ConstantsPage() {
+  return <AreaGate id="constants"><ConstantsPageBody /></AreaGate>;
+}
+
+function ConstantsPageBody() {
+  const readOnly = !useArea().edit;
   const cc = useCc();
   const db = useDb();
   const prod = cc.prod;
@@ -76,6 +82,9 @@ export default function ConstantsPage() {
   return (
     <div className="grid gap-5">
       <PageHeader icon={<Settings2 />} title="ثوابت النظام" />
+      {readOnly ? <p className="rounded-xl border border-line px-3 py-2 text-[13.5px] text-muted">للمشاهدة بس: الدور بتاعك مالوش صلاحية تعديل ثوابت النظام.</p> : null}
+      {/* without تعديل every field and button of the page is locked */}
+      <fieldset disabled={readOnly} className="contents">
       <div className="grid items-start gap-5 lg:grid-cols-2">
         <Chips title="تعريف وحدة التخزين لمواد الخام" subtitle="حذف الوحدة من هنا يشيلها من القائمة فقط، والخامات المسجلة بها تفضل كما هي" values={lists.storageUnits} onChange={(storageUnits) => setLists({ storageUnits })} placeholder="وحدة تخزين جديدة" />
 
@@ -188,6 +197,7 @@ export default function ConstantsPage() {
 
         <Chips title="طريقة التخزين" subtitle="القائمة المعرفة مسبقاً في بيانات المنتج المصنع" values={s.storageMethods} onChange={(storageMethods) => patch({ storageMethods })} placeholder="طريقة تخزين جديدة" />
       </div>
+      </fieldset>
     </div>
   );
 }

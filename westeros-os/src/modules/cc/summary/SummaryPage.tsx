@@ -1,4 +1,5 @@
 /** 1- الملخص: charts of production (daily, weekly, monthly), of each chef's day, of the product store, and general figures. */
+import { AreaGate } from "../useAccess";
 import { useMemo, useState } from "react";
 import { AlarmClock, BarChart3, ChefHat, Factory, Package, ShoppingCart, Truck, Wallet } from "lucide-react";
 import { useLive } from "@/data/hooks";
@@ -42,6 +43,10 @@ function series(batches: MfgBatch[], span: Span, now: Date): BarDatum[] {
 }
 
 export default function SummaryPage() {
+  return <AreaGate id="summary"><SummaryPageBody /></AreaGate>;
+}
+
+function SummaryPageBody() {
   const cc = useCc();
   const prod = cc.prod;
   const requests = useLive("stockRequests").data;

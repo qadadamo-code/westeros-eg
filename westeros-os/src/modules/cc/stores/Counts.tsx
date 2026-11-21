@@ -1,4 +1,5 @@
 /** 2.3 جرد المخزن: previous counts, a new count, and its result (surplus / deficit) once saved. */
+import { useArea } from "../useAccess";
 import { useMemo, useState } from "react";
 import { ClipboardCheck, Plus } from "lucide-react";
 import { useSession } from "@/auth/session";
@@ -16,6 +17,7 @@ const diff = (l: CountLine) => Math.round(((l.counted ?? l.expected) - l.expecte
 export default function Counts() {
   const cc = useCc();
   const { can } = useSession();
+  const area = useArea();
   const counts = useLive("stockCounts", { orderBy: [{ field: "startedAt", dir: "desc" }] }).data;
   const [add, setAdd] = useState(false);
   const [show, setShow] = useState<StockCount | null>(null);
@@ -30,7 +32,7 @@ export default function Counts() {
     <div className="grid gap-4">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-[17px] font-bold">قائمة عمليات الجرد السابقة</h2>
-        {can("inventory.count") ? <Button icon={<Plus />} onClick={() => setAdd(true)}>اضافة عملية جرد</Button> : null}
+        {can("inventory.count") && area.add ? <Button icon={<Plus />} onClick={() => setAdd(true)}>اضافة عملية جرد</Button> : null}
       </div>
       <Card className="overflow-hidden">
         <Table columns={columns} rows={counts} rowKey={(c) => c.id} onRowClick={(c) => setShow(c)} empty={<EmptyState compact icon={<ClipboardCheck />} title="لا توجد عمليات جرد" />} />

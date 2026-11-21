@@ -1,4 +1,5 @@
 /** 3.3 أصناف البيع: the menu items table, add and edit, and the Excel import matched by the item code. */
+import { useArea } from "../useAccess";
 import { searchHit } from "@/lib/search";
 import { useMemo, useState } from "react";
 import { Plus, Search, UtensilsCrossed } from "lucide-react";
@@ -37,6 +38,7 @@ export default function SaleItems() {
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("");
   const [edit, setEdit] = useState<MenuItem | "new" | null>(null);
+  const area = useArea();
   const manage = can("menu.edit");
   const catName = (id: string) => cats.find((c) => c.id === id)?.name.ar ?? "—";
   const recipeOf = (id: string) => recipes.find((r) => r.ownerType === "menu_item" && r.ownerId === id && !r.scopeItemId) ?? null;
@@ -124,13 +126,13 @@ export default function SaleItems() {
         <Select value={cat} onChange={(e) => setCat(e.target.value)} options={[{ value: "", label: "كل الفئات" }, ...cats.map((c) => ({ value: c.id, label: c.name.ar }))]} />
         <ExportButton file="أصناف البيع" head={["كود الصنف", "اسم الصنف", "فئة الصنف", "عدد المكونات", "تكلفة الصنف"]} rows={() => rows.map((i) => [i.sku ?? "", i.name.ar, catName(i.categoryId), recipeOf(i.id)?.lines.length ?? 0, costOf(i.id) / 100])} />
         {manage ? <ExcelImport fields={FIELDS} run={importRows} /> : null}
-        {manage ? <Button icon={<Plus />} disabled={!cats.length} onClick={() => setEdit("new")}>اضافة صنف</Button> : null}
+        {manage && area.add ? <Button icon={<Plus />} disabled={!cats.length} onClick={() => setEdit("new")}>اضافة صنف</Button> : null}
       </div>
       {manage ? <BulkBar count={sel.rows.length} noun="صنف" onClear={sel.clear} onEdit={() => setEdit(sel.rows[0])} categories={cats.map((c) => ({ value: c.id, label: c.name.ar }))} onMove={move} onDelete={remove} /> : null}
       <Card className="overflow-hidden">
         <Table columns={columns} rows={rows} rowKey={(i) => i.id} dense onRowClick={(i) => setEdit(i)} empty={<EmptyState compact icon={<UtensilsCrossed />} title="لا توجد أصناف بيع" body={cats.length ? undefined : "عرّف فئات أصناف البيع من ثوابت النظام أولاً"} />} />
       </Card>
-      {edit ? <SaleDialog key={edit === "new" ? "new" : edit.id} item={edit === "new" ? null : edit} recipe={edit === "new" ? null : recipeOf(edit.id)} cats={cats} items={items} cc={cc} readOnly={!manage} onClose={() => setEdit(null)} /> : null}
+      {edit ? <SaleDialog key={edit === "new" ? "new" : edit.id} item={edit === "new" ? null : edit} recipe={edit === "new" ? null : recipeOf(edit.id)} cats={cats} items={items} cc={cc} readOnly={!manage || (edit === "new" ? !area.add : !area.edit)} onClose={() => setEdit(null)} /> : null}
     </div>
   );
 }

@@ -14,16 +14,13 @@ import { Badge, Button, Card, Dialog, EmptyState, Input, Select, Switch, Table, 
 import { useSelection } from "../catalog/Bulk";
 import { nextUserCode, rangeOf, userTypeOf, userTypesOf } from "../lib";
 import { useCc, type Cc } from "../useCc";
+import { useArea } from "../useAccess";
+import { ExportButton } from "../ui";
+import { ExcelImport } from "../catalog/Import";
+import { CONTRACTS, exportUsers, importUsers, USER_FIELDS, USER_HEAD } from "./usersExcel";
 
 const HIDE_KEY = "westeros-os.users.hideStopped";
 const ALL = "*";
-const CONTRACTS: { value: ContractType; label: string }[] = [
-  { value: "permanent", label: "دائم" },
-  { value: "fixed_term", label: "مدة محددة" },
-  { value: "part_time", label: "دوام جزئي" },
-  { value: "probation", label: "تحت الاختبار" },
-  { value: "daily", label: "يومي" },
-];
 const today = () => new Date().toISOString().slice(0, 10);
 
 /** مكان العمل: one branch, or every branch (an empty list) */
@@ -46,6 +43,9 @@ export default function UsersList() {
   const [hide, setHide] = useState(() => loadRaw(HIDE_KEY) !== "0");
   const [edit, setEdit] = useState<Membership | "new" | null>(null);
   const [bulk, setBulk] = useState<"role" | "branch" | "delete" | null>(null);
+  // what this employee may do on the tab (المستخدمين ← الأدوار)
+  const area = useArea();
+  const excel = { members, profiles, settings: cc.prod.settings!, branches: cc.branches };
   const stopped = members.filter((m) => !m.active).length;
   const rows = useMemo(
     () =>
@@ -90,16 +90,20 @@ export default function UsersList() {
         <Button variant={hide ? "soft" : "outline"} icon={<Power />} onClick={() => { const v = !hide; setHide(v); saveRaw(HIDE_KEY, v ? "1" : "0"); }}>
           {hide ? `إظهار غير النشطين${stopped ? ` (${stopped})` : ""}` : "إخفاء غير النشطين"}
         </Button>
-        <Button icon={<Plus />} onClick={() => setEdit("new")}>موظف جديد</Button>
+        {cc.prod.settings ? <ExportButton file="المستخدمين" head={USER_HEAD} rows={() => exportUsers(excel, rows)} /> : null}
+        {cc.prod.settings ? <ExcelImport noun="موظفين" fields={USER_FIELDS} run={(sheet, dry) => importUsers(db, excel, sheet, dry)} skipNote="من غير كود، كود برا مدى أكواد الأدوار، كود جديد من غير اسم، دور مختلف عن مدى الكود، أو فرع ونوع تعاقد مش معروفين." /> : null}
+        {area.add ? <Button icon={<Plus />} onClick={() => setEdit("new")}>موظف جديد</Button> : null}
       </div>
       {picked.length ? (
         <div className="flex flex-wrap items-center gap-2 rounded-xl border border-primary/40 bg-primary-soft/40 px-3 py-2">
           <span className="me-auto text-[14.5px] font-semibold">المحدد: <b className="num">{picked.length}</b> مستخدم</span>
-          {picked.length === 1 ? <Button size="sm" variant="outline" icon={<Pencil />} onClick={() => setEdit(picked[0])}>تعديل</Button> : null}
-          <Button size="sm" variant="outline" icon={<ShieldCheck />} onClick={() => setBulk("role")}>تغيير الدور</Button>
-          <Button size="sm" variant="outline" icon={<Building2 />} onClick={() => setBulk("branch")}>تغيير مكان العمل</Button>
-          <Button size="sm" variant="outline" icon={<Power />} onClick={() => void setActive(!picked.every((m) => m.active))}>{picked.every((m) => m.active) ? "إيقاف" : "تنشيط"}</Button>
-          <Button size="sm" variant="danger" icon={<Trash2 />} onClick={() => setBulk("delete")}>حذف</Button>
+          {picked.length === 1 && area.edit ? <Button size="sm" variant="outline" icon={<Pencil />} onClick={() => setEdit(picked[0])}>تعديل</Button> : null}
+          {area.edit ? <>
+            <Button size="sm" variant="outline" icon={<ShieldCheck />} onClick={() => setBulk("role")}>تغيير الدور</Button>
+            <Button size="sm" variant="outline" icon={<Building2 />} onClick={() => setBulk("branch")}>تغيير مكان العمل</Button>
+            <Button size="sm" variant="outline" icon={<Power />} onClick={() => void setActive(!picked.every((m) => m.active))}>{picked.every((m) => m.active) ? "إيقاف" : "تنشيط"}</Button>
+          </> : null}
+          {area.delete ? <Button size="sm" variant="danger" icon={<Trash2 />} onClick={() => setBulk("delete")}>حذف</Button> : null}
           <Button size="sm" variant="ghost" icon={<X />} onClick={sel.clear}>إلغاء التحديد</Button>
         </div>
       ) : null}
@@ -107,7 +111,7 @@ export default function UsersList() {
         <Table columns={columns} rows={rows} rowKey={(m) => m.id} onRowClick={(m) => setEdit(m)} empty={<EmptyState compact icon={<Users />} title={members.length ? "لا يوجد مستخدمين بالبحث ده" : "لا يوجد مستخدمين"} />} />
       </Card>
       <p className="text-[13px] text-muted">{rows.length} من {members.length} مستخدم{hide && stopped ? ` · ${stopped} غير نشط مخفي` : ""}</p>
-      {edit ? <UserDialog cc={cc} key={edit === "new" ? "new" : edit.id} member={edit === "new" ? null : edit} profile={edit === "new" ? null : profileOf.get(edit.id) ?? null} onClose={() => setEdit(null)} /> : null}
+      {edit ? <UserDialog cc={cc} key={edit === "new" ? "new" : edit.id} readOnly={edit === "new" ? !area.add : !area.edit} member={edit === "new" ? null : edit} profile={edit === "new" ? null : profileOf.get(edit.id) ?? null} onClose={() => setEdit(null)} /> : null}
       {bulk === "role" ? <BulkRole cc={cc} members={picked.filter((m) => m.role !== "owner")} onClose={() => setBulk(null)} onDone={sel.clear} /> : null}
       {bulk === "branch" ? <BulkBranch cc={cc} members={picked.filter((m) => m.role !== "owner")} onClose={() => setBulk(null)} onDone={sel.clear} /> : null}
       {bulk === "delete" ? <BulkDelete cc={cc} members={picked} locked={locked} onClose={() => setBulk(null)} onDone={sel.clear} /> : null}
@@ -116,7 +120,7 @@ export default function UsersList() {
 }
 
 /** بطاقة الموظف */
-function UserDialog({ cc, member, profile, onClose }: { cc: Cc; member: Membership | null; profile: StaffProfile | null; onClose: () => void }) {
+function UserDialog({ cc, member, profile, readOnly, onClose }: { cc: Cc; member: Membership | null; profile: StaffProfile | null; readOnly?: boolean; onClose: () => void }) {
   const db = useDb();
   const { toast } = useToast();
   const { staff } = useSession();
@@ -183,8 +187,8 @@ function UserDialog({ cc, member, profile, onClose }: { cc: Cc; member: Membersh
   const h3 = "text-[14.5px] font-bold";
   return (
     <Dialog open onClose={onClose} size="xl" title={member ? `بيانات ${member.name}` : "موظف جديد"}
-      footer={<div className="flex items-center justify-end gap-2">{!type && !owner ? <span className="me-auto text-[13px] text-danger">اختر دور الموظف</span> : null}<Button variant="ghost" onClick={onClose}>إلغاء</Button><Button loading={busy} disabled={!valid} onClick={save}>حفظ</Button></div>}>
-      <div className="grid gap-5">
+      footer={<div className="flex items-center justify-end gap-2">{!type && !owner ? <span className="me-auto text-[13px] text-danger">اختر دور الموظف</span> : null}<Button variant="ghost" onClick={onClose}>{readOnly ? "إغلاق" : "إلغاء"}</Button>{readOnly ? null : <Button loading={busy} disabled={!valid} onClick={save}>حفظ</Button>}</div>}>
+      <fieldset disabled={readOnly} className="grid gap-5">
         <section className="grid gap-3">
           <h3 className={h3}>البيانات الأساسية</h3>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -228,7 +232,7 @@ function UserDialog({ cc, member, profile, onClose }: { cc: Cc; member: Membersh
           {member && !owner && member.id !== staff?.id ? <Switch checked={active} onChange={setActive} label="الموظف نشط" description="الموظف غير النشط لا يقدر يدخل السيستم" /> : null}
         </section>
         <Input label="ملاحظات" value={notes} onChange={(e) => setNotes(e.target.value)} />
-      </div>
+      </fieldset>
     </Dialog>
   );
 }

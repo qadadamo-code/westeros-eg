@@ -1,12 +1,14 @@
 /**
- * صلاحيات الأدوار: every permission a role can tick in المستخدمين > الأدوار, grouped under headings, each with a line
- * that explains it. The screens, prices, restore and الحسابات permissions keep their own fields on the role
- * (`screens`, `seePrices`, `restore`, `finance`); the newer ones live in `perms`.
+ * صلاحيات الأدوار: every permission a role can tick in المستخدمين > الأدوار. First the tabs matrix (access.ts: مشاهدة،
+ * إضافة، تعديل، حذف، استيراد، تصدير for every tab, ids "acc:area:act"; the screens a role opens follow from it), then
+ * the other permissions grouped under headings, each with a line that explains it. Prices, restore and الحسابات keep
+ * their own fields on the role (`seePrices`, `restore`, `finance`); the newer ones live in `perms`.
  * The account owner always has every permission.
  */
 import type { MfgLists, MfgUserType } from "@/data/types";
 import { FIN_PERMS, finPermsOf } from "./finance/perms";
-import { canRestore, SCREENS, screensOf, seesPrices, userTypeOf } from "./lib";
+import { accessKey, accessOf, areas, screensFromAccess } from "./access";
+import { canRestore, seesPrices, userTypeOf } from "./lib";
 
 /** الصلاحيات الأخرى (stored in `perms`) */
 export const SUPPLY_PERMS = [
@@ -61,10 +63,9 @@ const FIN_HELP: Record<string, string> = {
 export interface PermItem { id: string; label: string; help: string }
 export interface PermGroup { id: string; title: string; note?: string; items: PermItem[] }
 
-/** the headings and the permissions under each one, in the order the role dialog shows them */
+/** the headings and the permissions under each one, in the order the role dialog shows them (after the tabs matrix, see access.ts) */
 export function permGroups(financeOn: boolean): PermGroup[] {
   return [
-    { id: "screens", title: "الشاشات اللي يفتحها", items: SCREENS.map((s) => ({ id: `screen:${s.id}`, label: s.label, help: SCREEN_HELP[s.id] ?? "" })) },
     { id: "supply", title: "المخازن والفروع: طلبات التوريد", items: SUPPLY_PERMS.map((p) => ({ id: p.id, label: p.label, help: p.help })) },
     { id: "purchase", title: "المخازن والفروع: طلبات الشراء", items: PURCHASE_PERMS.map((p) => ({ id: p.id, label: p.label, help: p.help })) },
     { id: "money", title: "الأسعار والتكاليف", items: [{ id: "prices", label: "رؤية الأسعار والتكاليف", help: "يشوف أسعار الشراء وتكلفة الوصفات والتشغيلات. من غيرها الأرقام دي بتظهر مخفية." }] },
@@ -88,7 +89,7 @@ export const isManagement = (member: { role: string } | null | undefined) => mem
 /** every permission id a role has, in the ids `permGroups` uses */
 export function permsOfRole(t: MfgUserType): Set<string> {
   return new Set([
-    ...screensOf(t).map((s) => `screen:${s}`),
+    ...[...accessOf(t)].map((k) => `acc:${k}`),
     ...otherPermsOf(t),
     ...(seesPrices(t) ? ["prices"] : []),
     ...finPermsOf(t).map((p) => `fin:${p}`),
@@ -97,9 +98,10 @@ export function permsOfRole(t: MfgUserType): Set<string> {
 }
 
 /** a set of permission ids written back onto the role's fields (the database level is worked out by the caller) */
-export function rolePatch(ids: Set<string>): Pick<MfgUserType, "screens" | "perms" | "seePrices" | "finance" | "restore"> {
+export function rolePatch(ids: Set<string>): Pick<MfgUserType, "access" | "screens" | "perms" | "seePrices" | "finance" | "restore"> {
   return {
-    screens: SCREENS.map((s) => s.id).filter((s) => ids.has(`screen:${s}`)),
+    access: areas().flatMap((a) => a.acts.map((x) => accessKey(a.id, x))).filter((k) => ids.has(`acc:${k}`)),
+    screens: screensFromAccess([...ids].filter((k) => k.startsWith("acc:")).map((k) => k.slice(4))),
     perms: [...SUPPLY_PERMS, ...PURCHASE_PERMS].map((p) => p.id).filter((p) => ids.has(p)),
     seePrices: ids.has("prices"),
     finance: FIN_PERMS.map((p) => p.id).filter((p) => ids.has(`fin:${p}`)),

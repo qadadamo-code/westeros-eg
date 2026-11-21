@@ -2,6 +2,7 @@
  * 2.1 المخازن: the list of warehouses with edit and delete; opening one shows its data and what it holds now
  * (the products, the quantity with its unit, and when each last moved), with an Excel export.
  */
+import { useArea } from "../useAccess";
 import { useEffect, useMemo, useState } from "react";
 import { ExternalLink, Pencil, Plus, Trash2, Warehouse } from "lucide-react";
 import { useSession } from "@/auth/session";
@@ -19,6 +20,7 @@ export default function Warehouses() {
   const [show, setShow] = useState<StorageLocation | null>(null);
   const [del, setDel] = useState<StorageLocation | null>(null);
   const manage = can("inventory.manage");
+  const area = useArea();
   const nextCode = Math.max(0, ...cc.locations.map((l) => l.code ?? 0)) + 1;
   const columns: Column<StorageLocation>[] = [
     { key: "code", header: "كود المخزن", cell: (l) => <span className="num text-muted">{l.code ?? "—"}</span> },
@@ -28,11 +30,11 @@ export default function Warehouses() {
     { key: "address", header: "عنوان المخزن", hideOnMobile: true, cell: (l) => l.address || "—" },
     { key: "map", header: "موقع المخزن", hideOnMobile: true, cell: (l) => (l.mapUrl ? <a className="inline-flex items-center gap-1 font-semibold text-primary" href={l.mapUrl} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>لوكيشن <ExternalLink className="size-3.5" /></a> : "—") },
     { key: "keeper", header: "امين المخزن", hideOnMobile: true, cell: (l) => cc.memberById.get(l.keeperId ?? "")?.name ?? "—" },
-    ...(manage
+    ...(manage && (area.edit || area.delete)
       ? [{ key: "act", header: "", align: "end" as const, cell: (l: StorageLocation) => (
           <span className="inline-flex gap-2" onClick={(e) => e.stopPropagation()}>
-            <Button size="sm" variant="outline" icon={<Pencil className="size-4" />} onClick={() => setEdit(l)}>تعديل</Button>
-            <Button size="sm" variant="outline" className="text-danger" icon={<Trash2 className="size-4" />} onClick={() => setDel(l)}>حذف</Button>
+            {area.edit ? <Button size="sm" variant="outline" icon={<Pencil className="size-4" />} onClick={() => setEdit(l)}>تعديل</Button> : null}
+            {area.delete ? <Button size="sm" variant="outline" className="text-danger" icon={<Trash2 className="size-4" />} onClick={() => setDel(l)}>حذف</Button> : null}
           </span>
         ) }]
       : []),
@@ -41,7 +43,7 @@ export default function Warehouses() {
     <div className="grid gap-4">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-[17px] font-bold">قائمة المخازن الحالية</h2>
-        {manage ? <Button icon={<Plus />} onClick={() => setEdit("new")}>انشاء مخزن</Button> : null}
+        {manage && area.add ? <Button icon={<Plus />} onClick={() => setEdit("new")}>انشاء مخزن</Button> : null}
       </div>
       <Card className="overflow-hidden">
         <Table columns={columns} rows={cc.warehouses} rowKey={(l) => l.id} onRowClick={(l) => setShow(l)} empty={<EmptyState compact icon={<Warehouse />} title="لا توجد مخازن" />} />

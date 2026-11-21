@@ -1,4 +1,5 @@
 /** الفروع: the branches of the restaurant; every warehouse sits in one of them. */
+import { useArea } from "../useAccess";
 import { useEffect, useState } from "react";
 import { ExternalLink, Pencil, Plus, Store, Trash2 } from "lucide-react";
 import { useSession } from "@/auth/session";
@@ -18,6 +19,7 @@ export default function Branches() {
   const [del, setDel] = useState<Branch | null>(null);
   // the database lets only the account owner and the users-management level define branches
   const manage = role === "owner" || role === "admin";
+  const area = useArea();
   const nextCode = Math.max(0, ...cc.branches.map((b) => branchCode(b, cc.branches))) + 1;
   const columns: Column<Branch>[] = [
     { key: "code", header: "كود الفرع", cell: (b) => <span className="num text-muted">{branchCode(b, cc.branches)}</span> },
@@ -26,10 +28,10 @@ export default function Branches() {
     { key: "map", header: "موقع الفرع", hideOnMobile: true, cell: (b) => (b.mapUrl ? <a className="inline-flex items-center gap-1 font-semibold text-primary" href={b.mapUrl} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>لوكيشن <ExternalLink className="size-3.5" /></a> : "—") },
     { key: "manager", header: "مدير الفرع", cell: (b) => cc.memberById.get(b.managerId ?? "")?.name ?? "—" },
     { key: "stores", header: "المخازن", align: "end", cell: (b) => <span className="num">{cc.warehouses.filter((l) => l.branchId === b.id).length}</span> },
-    ...(manage ? [{ key: "edit", header: "", align: "end" as const, cell: (b: Branch) => (
+    ...(manage && (area.edit || area.delete) ? [{ key: "edit", header: "", align: "end" as const, cell: (b: Branch) => (
       <span className="inline-flex gap-2" onClick={(e) => e.stopPropagation()}>
-        <Button size="sm" variant="outline" icon={<Pencil className="size-4" />} onClick={() => setEdit(b)}>تعديل</Button>
-        <Button size="sm" variant="outline" className="text-danger" icon={<Trash2 className="size-4" />} onClick={() => setDel(b)}>حذف</Button>
+        {area.edit ? <Button size="sm" variant="outline" icon={<Pencil className="size-4" />} onClick={() => setEdit(b)}>تعديل</Button> : null}
+        {area.delete ? <Button size="sm" variant="outline" className="text-danger" icon={<Trash2 className="size-4" />} onClick={() => setDel(b)}>حذف</Button> : null}
       </span>
     ) }] : []),
   ];
@@ -37,10 +39,10 @@ export default function Branches() {
     <div className="grid gap-4">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-[17px] font-bold">قائمة الفروع</h2>
-        {manage ? <Button icon={<Plus />} onClick={() => setEdit("new")}>اضافة فرع</Button> : null}
+        {manage && area.add ? <Button icon={<Plus />} onClick={() => setEdit("new")}>اضافة فرع</Button> : null}
       </div>
       <Card className="overflow-hidden">
-        <Table columns={columns} rows={cc.branches} rowKey={(b) => b.id} onRowClick={manage ? (b) => setEdit(b) : undefined} empty={<EmptyState compact icon={<Store />} title="لا توجد فروع" />} />
+        <Table columns={columns} rows={cc.branches} rowKey={(b) => b.id} onRowClick={manage && area.edit ? (b) => setEdit(b) : undefined} empty={<EmptyState compact icon={<Store />} title="لا توجد فروع" />} />
       </Card>
       {edit ? <BranchDialog key={edit === "new" ? "new" : edit.id} row={edit === "new" ? null : edit} code={edit === "new" ? nextCode : branchCode(edit, cc.branches)} cc={cc} onClose={() => setEdit(null)} /> : null}
       {del ? <DeleteBranch key={del.id} row={del} cc={cc} onClose={() => setDel(null)} /> : null}

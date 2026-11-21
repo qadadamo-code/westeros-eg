@@ -1,4 +1,5 @@
 /** 2.2 الحركات المخزنية: the list of movements and adding one (opening balance, damage, transfer). */
+import { useArea } from "../useAccess";
 import { useMemo, useState } from "react";
 import { ArrowLeftRight, Plus, X } from "lucide-react";
 import { useSession } from "@/auth/session";
@@ -21,6 +22,7 @@ const KIND_LABEL: Partial<Record<MoveKind, string>> = {
 export default function Moves() {
   const cc = useCc();
   const { can } = useSession();
+  const area = useArea();
   // الفلاتر: نوع الحركة، المخزون، المخزن. They go to the database so the latest 300 matching moves are shown, not 300 then filtered
   const [kind, setKind] = useState<MoveKind | "">("");
   const [itemId, setItemId] = useState("");
@@ -56,7 +58,7 @@ export default function Moves() {
         <h2 className="text-[17px] font-bold">قائمة الحركات المخزنية الحالية والسابقة</h2>
         <div className="flex flex-wrap items-center gap-2">
           <ExportButton file="الحركات المخزنية" head={["التاريخ والوقت", "نوع الحركة", "المخزن", "الفرع", "الكود", "المخزون", "الكمية", "وحدة الكمية", "امين المخزن"]} rows={exportRows} />
-          {can("inventory.count") ? <Button icon={<Plus />} onClick={() => setAdd(true)}>اضافة حركة مخزنية</Button> : null}
+          {can("inventory.count") && area.add ? <Button icon={<Plus />} onClick={() => setAdd(true)}>اضافة حركة مخزنية</Button> : null}
         </div>
       </div>
       <div className="grid gap-3 sm:grid-cols-3">

@@ -3,6 +3,7 @@
  * method, types what went in and what came out, and sees the figures of the document live; saving signs the batch with the
  * chef, moves the stock and opens the sticker.
  */
+import { useArea } from "@/modules/cc/useAccess";
 import { searchHit } from "@/lib/search";
 import { useMemo, useState, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -141,6 +142,8 @@ function useCtx(prod: Prod): BuildCtx {
 
 /** Who signs the batch, the note, the save button — and the sticker once it is saved. */
 function SaveBar({ prod, draft, ready, onDone, afterSave, beforeSave }: { prod: Prod; draft: BatchDraft; ready: boolean; onDone: () => void; afterSave?: () => Promise<unknown>; /** product fields the batch itself needs, saved first */ beforeSave?: () => Promise<unknown> }) {
+  // إضافة in تصنيع صنف (المستخدمين ← الأدوار)
+  const area = useArea();
   const { L, lang } = useT();
   const db = useDb();
   const { staff, role } = useSession();
@@ -200,13 +203,13 @@ function SaveBar({ prod, draft, ready, onDone, afterSave, beforeSave }: { prod: 
       {COST_CONTROL_ONLY ? (
         <Button size="lg" block disabled={!ready} onClick={() => setStoring(true)}>متابعة</Button>
       ) : (
-        <Button size="lg" block icon={<Check />} loading={busy} disabled={!ready} onClick={save}>
+        <Button size="lg" block icon={<Check />} loading={busy} disabled={!ready || !area.add} title={area.add ? undefined : "الدور بتاعك مالوش صلاحية إضافة تشغيلة"} onClick={save}>
           {L("حفظ التشغيلة وطباعة الستيكر", "Save batch & print sticker")}
         </Button>
       )}
       {storing ? (
         <Dialog open onClose={() => (busy ? undefined : setStoring(false))} size="md" title="مخزن تخزين المنتج" description="المخازن المناسبة: التابعة لفرع معرف كمطبخ مركزي، وبنفس درجة حرارة تخزين المنتج."
-          footer={<div className="flex flex-wrap justify-end gap-2"><Button variant="ghost" disabled={busy} onClick={() => setStoring(false)}>رجوع</Button><Button icon={<Check />} loading={busy} disabled={!ready || made.some((x) => !chosen(x))} onClick={save}>حفظ التشغيلة وطباعة الستيكر</Button></div>}>
+          footer={<div className="flex flex-wrap justify-end gap-2"><Button variant="ghost" disabled={busy} onClick={() => setStoring(false)}>رجوع</Button><Button icon={<Check />} loading={busy} disabled={!ready || !area.add || made.some((x) => !chosen(x))} onClick={save}>حفظ التشغيلة وطباعة الستيكر</Button></div>}>
           <div className="grid gap-4">
             {made.map((x) => {
               const ok = suits(x);

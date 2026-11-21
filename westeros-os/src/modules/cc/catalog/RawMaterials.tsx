@@ -1,4 +1,5 @@
 /** 3.1 مواد الخام: the list, add and edit, and the Excel import matched by the raw material code. */
+import { useArea } from "../useAccess";
 import { searchHit } from "@/lib/search";
 import { useMemo, useState } from "react";
 import { Boxes, Plus, Search } from "lucide-react";
@@ -58,6 +59,7 @@ export default function RawMaterials() {
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("");
   const [edit, setEdit] = useState<StockItem | "new" | null>(null);
+  const area = useArea();
   const manage = can("inventory.manage");
   // فئة الخام: القائمة المعرفة في ثوابت النظام
   const cats = cc.lists.rawCategories;
@@ -168,13 +170,13 @@ export default function RawMaterials() {
         <ExportButton file="مواد الخام" head={["كود الخام", "اسم الخام", "فئة الخام", "نوع التخزين", "وحدة التخزين", "اخر سعر شراء", "تاريخ اخر عملية شراء", "تاريخ الصلاحية", "وحدة التصنيع", "الكمية في وحدة التخزين", "معامل التحويل", "سعر وحدة التصنيع"]}
           rows={() => rows.map((i) => { const s = specOf(i, cc.lists); return [i.sku, i.name.ar, s.category, storeType(s.storeType)?.name ?? "", s.storageUnit, s.lastPrice / 100, s.lastPurchaseDate ?? "", s.expiryDate ?? "", s.mfgUnit, s.perStorage, Math.round(conversionOf(s.perStorage) * 1e5) / 1e5, mfgUnitPrice(s.lastPrice, s.perStorage) / 100]; })} />
         {manage ? <ExcelImport fields={FIELDS} run={importRows} /> : null}
-        {manage ? <Button icon={<Plus />} onClick={() => setEdit("new")}>اضافة مادة خام</Button> : null}
+        {manage && area.add ? <Button icon={<Plus />} onClick={() => setEdit("new")}>اضافة مادة خام</Button> : null}
       </div>
       {manage ? <BulkBar count={sel.rows.length} noun="خام" onClear={sel.clear} onEdit={() => setEdit(sel.rows[0])} categories={cats.map((c) => ({ value: c, label: c }))} onMove={move} onDelete={remove} /> : null}
       <Card className="overflow-hidden">
         <Table columns={columns} rows={rows} rowKey={(i) => i.id} dense onRowClick={(i) => setEdit(i)} empty={<EmptyState compact icon={<Boxes />} title="لا توجد مواد خام" />} />
       </Card>
-      {edit ? <RawDialog key={edit === "new" ? "new" : edit.id} item={edit === "new" ? null : edit} cc={cc} cats={cats} readOnly={!manage} onClose={() => setEdit(null)} /> : null}
+      {edit ? <RawDialog key={edit === "new" ? "new" : edit.id} item={edit === "new" ? null : edit} cc={cc} cats={cats} readOnly={!manage || (edit === "new" ? !area.add : !area.edit)} onClose={() => setEdit(null)} /> : null}
     </div>
   );
 }

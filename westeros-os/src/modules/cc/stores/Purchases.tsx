@@ -5,6 +5,7 @@
  * keeper documents the receipt (the day and the quantities received). The received quantities wait in
  * الحسابات > المشتريات and enter the warehouse only with the purchase invoice (see ./purchase.ts).
  */
+import { useArea } from "../useAccess";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { CalendarClock, PackageCheck, Pencil, Play, Plus, ShoppingCart, Trash2 } from "lucide-react";
@@ -46,6 +47,7 @@ const canChange = (cc: Cc, r: StockRequest) => r.status === "new" && !r.received
 export default function Purchases() {
   const cc = useCc();
   const { can } = useSession();
+  const area = useArea();
   const all = useLive("stockRequests", { orderBy: [{ field: "at", dir: "desc" }] }).data;
   const rows = useMemo(() => all.filter((r) => r.kind === "purchase"), [all]);
   const [onlyOpen, setOnlyOpen] = useState(true);
@@ -75,7 +77,7 @@ export default function Purchases() {
         <h2 className="text-[17px] font-bold">قائمة طلبات الشراء</h2>
         <div className="flex flex-wrap gap-2">
           <Button variant={onlyOpen ? "soft" : "outline"} onClick={() => setOnlyOpen((v) => !v)}>{onlyOpen ? "إظهار كل الطلبات" : "المفتوحة فقط"}</Button>
-          {can("inventory.count") ? <Button icon={<Plus />} onClick={() => setEdit("new")}>طلب شراء جديد</Button> : null}
+          {can("inventory.count") && area.add ? <Button icon={<Plus />} onClick={() => setEdit("new")}>طلب شراء جديد</Button> : null}
         </div>
       </div>
       <Card className="overflow-hidden">
@@ -140,6 +142,7 @@ function PurchaseView({ cc, row, onClose, onEdit }: { cc: Cc; row: StockRequest;
   const { toast } = useToast();
   const buyer = memberCan(cc.staff, cc.lists, "purchase.handle") && requestOpen(row) && row.status !== "sent";
   const receiver = canReceive(cc, row);
+  const area = useArea();
   const change = canChange(cc, row);
   const [later, setLater] = useState(false);
   const [newDue, setNewDue] = useState(nextDay(nowLocal()));
@@ -189,8 +192,8 @@ function PurchaseView({ cc, row, onClose, onEdit }: { cc: Cc; row: StockRequest;
   return (
     <Dialog open onClose={onClose} size="lg" title={`طلب شراء رقم ${row.number}`} description={`${fmtAt(row.at)} · مطلوب يوم ${fmtDay(row.dueDate)}`}
       footer={<div className="flex flex-wrap justify-end gap-2">
-        {change ? <Button variant="danger" icon={<Trash2 />} onClick={() => setDel(true)}>حذف</Button> : null}
-        {change ? <Button variant="outline" icon={<Pencil />} onClick={onEdit}>تعديل</Button> : null}
+        {change && area.delete ? <Button variant="danger" icon={<Trash2 />} onClick={() => setDel(true)}>حذف</Button> : null}
+        {change && area.edit ? <Button variant="outline" icon={<Pencil />} onClick={onEdit}>تعديل</Button> : null}
         {buyer ? <Button variant={receiver ? "outline" : "primary"} icon={<ShoppingCart />} loading={busy} onClick={() => void bought()}>تم الشراء</Button> : null}
         {receiver ? <Button icon={<PackageCheck />} onClick={() => setReceive(true)}>توثيق الاستلام</Button> : null}
         <Button variant="ghost" onClick={onClose}>إغلاق</Button></div>}>

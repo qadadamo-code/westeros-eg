@@ -2,6 +2,7 @@
  * طلب توريد: the list of requests; a new request (the branch is the employee's workplace unless their role may pick it);
  * the responsible employee's screen (status, quantity sent, raw material stickers); and the receipt by scanning.
  */
+import { useArea } from "../useAccess";
 import { SourceEntry } from "../finance/SourceEntry";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -37,6 +38,7 @@ const kindsOf = (cc: Cc, r: StockRequest) => [...new Set(r.lines.map((l) => line
 export default function Requests() {
   const cc = useCc();
   const { can, staff } = useSession();
+  const area = useArea();
   const all = useLive("stockRequests", { orderBy: [{ field: "at", dir: "desc" }] }).data;
   const rows = useMemo(() => all.filter((r) => r.kind === "supply"), [all]);
   const [onlyOpen, setOnlyOpen] = useState(true);
@@ -79,7 +81,7 @@ export default function Requests() {
         <h2 className="text-[17px] font-bold">قائمة طلبات التوريد</h2>
         <div className="flex flex-wrap gap-2">
           <Button variant={onlyOpen ? "soft" : "outline"} onClick={() => setOnlyOpen((v) => !v)}>{onlyOpen ? "إظهار كل الطلبات" : "المفتوحة فقط"}</Button>
-          {can("inventory.count") ? <Button icon={<Plus />} onClick={() => setAdd(true)}>طلب توريد جديد</Button> : null}
+          {can("inventory.count") && area.add ? <Button icon={<Plus />} onClick={() => setAdd(true)}>طلب توريد جديد</Button> : null}
         </div>
       </div>
       <Card className="overflow-hidden">

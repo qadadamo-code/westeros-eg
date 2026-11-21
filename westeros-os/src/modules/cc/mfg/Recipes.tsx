@@ -1,4 +1,5 @@
 /** 5.2 الوصفات: every defined recipe in one list; a recipe is defined for a product chosen from the manufactured products. */
+import { useArea } from "../useAccess";
 import { searchHit } from "@/lib/search";
 import { useMemo, useState } from "react";
 import { BookOpenCheck, Pencil, Plus, Search, Trash2 } from "lucide-react";
@@ -46,6 +47,7 @@ export default function Recipes() {
   };
   const [open, setOpen] = useState<MfgProduct | "new" | null>(null);
   const manage = can("production.manage");
+  const area = useArea();
   const names = cc.lists.recipeNames;
   const rows = useMemo(() => {
     const n = q.trim().toLowerCase();
@@ -60,11 +62,11 @@ export default function Recipes() {
     { key: "cat", header: "فئة المنتج", hideOnMobile: true, cell: (p) => categoryName(prod.categories, p.category).ar },
     { key: "type", header: "نوع الوصفة", cell: (p) => <Badge tone={p.recipeType === "main" ? "primary" : "brass"} size="sm">{names[p.recipeType]}</Badge> },
     { key: "n", header: "المكونات", align: "end", cell: (p) => <span className="num">{p.lines.length}</span> },
-    ...(manage
+    ...(manage && (area.edit || area.delete)
       ? [{ key: "edit", header: "", align: "end" as const, cell: (p: MfgProduct) => (
           <span className="inline-flex gap-2">
-            <Button size="sm" variant="outline" icon={<Pencil className="size-4" />} onClick={(e) => { e.stopPropagation(); setOpen(p); }}>تعديل</Button>
-            <Button size="sm" variant="outline" className="text-danger" icon={<Trash2 className="size-4" />} onClick={(e) => { e.stopPropagation(); setDel(p); }}>حذف</Button>
+            {area.edit ? <Button size="sm" variant="outline" icon={<Pencil className="size-4" />} onClick={(e) => { e.stopPropagation(); setOpen(p); }}>تعديل</Button> : null}
+            {area.delete ? <Button size="sm" variant="outline" className="text-danger" icon={<Trash2 className="size-4" />} onClick={(e) => { e.stopPropagation(); setDel(p); }}>حذف</Button> : null}
           </span>
         ) }]
       : []),
@@ -75,7 +77,7 @@ export default function Recipes() {
         <Input icon={<Search />} placeholder="ابحث باسم المنتج أو الكود" value={q} onChange={(e) => setQ(e.target.value)} />
         <Select aria-label="فئة المنتج" value={cat} onChange={(e) => setCat(e.target.value)} options={[{ value: "", label: "كل الفئات" }, ...cats.map((c) => ({ value: c.id, label: c.name.ar }))]} />
         <Select aria-label="نوع الوصفة" value={rtype} onChange={(e) => setRtype(e.target.value as RecipeType | "")} options={[{ value: "", label: "كل أنواع الوصفات" }, ...(["main", "sub", "marinade"] as const).map((t) => ({ value: t, label: names[t] }))]} />
-        {manage ? <Button icon={<Plus />} disabled={!free} title={free || !prod.products.length ? undefined : "كل المنتجات المصنعة لها وصفات"} onClick={() => setOpen("new")}>تعريف وصفة</Button> : null}
+        {manage && area.add ? <Button icon={<Plus />} disabled={!free} title={free || !prod.products.length ? undefined : "كل المنتجات المصنعة لها وصفات"} onClick={() => setOpen("new")}>تعريف وصفة</Button> : null}
       </div>
       <Card className="overflow-hidden">
         <Table columns={columns} rows={rows} rowKey={(p) => p.id} dense onRowClick={(p) => setOpen(p)} empty={<EmptyState compact icon={<BookOpenCheck />} title="لا توجد وصفات معرفة" body={prod.products.length ? undefined : "أضف المنتجات المصنعة أولاً من قائمة المنتجات والخامات"} />} />
@@ -87,7 +89,7 @@ export default function Recipes() {
           {null}
         </Dialog>
       ) : null}
-      {open ? <RecipeDialog key={open === "new" ? "new" : open.id} product={open === "new" ? null : open} cc={cc} readOnly={!manage} onClose={() => setOpen(null)} /> : null}
+      {open ? <RecipeDialog key={open === "new" ? "new" : open.id} product={open === "new" ? null : open} cc={cc} readOnly={!manage || (open === "new" ? !area.add : !area.edit)} onClose={() => setOpen(null)} /> : null}
     </div>
   );
 }

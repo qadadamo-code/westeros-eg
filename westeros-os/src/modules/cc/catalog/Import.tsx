@@ -8,6 +8,7 @@ import { useRef, useState } from "react";
 import { FileSpreadsheet } from "lucide-react";
 import { Button, Dialog, Select, useToast } from "@/ui";
 import { readTable } from "../xlsx";
+import { useAreaOrNull } from "../useAccess";
 
 export interface ImportField {
   /** the name the importer reads the value by */
@@ -28,7 +29,7 @@ export interface ImportPlan {
 
 const norm = (s: string) => s.replace(/[أإآ]/g, "ا").replace(/ة/g, "ه").replace(/\s+/g, " ").trim().toLowerCase();
 
-export function ExcelImport({ fields, run, skipNote = "من غير كود، أو كود جديد من غير اسم." }: { /** the first field is the code the rows are matched on */ fields: ImportField[]; run: (rows: Record<string, string>[], dry: boolean) => Promise<ImportPlan>; /** which rows the importer leaves out */ skipNote?: string }) {
+export function ExcelImport({ fields, run, skipNote = "من غير كود، أو كود جديد من غير اسم.", noun = "أصناف" }: { /** what the rows are, plural: أصناف، موظفين */ noun?: string; /** the first field is the code the rows are matched on */ fields: ImportField[]; run: (rows: Record<string, string>[], dry: boolean) => Promise<ImportPlan>; /** which rows the importer leaves out */ skipNote?: string }) {
   const file = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const [busy, setBusy] = useState(false);
@@ -66,6 +67,9 @@ export function ExcelImport({ fields, run, skipNote = "من غير كود، أو
       setBusy(false);
     }
   };
+  // inside a tab that checks permissions: shown only with استيراد
+  const area = useAreaOrNull();
+  if (area && !area.import) return null;
   const options = sheet ? [{ value: "", label: "— لا يُسحب —" }, ...sheet.head.map((h, i) => ({ value: String(i), label: `${h || `عمود ${i + 1}`}${sheet.body[0]?.[i] ? ` (مثال: ${sheet.body[0][i].slice(0, 24)})` : ""}` }))] : [];
   return (
     <>
@@ -112,7 +116,7 @@ export function ExcelImport({ fields, run, skipNote = "من غير كود، أو
           footer={<div className="flex flex-wrap justify-end gap-2"><Button variant="ghost" onClick={close}>إلغاء الاستيراد</Button><Button variant="outline" disabled={busy} onClick={() => setPlan(null)}>رجوع لربط الأعمدة</Button><Button loading={busy} disabled={!plan.added.length && !plan.updated.length} onClick={approve}>اعتماد الاستيراد</Button></div>}>
           <div className="grid gap-4">
             <div className="grid grid-cols-3 gap-2">
-              {([["أصناف جديدة", plan.added.length], ["أصناف معدلة", plan.updated.length], ["صفوف متروكة", plan.skipped]] as const).map(([k, n]) => (
+              {([[`${noun} جدد`.replace("أصناف جدد", "أصناف جديدة"), plan.added.length], [`${noun} معدلين`.replace("أصناف معدلين", "أصناف معدلة"), plan.updated.length], ["صفوف متروكة", plan.skipped]] as const).map(([k, n]) => (
                 <div key={k} className="rounded-xl bg-surface-2 px-3 py-2.5">
                   <div className="text-[12.5px] text-muted">{k}</div>
                   <div className="num mt-0.5 text-[22px] font-bold">{n}</div>

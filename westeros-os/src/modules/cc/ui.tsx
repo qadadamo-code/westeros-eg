@@ -1,4 +1,5 @@
 /** Shared pieces of the Cost Control screens. */
+import { useAreaOrNull } from "./useAccess";
 import { useRef, type ReactNode } from "react";
 import { Camera, Download, Trash2 } from "lucide-react";
 import type { StockItem } from "@/data/types";
@@ -102,6 +103,9 @@ export function ReadOnly({ label, children }: { label: ReactNode; children: Reac
 /** تصدير اكسل: saves what the table shows now as an Excel file. */
 export function ExportButton({ file, head, rows, size, disabled }: { file: string; head: string[]; rows: () => Cell[][]; size?: "sm" | "md"; disabled?: boolean }) {
   const { toast } = useToast();
+  // inside a tab that checks permissions: shown only with تصدير
+  const area = useAreaOrNull();
+  if (area && !area.export) return null;
   return (
     <Button type="button" variant="secondary" size={size} icon={<Download />} disabled={disabled} onClick={() => {
       const r = rows();
