@@ -65,6 +65,7 @@ export const waitingToReceive = (l: StockRequestLine) => (l.sentQty ?? 0) > 0 &&
  * What waits for this member:
  *   toSend     open requests with lines from the warehouses they keep that were not sent (a request postponed to a later day waits until that day)
  *   toReceive  requests they asked for with lines that were sent and not received
+ *   toBuy      طلب شراء waiting for the purchasing employee; toConfirm: bought, waiting for the keeper who asked to document the receipt
  */
 export function pendingFor(member: Actor, lists: MfgLists | null | undefined, requests: StockRequest[], stores: StoreCtx, now = nowIso()) {
   const today = day(now);
@@ -74,8 +75,11 @@ export function pendingFor(member: Actor, lists: MfgLists | null | undefined, re
   const toReceive = !member ? [] : open.filter((r) => r.keeperId === member.id && r.lines.some(waitingToReceive));
   // طلب شراء: the employees responsible for purchasing see every open request (a postponed one from its new date)
   const toBuy = !member || !memberCan(member, lists, "purchase.handle") ? [] : requests.filter((r) =>
-    r.kind === "purchase" && requestOpen(r) && !(r.status === "postponed" && r.dueDate && r.dueDate > today));
-  return { toSend, toReceive, toBuy, count: toSend.length + toReceive.length + toBuy.length };
+    r.kind === "purchase" && requestOpen(r) && r.status !== "sent" && !(r.status === "postponed" && r.dueDate && r.dueDate > today));
+  // bought: the warehouse keeper who asked documents the receipt
+  const toConfirm = !member ? [] : requests.filter((r) => r.kind === "purchase" && r.status === "sent" && requestOpen(r) && r.keeperId === member.id);
+  const supply = toSend.length + toReceive.length, purchase = toBuy.length + toConfirm.length;
+  return { toSend, toReceive, toBuy, toConfirm, supply, purchase, count: supply + purchase };
 }
 
 const event = (actor: Actor, action: string, note?: string): StockRequestEvent => ({ at: nowIso(), by: actor?.id ?? null, name: actor?.name ?? "", action, ...(note ? { note } : {}) });

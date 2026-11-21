@@ -9,8 +9,11 @@ import Moves from "./Moves";
 import Counts from "./Counts";
 import Requests from "./Requests";
 import Purchases from "./Purchases";
+import { useStoreTabCounts } from "./SupplyAlerts";
 
 export default function StoresPage() {
+  // the menu count, split over the tabs it waits in
+  const counts = useStoreTabCounts();
   return (
     <div className="grid gap-5">
       <PageHeader icon={<Warehouse />} title="المخازن والفروع" />
@@ -21,8 +24,8 @@ export default function StoresPage() {
           { to: "/stores/branches", label: "الفروع", icon: <Building2 /> },
           { to: "/stores/moves", label: "الحركات المخزنية", icon: <ArrowLeftRight /> },
           { to: "/stores/count", label: "جرد المخزن", icon: <ClipboardCheck /> },
-          { to: "/stores/supply", label: "طلب توريد", icon: <Truck /> },
-          { to: "/stores/purchase", label: "طلب شراء", icon: <ShoppingCart /> },
+          { to: "/stores/supply", label: "طلب توريد", icon: <Truck />, count: counts.supply },
+          { to: "/stores/purchase", label: "طلب شراء", icon: <ShoppingCart />, count: counts.purchase },
         ]}
       />
       <Routes>

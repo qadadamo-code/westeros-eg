@@ -50,6 +50,8 @@ export interface PurchaseData {
   note: string;
   attachments: { name: string; url: string }[];
   by: string;
+  /** the طلب شراء it was registered from */
+  requestId?: string | null;
 }
 export const purchaseOf = (d: FinDoc) => d.data as unknown as PurchaseData;
 

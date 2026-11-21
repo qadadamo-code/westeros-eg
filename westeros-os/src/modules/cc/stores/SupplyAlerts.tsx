@@ -38,6 +38,11 @@ export function useSupplyBadge(): number | null {
   const p = usePending();
   return screenAllowed("cc-stores") ? p.count || null : null;
 }
+/** the counts on the طلب توريد and طلب شراء tabs, so the menu count says where it waits */
+export function useStoreTabCounts(): { supply: number; purchase: number } {
+  const p = usePending();
+  return { supply: p.supply, purchase: p.purchase };
+}
 
 const seenOf = (staffId: string): string[] => {
   try {
@@ -60,7 +65,7 @@ export function SupplyAlerts() {
   const { resting } = useSession();
   const [open, setOpen] = useState(false);
   const notified = useRef(new Set<string>());
-  const keys = useMemo(() => [...p.toBuy.map((r) => `p:${r.id}:${r.status}`), ...p.toSend.map((r) => `s:${r.id}:${r.status}`), ...p.toReceive.map((r) => `r:${r.id}:${r.lines.filter(waitingToReceive).length}`)], [p.toSend, p.toReceive, p.toBuy]);
+  const keys = useMemo(() => [...p.toBuy.map((r) => `p:${r.id}:${r.status}`), ...p.toConfirm.map((r) => `c:${r.id}`), ...p.toSend.map((r) => `s:${r.id}:${r.status}`), ...p.toReceive.map((r) => `r:${r.id}:${r.lines.filter(waitingToReceive).length}`)], [p.toSend, p.toReceive, p.toBuy, p.toConfirm]);
   const allowed = screenAllowed("cc-stores");
   useEffect(() => {
     if (!p.staff || !allowed || resting || !keys.length) return;
@@ -74,7 +79,7 @@ export function SupplyAlerts() {
         if (notified.current.has(k)) continue;
         notified.current.add(k);
         try {
-          new Notification(k.startsWith("p:") ? "وستروس: طلب شراء" : "وستروس: طلب توريد", { body: k.startsWith("p:") ? "طلب شراء جديد" : k.startsWith("s:") ? "طلب توريد مستني التنفيذ" : "طلب توريد اتبعت ومستني تأكيد الاستلام", tag: k });
+          new Notification(k.startsWith("p:") || k.startsWith("c:") ? "وستروس: طلب شراء" : "وستروس: طلب توريد", { body: k.startsWith("p:") ? "طلب شراء جديد" : k.startsWith("c:") ? "طلب شراء اتشترى ومستني توثيق الاستلام" : k.startsWith("s:") ? "طلب توريد مستني التنفيذ" : "طلب توريد اتبعت ومستني تأكيد الاستلام", tag: k });
         } catch {
           /* not supported here */
         }
@@ -92,7 +97,7 @@ export function SupplyAlerts() {
   };
   const askNotify = typeof Notification !== "undefined" && Notification.permission === "default";
   return (
-    <Dialog open onClose={close} size="lg" title={p.toBuy.length && !p.toSend.length && !p.toReceive.length ? "طلبات الشراء" : "طلبات التوريد والشراء"} description="الطلبات اللي مستنياك دلوقتي"
+    <Dialog open onClose={close} size="lg" title={!p.supply ? "طلبات الشراء" : !p.purchase ? "طلبات التوريد" : "طلبات التوريد والشراء"} description="الطلبات اللي مستنياك دلوقتي"
       footer={<div className="flex flex-wrap items-center justify-end gap-2">{askNotify ? <Button variant="ghost" icon={<BellRing />} className="me-auto" onClick={() => void Notification.requestPermission()}>تفعيل إشعارات الجهاز</Button> : null}<Button variant="ghost" onClick={close}>لاحقاً</Button><Button onClick={() => { close(); nav(p.toSend.length || p.toReceive.length ? "/stores/supply" : "/stores/purchase"); }}>{p.toSend.length || p.toReceive.length ? "فتح طلبات التوريد" : "فتح طلبات الشراء"}</Button></div>}>
       <div className="grid gap-4">
         {p.toBuy.length ? (
@@ -106,6 +111,18 @@ export function SupplyAlerts() {
                   <span className="text-[13px] text-muted">من {r.keeperName || "—"} · مطلوب يوم <span className="num">{fmtDay(r.dueDate)}</span></span>
                 </span>
                 <span className="flex flex-wrap gap-1.5 text-[13px]">{r.lines.map((l) => <span key={l.itemId} className="rounded-lg bg-surface-2 px-2 py-0.5">{l.name.ar} <b className="num">{num(l.qty)}</b> {l.unit}</span>)}</span>
+              </button>
+            ))}
+          </section>
+        ) : null}
+        {p.toConfirm.length ? (
+          <section className="grid gap-2">
+            <h3 className="flex items-center gap-2 text-[15px] font-bold"><PackageCheck className="size-4" />طلبات شراء اتشترت ومستنية توثيق الاستلام</h3>
+            {p.toConfirm.map((r) => (
+              <button key={r.id} type="button" onClick={() => go(r)} className="grid gap-1.5 rounded-xl border border-line p-3 text-start hover:bg-surface-2">
+                <b>طلب شراء رقم <span className="num">{r.number}</span></b>
+                <span className="flex flex-wrap gap-1.5 text-[13px]">{r.lines.map((l) => <span key={l.itemId} className="rounded-lg bg-surface-2 px-2 py-0.5">{l.name.ar} <b className="num">{num(l.qty)}</b> {l.unit}</span>)}</span>
+                <span className="text-[12.5px] text-muted">سجل تاريخ الاستلام والكميات المستلمة</span>
               </button>
             ))}
           </section>

@@ -9,6 +9,7 @@ import { partyAccount } from "./parties";
 import { payLines, paySplit, PURCHASE, PURCHASE_REF, PURCHASE_RETURN, purchaseLines, purchaseProblem, purchaseTotals, RETURN_REF, returnLines, SUPPLIER, SUPPLIER_LINK, supplierOf, type PayInput, type PurchaseData, type PurchaseLine, type SupplierData } from "./purchases";
 import { STOCK_SOURCE, syncStock } from "./sync";
 import { nextVoucherNo } from "./treasury";
+import { linkInvoice } from "../stores/purchase";
 
 export async function saveSupplier(db: Db, row: FinDoc | null, f: { name: string; active: boolean; data: Omit<SupplierData, "accountId"> }): Promise<FinDoc> {
   const name = f.name.trim();
@@ -30,7 +31,7 @@ const codeOf = (j: Awaited<ReturnType<typeof journalContext>>, key: string) => {
 const momentOf = (date: string) => (date === cairoDay(new Date().toISOString()) ? undefined : `${date}T10:00:00.000Z`);
 const nextNo = (docs: FinDoc[]) => String(Math.max(0, ...docs.map((d) => Number(d.code) || 0)) + 1);
 
-export interface PurchaseInput { supplierId: string; date: string; invoiceNo: string; due: string; payment: "credit" | "cash"; moneyId: string | null; lines: PurchaseLine[]; discount: number; note: string; branchId: string | null; attachments?: { name: string; url: string }[] }
+export interface PurchaseInput { supplierId: string; date: string; invoiceNo: string; due: string; payment: "credit" | "cash"; moneyId: string | null; lines: PurchaseLine[]; discount: number; note: string; branchId: string | null; attachments?: { name: string; url: string }[]; /** طلب شراء whose received quantities this invoice enters */ requestId?: string | null }
 
 /** فاتورة شراء: the goods enter their warehouses at the invoice price, the last price of each item follows, and the entry is posted. */
 export async function postPurchase(db: Db, v: PurchaseInput, actor: Actor): Promise<FinDoc> {
@@ -47,7 +48,7 @@ export async function postPurchase(db: Db, v: PurchaseInput, actor: Actor): Prom
   for (const l of lines) if (l.type === "item" && (!items.get(l.itemId!) || !locs.get(l.locationId!))) throw new JournalError("صنف أو مخزن في الفاتورة غير موجود");
   const docs = await db.list("finDocs", { where: { kind: PURCHASE } });
   if (v.invoiceNo.trim() && docs.some((d) => (d.data as { supplierId?: string; invoiceNo?: string }).supplierId === v.supplierId && (d.data as { invoiceNo?: string }).invoiceNo === v.invoiceNo.trim())) throw new JournalError("فاتورة بنفس الرقم مسجلة لهذا المورد");
-  const data: PurchaseData = { supplierId: v.supplierId, invoiceNo: v.invoiceNo.trim(), due: v.due || v.date, payment: v.payment, moneyId: v.payment === "cash" ? v.moneyId : null, lines, discount: v.discount, net: t.net, vat: t.vat, total: t.total, entryId: null, note: v.note.trim(), attachments: v.attachments ?? [], by: actor.name };
+  const data: PurchaseData = { supplierId: v.supplierId, invoiceNo: v.invoiceNo.trim(), due: v.due || v.date, payment: v.payment, moneyId: v.payment === "cash" ? v.moneyId : null, lines, discount: v.discount, net: t.net, vat: t.vat, total: t.total, entryId: null, note: v.note.trim(), attachments: v.attachments ?? [], by: actor.name, requestId: v.requestId ?? null };
   const doc = await db.insert("finDocs", { kind: PURCHASE, code: nextNo(docs), name: supplier.name, branchId: v.branchId, status: "posted", date: v.date, data: data as unknown as Record<string, unknown> });
   const stock = lines.map((l, i) => ({ l, net: t.nets[i] })).filter((x) => x.l.type === "item");
   if (stock.length) {
@@ -60,6 +61,7 @@ export async function postPurchase(db: Db, v: PurchaseInput, actor: Actor): Prom
     date: v.date, memo: `فاتورة شراء ${doc.code}${data.invoiceNo ? ` (${data.invoiceNo})` : ""}: ${supplier.name}`, branchId: v.branchId, kind: "auto", sourceType: PURCHASE, sourceId: doc.id, attachments: data.attachments,
     lines: purchaseLines({ lines, discount: v.discount, accruedId: codeOf(j, "purchases.accrued"), vatInputId: codeOf(j, "vat.input"), creditId: v.payment === "cash" ? v.moneyId! : acc.id, branchId: v.branchId }), meta: { supplierId: supplier.id, due: data.due, invoiceNo: data.invoiceNo },
   });
+  if (v.requestId) await linkInvoice(db, v.requestId, doc.id, lines.filter((l) => l.type === "item").map((l) => l.itemId!), actor);
   return db.update("finDocs", doc.id, { data: { ...data, entryId: e?.id ?? null } as unknown as Record<string, unknown> });
 }
 

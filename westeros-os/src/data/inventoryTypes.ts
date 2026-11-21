@@ -121,6 +121,8 @@ export interface StockRequestLine {
   receivedQty?: number | null;
   /** the stickers scanned for this line (one entry per sticker, so a sticker is not counted twice) */
   scans?: string[];
+  /** طلب شراء: the purchase invoice (finDocs) that entered this line's received quantity into the warehouse */
+  invoiceId?: string | null;
 }
 export interface StockRequestEvent {
   at: string;
@@ -147,7 +149,8 @@ export interface StockRequest extends Row {
   note: string;
   /** purchase: the warehouse the quantities enter when the request is finished. supply: the warehouse they leave from. */
   toLocationId?: string | null;
-  /** set once the quantities were moved, so a request never moves stock twice */
+  /** set once the quantities were moved, so a request never moves stock twice.
+   *  طلب شراء (2026-11-21): the day the warehouse keeper documented the receipt; the stock enters with the purchase invoice */
   receivedAt?: string | null;
   /** when the last line was sent (0041) */
   sentAt?: string | null;

@@ -1,10 +1,11 @@
 /** المشتريات والموردون: الموردون وأرصدتهم، فواتير الشراء، المرتجعات، السداد، وأعمار الديون. */
 import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Banknote, FileText, Paperclip, Pencil, Plus, Truck, Undo2, X } from "lucide-react";
+import { Banknote, FileText, PackageCheck, Paperclip, Pencil, Plus, Truck, Undo2, X } from "lucide-react";
 import { useDb, useLive } from "@/data/hooks";
 import type { FinDoc, FinEntry } from "@/data/financeTypes";
-import type { StockItem } from "@/data/inventoryTypes";
+import type { StockItem, StockRequest } from "@/data/inventoryTypes";
+import { awaitingInvoice, awaitingInvoices } from "../stores/purchase";
 import { cn } from "@/lib/cn";
 import { readImage } from "@/modules/inventory/bits";
 import { Badge, Button, Card, Dialog, EmptyState, Input, Segmented, Select, Switch, Textarea, useToast } from "@/ui";
@@ -19,7 +20,7 @@ import { AccountSelect, BranchSelect, esc, fmt, fromText, printDoc, PrintButton,
 import { useFinance, type Fin } from "./useFinance";
 
 const err = (e: unknown) => String((e as Error)?.message ?? e);
-type Tab = "suppliers" | "invoices" | "returns" | "ageing";
+type Tab = "received" | "suppliers" | "invoices" | "returns" | "ageing";
 const addDays = (d: string, n: number) => new Date(Date.parse(d) + n * 86_400_000).toISOString().slice(0, 10);
 
 function useSuppliers(fin: Fin, docs: FinDoc[]) {
@@ -31,9 +32,12 @@ export default function Purchases() {
   const perms = useFinPerms();
   const can = perms.has("vouchers");
   const docs = useLive("finDocs").data;
-  const [tab, setTab] = useState<Tab>("suppliers");
+  const [tabPicked, setTab] = useState<Tab | null>(null);
   const [supplier, setSupplier] = useState<FinDoc | "new" | null>(null);
-  const [invoice, setInvoice] = useState<{ supplierId?: string } | null>(null);
+  const [invoice, setInvoice] = useState<{ supplierId?: string; request?: StockRequest } | null>(null);
+  // طلب شراء: what the warehouse keeper received and no purchase invoice entered yet
+  const requests = useLive("stockRequests").data;
+  const received = useMemo(() => awaitingInvoices(requests), [requests]);
   const [ret, setRet] = useState<{ of?: FinDoc; supplierId?: string } | null>(null);
   const [pay, setPay] = useState<FinDoc | null>(null);
   const [show, setShow] = useState<FinDoc | null>(null);
@@ -42,13 +46,16 @@ export default function Purchases() {
   const invoices = useMemo(() => docs.filter((d) => d.kind === PURCHASE).sort((a, b) => (b.date ?? "").localeCompare(a.date ?? "") || Number(b.code) - Number(a.code)), [docs]);
   const returns = useMemo(() => docs.filter((d) => d.kind === PURCHASE_RETURN).sort((a, b) => (b.date ?? "").localeCompare(a.date ?? "") || Number(b.code) - Number(a.code)), [docs]);
   const owed = suppliers.reduce((s, x) => s + x.open.balance, 0), overdue = suppliers.reduce((s, x) => s + x.overdue, 0), soon = suppliers.reduce((s, x) => s + x.soon, 0);
+  const tab: Tab = tabPicked ?? (received.length ? "received" : "suppliers");
   const openEntry = (id: string | null | undefined) => { const e = fin.entries.find((x) => x.id === id); if (e) setView(e); };
   return (
     <div className="grid gap-4">
-      <Toolbar lead={<Segmented size="sm" className="max-sm:grid max-sm:w-full max-sm:grid-cols-2 max-sm:[&>button]:h-10" label="المشتريات" value={tab} onChange={setTab} options={[{ value: "suppliers", label: "الموردون" }, { value: "invoices", label: "فواتير الشراء" }, { value: "returns", label: "المرتجعات" }, { value: "ageing", label: "أعمار الديون" }]} />} actions={<>{can ? <><Button icon={<FileText />} onClick={() => setInvoice({})}>فاتورة شراء</Button><Button variant="secondary" icon={<Undo2 />} onClick={() => setRet({})}>مرتجع</Button><Button variant="outline" icon={<Plus />} onClick={() => setSupplier("new")}>مورد جديد</Button></> : null}</>} />
+      <Toolbar lead={<Segmented size="sm" className="max-sm:grid max-sm:w-full max-sm:grid-cols-2 max-sm:[&>button]:h-10" label="المشتريات" value={tab} onChange={setTab} options={[{ value: "received", label: received.length ? `مستلم بدون فاتورة (${received.length})` : "مستلم بدون فاتورة" }, { value: "suppliers", label: "الموردون" }, { value: "invoices", label: "فواتير الشراء" }, { value: "returns", label: "المرتجعات" }, { value: "ageing", label: "أعمار الديون" }]} />} actions={<>{can ? <><Button icon={<FileText />} onClick={() => setInvoice({})}>فاتورة شراء</Button><Button variant="secondary" icon={<Undo2 />} onClick={() => setRet({})}>مرتجع</Button><Button variant="outline" icon={<Plus />} onClick={() => setSupplier("new")}>مورد جديد</Button></> : null}</>} />
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 max-sm:[&>*:last-child:nth-child(odd)]:col-span-2">
         {[["مستحق للموردين", owed, ""], ["متأخر عن ميعاده", overdue, overdue ? "text-danger" : ""], ["يستحق خلال 7 أيام", soon, soon ? "text-brass" : ""]].map(([l, v, c]) => <Card key={l as string} className="p-3"><div className="text-[12.5px] text-muted">{l}</div><div className={cn("num text-[18px] font-bold", c as string)} dir="ltr">{fmt(v as number)}</div></Card>)}
       </div>
+
+      {tab === "received" ? <Received rows={received} can={can} onInvoice={(r) => setInvoice({ request: r })} /> : null}
 
       {tab === "suppliers" ? (
         suppliers.length ? (
@@ -90,7 +97,7 @@ export default function Purchases() {
       {tab === "ageing" ? <Ageing suppliers={suppliers} /> : null}
 
       {supplier ? <SupplierDialog row={supplier === "new" ? null : supplier} onClose={() => setSupplier(null)} /> : null}
-      {invoice ? <InvoiceDialog fin={fin} mode="invoice" suppliers={suppliers.map((s) => s.doc)} supplierId={invoice.supplierId} onClose={() => setInvoice(null)} onSaved={(d) => { setInvoice(null); setShow(d); }} /> : null}
+      {invoice ? <InvoiceDialog fin={fin} mode="invoice" suppliers={suppliers.map((s) => s.doc)} supplierId={invoice.supplierId} request={invoice.request} onClose={() => setInvoice(null)} onSaved={(d) => { setInvoice(null); setShow(d); }} /> : null}
       {ret ? <InvoiceDialog fin={fin} mode="return" suppliers={suppliers.map((s) => s.doc)} supplierId={ret.supplierId} of={ret.of} onClose={() => setRet(null)} onSaved={(d) => { setRet(null); setShow(d); }} /> : null}
       {pay ? <PayDialog fin={fin} supplier={suppliers.find((s) => s.doc.id === pay.id)!} onClose={() => setPay(null)} onSaved={(e) => { setPay(null); setView(e); }} /> : null}
       {show ? <DocView fin={fin} doc={show} onClose={() => setShow(null)} onEntry={() => openEntry(purchaseOf(show).entryId)} onReturn={can && show.kind === PURCHASE ? () => { setRet({ of: show, supplierId: purchaseOf(show).supplierId }); setShow(null); } : undefined} /> : null}
@@ -138,6 +145,31 @@ function Ageing({ suppliers }: { suppliers: Sup[] }) {
   );
 }
 
+/* ───────── مستلم بدون فاتورة ───────── */
+
+function Received({ rows, can, onInvoice }: { rows: StockRequest[]; can: boolean; onInvoice: (r: StockRequest) => void }) {
+  const locs = useLive("storageLocations").data;
+  if (!rows.length) return <Card><EmptyState compact icon={<PackageCheck />} title="لا توجد كميات مستلمة بدون فاتورة" body="لما أمين المخزن يوثق استلام طلب شراء، الكميات تظهر هنا لحد ما تتسجل فاتورة الشراء، ومعاها تدخل المخزن." /></Card>;
+  return (
+    <div className="grid gap-3">
+      {rows.map((r) => (
+        <Card key={r.id} className="grid gap-2 p-3">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[14px]">
+            <b>طلب شراء رقم <span className="num">{r.number}</span></b>
+            <span className="text-muted">استلمه {r.history?.filter((h) => h.action === "received").at(-1)?.name || r.keeperName || "—"} يوم <span className="num">{fmtDay((r.receivedAt ?? "").slice(0, 10))}</span></span>
+            <Badge size="sm" tone="warn" className="ms-auto">لم يدخل المخزن</Badge>
+            {can ? <Button size="sm" icon={<FileText />} onClick={() => onInvoice(r)}>تسجيل فاتورة الشراء</Button> : null}
+          </div>
+          <div className="overflow-x-auto thin-scrollbar rounded-xl border border-line"><table className="w-full text-[14px]">
+            <thead><tr className="text-[12.5px] text-muted">{["الخامة", "الكمية المستلمة", "الوحدة", "يدخل مخزن"].map((h) => <th key={h} className="border-b border-line px-3 py-2 text-start font-semibold">{h}</th>)}</tr></thead>
+            <tbody>{r.lines.filter(awaitingInvoice).map((l) => <tr key={l.itemId} className="border-t border-line/60"><td className="px-3 py-2 font-semibold">{l.name.ar}</td><td className="num px-3 py-2" dir="ltr">{l.receivedQty}</td><td className="px-3 py-2 text-muted">{l.unit}</td><td className="px-3 py-2 text-muted">{locs.find((x) => x.id === l.locationId)?.name.ar ?? "—"}</td></tr>)}</tbody>
+          </table></div>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
 /* ───────── مورد ───────── */
 
 function SupplierDialog({ row, onClose }: { row: FinDoc | null; onClose: () => void }) {
@@ -174,7 +206,7 @@ type Row = { key: number; type: "item" | "account"; itemId: string; locationId: 
 let seq = 0;
 const blank = (type: "item" | "account" = "item", locationId = ""): Row => ({ key: ++seq, type, itemId: "", locationId, accountId: "", centreId: "", memo: "", qty: "", price: "", vat: "" });
 
-function InvoiceDialog({ fin, mode, suppliers, supplierId, of, onClose, onSaved }: { fin: Fin; mode: "invoice" | "return"; suppliers: FinDoc[]; supplierId?: string; of?: FinDoc; onClose: () => void; onSaved: (d: FinDoc) => void }) {
+function InvoiceDialog({ fin, mode, suppliers, supplierId, of, request, onClose, onSaved }: { fin: Fin; mode: "invoice" | "return"; suppliers: FinDoc[]; supplierId?: string; of?: FinDoc; request?: StockRequest; onClose: () => void; onSaved: (d: FinDoc) => void }) {
   const db = useDb();
   const { toast } = useToast();
   const actor = useActor();
@@ -183,8 +215,8 @@ function InvoiceDialog({ fin, mode, suppliers, supplierId, of, onClose, onSaved 
   const itemById = useMemo(() => new Map(items.map((i) => [i.id, i] as [string, StockItem])), [items]);
   const money = useMemo(() => moneyAccounts(fin.ix.ordered()), [fin.ix]);
   const active = suppliers.filter((s) => s.status === "active" || s.id === supplierId);
-  const [d, setD] = useState({ supplierId: supplierId ?? "", date: today(), invoiceNo: "", due: "", payment: "credit" as "credit" | "cash", moneyId: money[0]?.id ?? "", discount: "", note: "", branchId: fin.branchId ?? "" });
-  const [rows, setRows] = useState<Row[]>(() => (of ? purchaseOf(of).lines.filter((l) => l.type === "item").map((l) => ({ ...blank("item"), itemId: l.itemId ?? "", locationId: l.locationId ?? "", qty: String(l.qty), price: toText(l.price), vat: l.vatBp ? String(l.vatBp / 100) : "" })) : [blank("item", locs.find((l) => l.active)?.id ?? "")]));
+  const [d, setD] = useState({ supplierId: supplierId ?? "", date: today(), invoiceNo: "", due: "", payment: "credit" as "credit" | "cash", moneyId: money[0]?.id ?? "", discount: "", note: request ? `طلب شراء رقم ${request.number}` : "", branchId: fin.branchId ?? "" });
+  const [rows, setRows] = useState<Row[]>(() => (request ? request.lines.filter(awaitingInvoice).map((l) => ({ ...blank("item"), itemId: l.itemId, locationId: l.locationId ?? "", qty: String(l.receivedQty) })) : of ? purchaseOf(of).lines.filter((l) => l.type === "item").map((l) => ({ ...blank("item"), itemId: l.itemId ?? "", locationId: l.locationId ?? "", qty: String(l.qty), price: toText(l.price), vat: l.vatBp ? String(l.vatBp / 100) : "" })) : [blank("item", locs.find((l) => l.active)?.id ?? "")]));
   const [files, setFiles] = useState<{ name: string; url: string }[]>([]);
   const [busy, setBusy] = useState(false);
   const file = useRef<HTMLInputElement>(null);
@@ -204,13 +236,13 @@ function InvoiceDialog({ fin, mode, suppliers, supplierId, of, onClose, onSaved 
     setBusy(true);
     try {
       const common = { supplierId: d.supplierId, date: d.date, moneyId: d.payment === "cash" ? d.moneyId : null, note: d.note, branchId: d.branchId || null };
-      const doc = mode === "invoice" ? await postPurchase(db, { ...common, invoiceNo: d.invoiceNo, due, payment: d.payment, lines: filled, discount, attachments: files }, actor) : await postReturn(db, { ...common, lines: filled, refund: d.payment, ofInvoice: of?.id ?? null }, actor);
+      const doc = mode === "invoice" ? await postPurchase(db, { ...common, invoiceNo: d.invoiceNo, due, payment: d.payment, lines: filled, discount, attachments: files, requestId: request?.id ?? null }, actor) : await postReturn(db, { ...common, lines: filled, refund: d.payment, ofInvoice: of?.id ?? null }, actor);
       toast({ tone: "success", title: mode === "invoice" ? `تم تسجيل فاتورة الشراء ${doc.code}` : `تم تسجيل المرتجع ${doc.code}` });
       onSaved(doc);
     } catch (e) { toast({ tone: "error", title: "تعذر الحفظ", description: err(e), duration: 9000 }); } finally { setBusy(false); }
   };
   return (
-    <Dialog open onClose={onClose} size="xl" title={mode === "invoice" ? "فاتورة شراء" : of ? `مرتجع من فاتورة ${of.code}` : "مرتجع مشتريات"}
+    <Dialog open onClose={onClose} size="xl" title={mode === "invoice" ? (request ? `فاتورة شراء لطلب الشراء رقم ${request.number}` : "فاتورة شراء") : of ? `مرتجع من فاتورة ${of.code}` : "مرتجع مشتريات"}
       footer={<div className="flex flex-wrap items-center justify-end gap-2">
         {problem ? <span className="me-auto text-[13px] font-semibold text-danger">{problem}</span> : <span className="me-auto text-[14px]">الإجمالي <b className="num" dir="ltr">{fmt(t.total)}</b> ج.م</span>}
         <Button variant="ghost" onClick={onClose}>إلغاء</Button><Button loading={busy} disabled={!!problem} onClick={save}>حفظ وترحيل</Button>

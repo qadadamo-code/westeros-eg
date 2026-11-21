@@ -1,8 +1,9 @@
 /**
- * طلب شراء: raw materials to buy. Any employee who opens المخازن والفروع can ask; the request can be edited or deleted
- * until the purchasing employee starts on it. The employees whose role has "مسؤول المشتريات" are told (a message on
- * opening the system and a count on the menu), set it قيد التنفيذ or مؤجل, and when it is bought pick the warehouse
- * each raw material enters.
+ * طلب شراء: raw materials to buy. The warehouse keeper asks; the request can be edited or deleted until the purchasing
+ * employee starts on it. The employees whose role has "مسؤول المشتريات" are told (a message on opening the system and a
+ * count on the menu and on this tab), set it قيد التنفيذ or مؤجل, then تم الشراء. The request stays open until the
+ * keeper documents the receipt (the day and the quantities received). The received quantities wait in
+ * الحسابات > المشتريات and enter the warehouse only with the purchase invoice (see ./purchase.ts).
  */
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -15,7 +16,7 @@ import { fmtAt, fmtDay, fromLocal, lineUnit, nowLocal, num, REQUEST_STATUS, requ
 import { isManagement, memberCan } from "../perms";
 import { ReadOnly, StockLines, type QtyLine } from "../ui";
 import { useCc, type Cc } from "../useCc";
-import { finishRequest } from "./receive";
+import { awaitingInvoice, documentReceipt, markBought } from "./purchase";
 import { setRequestStatus } from "./supply";
 import { whName } from "./Moves";
 
@@ -27,7 +28,17 @@ const nextDay = (local: string) => {
 };
 const msg = (e: unknown) => String((e as Error).message ?? e);
 const toLocal = (iso: string) => { const d = new Date(new Date(iso).getTime() - new Date().getTimezoneOffset() * 60_000); return d.toISOString().slice(0, 16); };
-const ACTION: Record<string, string> = { new: "طلب الشراء", edit: "تعديل", in_progress: "قيد التنفيذ", postponed: "تأجيل", bought: "تم الشراء" };
+const ACTION: Record<string, string> = { new: "طلب الشراء", edit: "تعديل", in_progress: "قيد التنفيذ", postponed: "تأجيل", bought: "تم الشراء", received: "توثيق الاستلام", invoiced: "تسجيل فاتورة الشراء" };
+
+/** the status as the purchase request reads it: تم الشراء, then تم الاستلام waiting for (or with) its invoice */
+function statusOf(r: StockRequest): { ar: string; tone: "neutral" | "info" | "warn" | "brass" | "ok" | "danger" } {
+  if (r.status === "sent") return { ar: "تم الشراء، مستني الاستلام", tone: "brass" };
+  if (r.status === "done" && r.lines.some((l) => l.receivedQty != null)) return r.lines.some(awaitingInvoice) ? { ar: "تم الاستلام، مستني فاتورة", tone: "warn" } : { ar: "تم الاستلام والفاتورة", tone: "ok" };
+  if (r.status === "done") return { ar: "تم الشراء", tone: "ok" };
+  return { ar: REQUEST_STATUS[r.status]?.ar ?? r.status, tone: REQUEST_STATUS[r.status]?.tone ?? "neutral" };
+}
+/** documents the receipt: the keeper who asked, any warehouse keeper, or management */
+const canReceive = (cc: Cc, r: StockRequest) => requestOpen(r) && !!cc.staff && (r.keeperId === cc.staff.id || isManagement(cc.staff) || cc.locations.some((l) => l.keeperId === cc.staff!.id));
 
 /** editable and deletable: not started yet, by the employee who asked or by management */
 const canChange = (cc: Cc, r: StockRequest) => r.status === "new" && !r.receivedAt && (r.keeperId === cc.staff?.id || isManagement(cc.staff));
@@ -38,7 +49,7 @@ export default function Purchases() {
   const all = useLive("stockRequests", { orderBy: [{ field: "at", dir: "desc" }] }).data;
   const rows = useMemo(() => all.filter((r) => r.kind === "purchase"), [all]);
   const [onlyOpen, setOnlyOpen] = useState(true);
-  const shown = useMemo(() => (onlyOpen ? rows.filter(requestOpen) : rows), [rows, onlyOpen]);
+  const shown = useMemo(() => (onlyOpen ? rows.filter((r) => requestOpen(r) || r.lines.some(awaitingInvoice)) : rows), [rows, onlyOpen]);
   const [edit, setEdit] = useState<StockRequest | "new" | null>(null);
   const [show, setShow] = useState<string | null>(null);
   // the message on opening links straight to the request
@@ -55,7 +66,7 @@ export default function Purchases() {
     { key: "due", header: "مطلوب يوم", cell: (r) => <span className="num">{fmtDay(r.dueDate)}</span> },
     { key: "c", header: "الخامات", align: "end", cell: (r) => <span className="num">{r.lines.length}</span> },
     { key: "p", header: "الموظف", hideOnMobile: true, cell: (r) => r.keeperName || "—" },
-    { key: "s", header: "الحالة", cell: (r) => <Badge tone={REQUEST_STATUS[r.status]?.tone ?? "neutral"} size="sm">{r.status === "done" ? "تم الشراء" : REQUEST_STATUS[r.status]?.ar ?? r.status}</Badge> },
+    { key: "s", header: "الحالة", cell: (r) => <Badge tone={statusOf(r).tone} size="sm">{statusOf(r).ar}</Badge> },
   ];
   const current = show ? rows.find((r) => r.id === show) ?? null : null;
   return (
@@ -127,12 +138,13 @@ function PurchaseDialog({ cc, row, number, onClose }: { cc: Cc; row: StockReques
 function PurchaseView({ cc, row, onClose, onEdit }: { cc: Cc; row: StockRequest; onClose: () => void; onEdit: () => void }) {
   const db = useDb();
   const { toast } = useToast();
-  const buyer = memberCan(cc.staff, cc.lists, "purchase.handle") && requestOpen(row);
+  const buyer = memberCan(cc.staff, cc.lists, "purchase.handle") && requestOpen(row) && row.status !== "sent";
+  const receiver = canReceive(cc, row);
   const change = canChange(cc, row);
   const [later, setLater] = useState(false);
   const [newDue, setNewDue] = useState(nextDay(nowLocal()));
   const [del, setDel] = useState(false);
-  const [bought, setBought] = useState(false);
+  const [receive, setReceive] = useState(false);
   const [busy, setBusy] = useState(false);
   const loc = (id: string | null | undefined) => cc.locations.find((x) => x.id === id)?.name.ar ?? "—";
   const status = async (s: "in_progress" | "postponed") => {
@@ -141,6 +153,17 @@ function PurchaseView({ cc, row, onClose, onEdit }: { cc: Cc; row: StockRequest;
       await setRequestStatus(db, row, cc.staff, s, s === "postponed" ? newDue : undefined);
       toast({ tone: "success", title: s === "postponed" ? `تم تأجيل الطلب إلى ${fmtDay(newDue)}` : "الطلب قيد التنفيذ" });
       setLater(false);
+    } catch (e) {
+      toast({ tone: "error", title: "تعذر الحفظ", description: msg(e) });
+    } finally {
+      setBusy(false);
+    }
+  };
+  const bought = async () => {
+    setBusy(true);
+    try {
+      await markBought(db, row, cc.staff);
+      toast({ tone: "success", title: "تم الشراء", description: "وصل إشعار لأمين المخزن عشان يوثق الاستلام" });
     } catch (e) {
       toast({ tone: "error", title: "تعذر الحفظ", description: msg(e) });
     } finally {
@@ -160,17 +183,21 @@ function PurchaseView({ cc, row, onClose, onEdit }: { cc: Cc; row: StockRequest;
     }
   };
   const th = "px-3 py-2 text-start font-semibold";
-  if (bought) return <BoughtDialog cc={cc} row={row} onClose={onClose} />;
+  // the receipt was documented (requests bought before 2026-11-21 entered the warehouse straight away)
+  const got = row.lines.some((l) => l.receivedQty != null);
+  if (receive) return <ReceiptDialog cc={cc} row={row} onClose={onClose} />;
   return (
     <Dialog open onClose={onClose} size="lg" title={`طلب شراء رقم ${row.number}`} description={`${fmtAt(row.at)} · مطلوب يوم ${fmtDay(row.dueDate)}`}
       footer={<div className="flex flex-wrap justify-end gap-2">
         {change ? <Button variant="danger" icon={<Trash2 />} onClick={() => setDel(true)}>حذف</Button> : null}
         {change ? <Button variant="outline" icon={<Pencil />} onClick={onEdit}>تعديل</Button> : null}
-        {buyer ? <Button icon={<PackageCheck />} onClick={() => setBought(true)}>تم الشراء</Button> : null}
+        {buyer ? <Button variant={receiver ? "outline" : "primary"} icon={<ShoppingCart />} loading={busy} onClick={() => void bought()}>تم الشراء</Button> : null}
+        {receiver ? <Button icon={<PackageCheck />} onClick={() => setReceive(true)}>توثيق الاستلام</Button> : null}
         <Button variant="ghost" onClick={onClose}>إغلاق</Button></div>}>
       <div className="grid gap-3">
         <div className="flex flex-wrap items-center gap-2 text-[14px]">
-          <Badge tone={REQUEST_STATUS[row.status]?.tone ?? "neutral"}>{row.status === "done" ? "تم الشراء" : REQUEST_STATUS[row.status]?.ar ?? row.status}</Badge>
+          <Badge tone={statusOf(row).tone}>{statusOf(row).ar}</Badge>
+          {row.receivedAt && row.lines.some((l) => l.receivedQty != null) ? <span>تاريخ الاستلام: <b className="num">{fmtDay(row.receivedAt.slice(0, 10))}</b></span> : null}
           <span>الموظف: <b>{row.keeperName || "—"}</b></span>
           {row.note ? <span className="text-muted">· {row.note}</span> : null}
         </div>
@@ -188,8 +215,8 @@ function PurchaseView({ cc, row, onClose, onEdit }: { cc: Cc; row: StockRequest;
         ) : null}
         <div className="overflow-x-auto rounded-2xl border border-line">
           <table className="w-full text-[14px]">
-            <thead className="bg-surface-2 text-[12.5px] text-muted"><tr><th className={th}>الخامة</th><th className="px-3 py-2 text-end font-semibold">الكمية</th><th className={th}>الوحدة</th>{row.receivedAt ? <th className={th}>دخل مخزن</th> : null}</tr></thead>
-            <tbody>{row.lines.map((l) => <tr key={l.itemId} className="border-t border-line"><td className="px-3 py-2 font-semibold">{l.name.ar}</td><td className="num px-3 py-2 text-end">{num(l.qty)}</td><td className="px-3 py-2 text-muted">{l.unit}</td>{row.receivedAt ? <td className="px-3 py-2 text-muted">{loc(l.locationId ?? row.toLocationId)}</td> : null}</tr>)}</tbody>
+            <thead className="bg-surface-2 text-[12.5px] text-muted"><tr><th className={th}>الخامة</th><th className="px-3 py-2 text-end font-semibold">المطلوب</th>{got ? <th className="px-3 py-2 text-end font-semibold">المستلم</th> : null}<th className={th}>الوحدة</th>{row.receivedAt ? <th className={th}>{got ? "يدخل مخزن" : "دخل مخزن"}</th> : null}{got ? <th className={th}>فاتورة الشراء</th> : null}</tr></thead>
+            <tbody>{row.lines.map((l) => <tr key={l.itemId} className="border-t border-line"><td className="px-3 py-2 font-semibold">{l.name.ar}</td><td className="num px-3 py-2 text-end">{num(l.qty)}</td>{got ? <td className="num px-3 py-2 text-end font-semibold">{num(l.receivedQty ?? 0)}</td> : null}<td className="px-3 py-2 text-muted">{l.unit}</td>{row.receivedAt ? <td className="px-3 py-2 text-muted">{(l.receivedQty ?? 1) > 0 ? loc(l.locationId ?? row.toLocationId) : "—"}</td> : null}{got ? <td className="px-3 py-2">{l.invoiceId ? <Badge tone="ok" size="sm">اتسجلت ودخلت المخزن</Badge> : awaitingInvoice(l) ? <Badge tone="warn" size="sm">مستنية فاتورة</Badge> : "—"}</td> : null}</tr>)}</tbody>
           </table>
         </div>
         {row.history?.length ? (
@@ -208,20 +235,22 @@ function PurchaseView({ cc, row, onClose, onEdit }: { cc: Cc; row: StockRequest;
   );
 }
 
-/** تم الشراء: the warehouse each raw material enters, then the quantities enter the stock */
-function BoughtDialog({ cc, row, onClose }: { cc: Cc; row: StockRequest; onClose: () => void }) {
+/** توثيق الاستلام: the day it arrived, the quantity received of each raw material and the warehouse it will enter with the invoice */
+function ReceiptDialog({ cc, row, onClose }: { cc: Cc; row: StockRequest; onClose: () => void }) {
   const db = useDb();
   const { toast } = useToast();
   const toFor = (itemId: string) => { const it = cc.itemById.get(itemId); return it ? cc.warehouses.filter((l) => cc.fits(l, it)) : []; };
+  const [day, setDay] = useState(nowLocal().slice(0, 10));
+  const [qty, setQty] = useState<Record<string, string>>(() => Object.fromEntries(row.lines.map((l) => [l.itemId, String(l.qty)])));
   const [to, setTo] = useState<Record<string, string>>(() => Object.fromEntries(row.lines.map((l) => [l.itemId, toFor(l.itemId)[0]?.id ?? ""])));
   const [busy, setBusy] = useState(false);
-  const valid = row.lines.every((l) => !!to[l.itemId]);
+  const n = (id: string) => Math.max(0, Number(qty[id]) || 0);
+  const valid = !!day && row.lines.some((l) => n(l.itemId) > 0) && row.lines.every((l) => !n(l.itemId) || !!to[l.itemId]);
   const save = async () => {
     setBusy(true);
     try {
-      const done = await finishRequest(db, row.id, to);
-      await db.update("stockRequests", row.id, { history: [...(done.history ?? row.history ?? []), { at: new Date().toISOString(), by: cc.staff?.id ?? null, name: cc.staff?.name ?? "", action: "bought" }] });
-      toast({ tone: "success", title: "تم الشراء ودخلت الخامات المخزن" });
+      await documentReceipt(db, row.id, cc.staff, day, Object.fromEntries(row.lines.map((l) => [l.itemId, { qty: n(l.itemId), locationId: to[l.itemId] || null }])));
+      toast({ tone: "success", title: "تم توثيق الاستلام", description: "الكميات ظهرت في المشتريات في الحسابات، وتدخل المخزن مع تسجيل فاتورة الشراء" });
       onClose();
     } catch (e) {
       toast({ tone: "error", title: "تعذر الحفظ", description: msg(e) });
@@ -231,24 +260,29 @@ function BoughtDialog({ cc, row, onClose }: { cc: Cc; row: StockRequest; onClose
   };
   const th = "px-3 py-2 text-start font-semibold";
   return (
-    <Dialog open onClose={onClose} size="lg" title={`تم شراء طلب رقم ${row.number}`} description="اختر المخزن اللي كل خامة هتدخله"
-      footer={<div className="flex justify-end gap-2"><Button variant="ghost" onClick={onClose}>إلغاء</Button><Button loading={busy} disabled={!valid} onClick={save}>تأكيد</Button></div>}>
-      <div className="overflow-x-auto rounded-2xl border border-line">
-        <table className="w-full min-w-[520px] text-[14px]">
-          <thead className="bg-surface-2 text-[12.5px] text-muted"><tr><th className={th}>الخامة</th><th className="px-3 py-2 text-end font-semibold">الكمية</th><th className={th}>يدخل مخزن</th></tr></thead>
-          <tbody>
-            {row.lines.map((l) => {
-              const t = toFor(l.itemId);
-              return (
-                <tr key={l.itemId} className="border-t border-line">
-                  <td className="px-3 py-1.5 font-semibold">{l.name.ar}</td>
-                  <td className="num px-3 py-1.5 text-end">{num(l.qty)} <span className="text-muted">{l.unit}</span></td>
-                  <td className="px-3 py-1.5"><Select aria-label="يدخل مخزن" value={to[l.itemId] ?? ""} onChange={(e) => setTo((p) => ({ ...p, [l.itemId]: e.target.value }))} options={t.length ? t.map((o) => ({ value: o.id, label: whName(cc, o) })) : [{ value: "", label: "لا يوجد مخزن مناسب" }]} /></td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+    <Dialog open onClose={onClose} size="lg" title={`توثيق استلام طلب الشراء رقم ${row.number}`} description="الخامات مش هتدخل المخزن غير لما فاتورة الشراء تتسجل في الحسابات"
+      footer={<div className="flex justify-end gap-2"><Button variant="ghost" onClick={onClose}>إلغاء</Button><Button loading={busy} disabled={!valid} onClick={save}>تأكيد الاستلام</Button></div>}>
+      <div className="grid gap-3">
+        <div className="w-48"><Input label="تاريخ الاستلام" type="date" dir="ltr" value={day} onChange={(e) => setDay(e.target.value)} /></div>
+        <div className="overflow-x-auto rounded-2xl border border-line">
+          <table className="w-full min-w-[560px] text-[14px]">
+            <thead className="bg-surface-2 text-[12.5px] text-muted"><tr><th className={th}>الخامة</th><th className="px-3 py-2 text-end font-semibold">المطلوب</th><th className={th}>الكمية المستلمة</th><th className={th}>يدخل مخزن</th></tr></thead>
+            <tbody>
+              {row.lines.map((l) => {
+                const t = toFor(l.itemId);
+                return (
+                  <tr key={l.itemId} className="border-t border-line">
+                    <td className="px-3 py-1.5 font-semibold">{l.name.ar}</td>
+                    <td className="num px-3 py-1.5 text-end">{num(l.qty)} <span className="text-muted">{l.unit}</span></td>
+                    <td className="px-3 py-1.5"><div className="w-32"><Input aria-label="الكمية المستلمة" dir="ltr" inputMode="decimal" value={qty[l.itemId] ?? ""} onChange={(e) => setQty((p) => ({ ...p, [l.itemId]: e.target.value }))} /></div></td>
+                    <td className="px-3 py-1.5"><Select aria-label="يدخل مخزن" value={to[l.itemId] ?? ""} onChange={(e) => setTo((p) => ({ ...p, [l.itemId]: e.target.value }))} options={t.length ? t.map((o) => ({ value: o.id, label: whName(cc, o) })) : [{ value: "", label: "لا يوجد مخزن مناسب" }]} /></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <p className="text-[12.5px] text-muted">اكتب صفر للخامة اللي ما وصلتش.</p>
       </div>
     </Dialog>
   );
