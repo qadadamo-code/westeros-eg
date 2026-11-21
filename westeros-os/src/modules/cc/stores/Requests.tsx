@@ -13,12 +13,12 @@ import { cn } from "@/lib/cn";
 import { Badge, Button, Card, Dialog, EmptyState, Input, Select, Table, useToast, type Column } from "@/ui";
 import { labelSizes, saveLabelSize, savedLabelSize } from "@/modules/production/Label";
 import { fmtAt, fmtDay, fromLocal, lineUnit, nowLocal, num, REQUEST_STATUS, requestOpen, storeTypeName, toLine } from "../lib";
-import { memberCan } from "../perms";
+import { isManagement, memberCan } from "../perms";
 import { Scanner } from "../Scanner";
 import { whName } from "./Moves";
 import { ReadOnly, StockLines, type QtyLine } from "../ui";
 import { useCc, type Cc } from "../useCc";
-import { handlesKinds, KIND_LABEL, lineKind, matchScan, parseSticker, receiveLines, sendLines, setRequestStatus, waitingToReceive, waitingToSend, type LineKind } from "./supply";
+import { KIND_LABEL, lineKind, matchScan, mineLine, sourcesOf, parseSticker, receiveLines, sendLines, setRequestStatus, waitingToReceive, waitingToSend, type LineKind } from "./supply";
 import { printSupplyStickers, SupplyLabel, supplyStickers, type SupplySticker } from "./SupplyLabel";
 
 /** موعد التوريد: the day after the request's date */
@@ -156,12 +156,26 @@ function RequestDialog({ cc, number, onClose }: { cc: Cc; number: number; onClos
   );
 }
 
-const ACTION: Record<string, string> = { new: "طلب التوريد", in_progress: "قيد التنفيذ", postponed: "تأجيل", sent: "إرسال", received: "استلام", rejected: "رفض" };
+const ACTION: Record<string, string> = { branch: "تغيير الفرع", new: "طلب التوريد", in_progress: "قيد التنفيذ", postponed: "تأجيل", sent: "إرسال", received: "استلام", rejected: "رفض" };
 
 function RequestView({ cc, row, onClose, onAct }: { cc: Cc; row: StockRequest; onClose: () => void; onAct: (mode: "handle" | "receive") => void }) {
-  const kinds = handlesKinds(cc.staff, cc.lists);
+  const db = useDb();
+  const { toast } = useToast();
+  const stores = { locations: cc.locations, levels: cc.levels };
+  const mine = (l: StockRequest["lines"][number]) => mineLine(cc.staff, cc.lists, l, row, stores);
   const loc = (id: string | null | undefined) => cc.locations.find((x) => x.id === id)?.name.ar ?? "—";
-  const canHandle = requestOpen(row) && row.lines.some((l) => waitingToSend(l) && kinds.includes(lineKind(l, cc.itemById)));
+  const canHandle = requestOpen(row) && row.lines.some((l) => waitingToSend(l) && mine(l));
+  // تغيير الفرع بعد الطلب: management only, while nothing was sent
+  const canMoveBranch = isManagement(cc.staff) && requestOpen(row) && row.lines.every(waitingToSend);
+  const moveBranch = async (branchId: string) => {
+    if (branchId === row.branchId) return;
+    try {
+      await db.update("stockRequests", row.id, { branchId, history: [...(row.history ?? []), { at: new Date().toISOString(), by: cc.staff?.id ?? null, name: cc.staff?.name ?? "", action: "branch", note: `${askedBy(cc, row)} ← ${cc.branchName(branchId)}` }] });
+      toast({ tone: "success", title: `الطلب اتحول لفرع ${cc.branchName(branchId)}` });
+    } catch (e) {
+      toast({ tone: "error", title: "تعذر الحفظ", description: msg(e) });
+    }
+  };
   const canReceive = requestOpen(row) && (row.keeperId === cc.staff?.id || cc.staff?.role === "owner") && row.lines.some(waitingToReceive);
   const rawSent = row.lines.filter((l) => lineKind(l, cc.itemById) === "raw" && (l.sentQty ?? 0) > 0 && l.receivedQty == null);
   const [print, setPrint] = useState(false);
@@ -169,14 +183,16 @@ function RequestView({ cc, row, onClose, onAct }: { cc: Cc; row: StockRequest; o
   return (
     <Dialog open onClose={onClose} size="xl" title={`طلب توريد رقم ${row.number}`} description={`${fmtAt(row.at)} · موعد التوريد ${fmtDay(row.dueDate)}`}
       footer={<div className="flex flex-wrap justify-end gap-2"><SourceEntry refId={row.id} />
-        {rawSent.length && kinds.includes("raw") ? <Button variant="outline" icon={<Printer />} onClick={() => setPrint(true)}>ملصق الخامات</Button> : null}
+        {rawSent.some((l) => mine(l) || l.sentBy === cc.staff?.id) ? <Button variant="outline" icon={<Printer />} onClick={() => setPrint(true)}>ملصق الخامات</Button> : null}
         {canHandle ? <Button icon={<Play />} onClick={() => onAct("handle")}>تنفيذ الطلب</Button> : null}
         {canReceive ? <Button icon={<PackageCheck />} onClick={() => onAct("receive")}>توثيق الاستلام</Button> : null}
         <Button variant="ghost" onClick={onClose}>إغلاق</Button></div>}>
       <div className="grid gap-3">
         <div className="flex flex-wrap items-center gap-2 text-[14px]">
           <Badge tone={REQUEST_STATUS[row.status]?.tone ?? "neutral"}>{REQUEST_STATUS[row.status]?.ar ?? row.status}</Badge>
-          <span>الفرع: <b>{askedBy(cc, row)}</b></span>
+          {canMoveBranch ? (
+            <span className="w-52"><Select aria-label="الفرع" value={row.branchId ?? ""} onChange={(e) => void moveBranch(e.target.value)} options={cc.branches.map((b) => ({ value: b.id, label: `الفرع: ${b.name.ar}` }))} /></span>
+          ) : <span>الفرع: <b>{askedBy(cc, row)}</b></span>}
           <span>طالب التوريد: <b>{row.keeperName || "—"}</b></span>
         </div>
         <div className="overflow-x-auto rounded-2xl border border-line">
@@ -214,16 +230,22 @@ function RequestView({ cc, row, onClose, onAct }: { cc: Cc; row: StockRequest; o
 }
 
 /**
- * تنفيذ الطلب: the responsible employee's lines (by the kinds ticked on their role): status, the warehouse each line
+ * تنفيذ الطلب: the lines from the warehouses the employee keeps (امين المخزن, with the permission on their role): status, the warehouse each line
  * leaves from and the quantity sent. Nothing moves until the branch scans the stickers.
  */
 function HandleDialog({ cc, row, onClose }: { cc: Cc; row: StockRequest; onClose: () => void }) {
   const db = useDb();
   const { toast } = useToast();
-  const kinds = handlesKinds(cc.staff, cc.lists);
-  const mine = row.lines.filter((l) => waitingToSend(l) && kinds.includes(lineKind(l, cc.itemById)));
-  // where a line can leave from: warehouses outside the asking branch that hold it, the fullest first
-  const fromFor = (itemId: string) => cc.warehouses.filter((l) => l.branchId !== row.branchId && cc.onHand(itemId, l.id) > 0).sort((a, b) => cc.onHand(itemId, b.id) - cc.onHand(itemId, a.id));
+  const stores = { locations: cc.locations, levels: cc.levels };
+  const mine = row.lines.filter((l) => waitingToSend(l) && mineLine(cc.staff, cc.lists, l, row, stores));
+  // where a line can leave from: warehouses outside the asking branch that hold it, the fullest first;
+  // a warehouse keeper sends from the warehouses they keep (when the product's warehouses have keepers)
+  const fromFor = (itemId: string) => {
+    const all = cc.warehouses.filter((l) => l.branchId !== row.branchId && cc.onHand(itemId, l.id) > 0).sort((a, b) => cc.onHand(itemId, b.id) - cc.onHand(itemId, a.id));
+    if (cc.staff?.role === "owner") return all;
+    const kept = sourcesOf({ itemId }, row, stores).some((l) => l.keeperId);
+    return kept ? all.filter((l) => l.keeperId === cc.staff?.id) : all;
+  };
   const [from, setFrom] = useState<Record<string, string>>(() => Object.fromEntries(mine.map((l) => [l.itemId, fromFor(l.itemId)[0]?.id ?? ""])));
   const [qty, setQty] = useState<Record<string, string>>(() => Object.fromEntries(mine.map((l) => [l.itemId, String(l.qty)])));
   const [later, setLater] = useState(false);

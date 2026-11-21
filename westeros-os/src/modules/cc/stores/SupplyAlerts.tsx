@@ -1,32 +1,36 @@
 /**
  * إشعار طلبات التوريد: when the system opens (or another employee signs in), a message lists the supply requests
- * waiting for the signed-in employee: to send (by the kinds ticked on their role) and to receive (the ones they asked
+ * waiting for the signed-in employee: to send (from the warehouses they keep, when their role has the permission) and to receive (the ones they asked
  * for). A request that arrives while the system is open shows the message again, and a device notification when the
  * employee allowed it. The المخازن والفروع menu item carries the count.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { BellRing, PackageCheck, Send } from "lucide-react";
+import { BellRing, PackageCheck, Send, ShoppingCart } from "lucide-react";
 import { useSession } from "@/auth/session";
 import { useLive } from "@/data/hooks";
 import type { StockRequest } from "@/data/types";
 import { Badge, Button, Dialog } from "@/ui";
 import { screenAllowed } from "@/modules/screens";
 import { fmtDay, listsOf, num, REQUEST_STATUS } from "../lib";
-import { handlesKinds, KIND_LABEL, lineKind, pendingFor, waitingToReceive, waitingToSend } from "./supply";
+import { KIND_LABEL, lineKind, mineLine, pendingFor, waitingToReceive, waitingToSend } from "./supply";
 
+/* طلب شراء: the employees with "مسؤول المشتريات" on their role are told too */
 const SEEN_KEY = "westeros-os.supplySeen";
 
 function usePending() {
   const { staff } = useSession();
-  const requests = useLive("stockRequests", { where: { kind: "supply" } }, { enabled: !!staff }).data;
+  const requests = useLive("stockRequests", {}, { enabled: !!staff }).data;
   const settings = useLive("mfgSettings").data[0];
   const items = useLive("stockItems").data;
+  const locations = useLive("storageLocations").data;
+  const levels = useLive("stockLevels").data;
   return useMemo(() => {
     const lists = listsOf(settings);
     const itemById = new Map(items.map((i) => [i.id, i]));
-    return { staff, lists, itemById, ...pendingFor(staff, lists, requests, itemById) };
-  }, [staff, settings, items, requests]);
+    const stores = { locations, levels };
+    return { staff, lists, itemById, stores, ...pendingFor(staff, lists, requests, stores) };
+  }, [staff, settings, items, requests, locations, levels]);
 }
 
 /** the count on the المخازن والفروع menu item */
@@ -56,7 +60,7 @@ export function SupplyAlerts() {
   const { resting } = useSession();
   const [open, setOpen] = useState(false);
   const notified = useRef(new Set<string>());
-  const keys = useMemo(() => [...p.toSend.map((r) => `s:${r.id}:${r.status}`), ...p.toReceive.map((r) => `r:${r.id}:${r.lines.filter(waitingToReceive).length}`)], [p.toSend, p.toReceive]);
+  const keys = useMemo(() => [...p.toBuy.map((r) => `p:${r.id}:${r.status}`), ...p.toSend.map((r) => `s:${r.id}:${r.status}`), ...p.toReceive.map((r) => `r:${r.id}:${r.lines.filter(waitingToReceive).length}`)], [p.toSend, p.toReceive, p.toBuy]);
   const allowed = screenAllowed("cc-stores");
   useEffect(() => {
     if (!p.staff || !allowed || resting || !keys.length) return;
@@ -70,7 +74,7 @@ export function SupplyAlerts() {
         if (notified.current.has(k)) continue;
         notified.current.add(k);
         try {
-          new Notification("وستروس: طلب توريد", { body: k.startsWith("s:") ? "طلب توريد مستني التنفيذ" : "طلب توريد اتبعت ومستني تأكيد الاستلام", tag: k });
+          new Notification(k.startsWith("p:") ? "وستروس: طلب شراء" : "وستروس: طلب توريد", { body: k.startsWith("p:") ? "طلب شراء جديد" : k.startsWith("s:") ? "طلب توريد مستني التنفيذ" : "طلب توريد اتبعت ومستني تأكيد الاستلام", tag: k });
         } catch {
           /* not supported here */
         }
@@ -84,19 +88,33 @@ export function SupplyAlerts() {
   };
   const go = (r: StockRequest) => {
     close();
-    nav(`/stores/supply?open=${r.id}`);
+    nav(`/stores/${r.kind === "purchase" ? "purchase" : "supply"}?open=${r.id}`);
   };
-  const kinds = handlesKinds(p.staff, p.lists);
   const askNotify = typeof Notification !== "undefined" && Notification.permission === "default";
   return (
-    <Dialog open onClose={close} size="lg" title="طلبات التوريد" description="الطلبات اللي مستنياك دلوقتي"
-      footer={<div className="flex flex-wrap items-center justify-end gap-2">{askNotify ? <Button variant="ghost" icon={<BellRing />} className="me-auto" onClick={() => void Notification.requestPermission()}>تفعيل إشعارات الجهاز</Button> : null}<Button variant="ghost" onClick={close}>لاحقاً</Button><Button onClick={() => { close(); nav("/stores/supply"); }}>فتح طلبات التوريد</Button></div>}>
+    <Dialog open onClose={close} size="lg" title={p.toBuy.length && !p.toSend.length && !p.toReceive.length ? "طلبات الشراء" : "طلبات التوريد والشراء"} description="الطلبات اللي مستنياك دلوقتي"
+      footer={<div className="flex flex-wrap items-center justify-end gap-2">{askNotify ? <Button variant="ghost" icon={<BellRing />} className="me-auto" onClick={() => void Notification.requestPermission()}>تفعيل إشعارات الجهاز</Button> : null}<Button variant="ghost" onClick={close}>لاحقاً</Button><Button onClick={() => { close(); nav(p.toSend.length || p.toReceive.length ? "/stores/supply" : "/stores/purchase"); }}>{p.toSend.length || p.toReceive.length ? "فتح طلبات التوريد" : "فتح طلبات الشراء"}</Button></div>}>
       <div className="grid gap-4">
+        {p.toBuy.length ? (
+          <section className="grid gap-2">
+            <h3 className="flex items-center gap-2 text-[15px] font-bold"><ShoppingCart className="size-4" />طلبات شراء</h3>
+            {p.toBuy.map((r) => (
+              <button key={r.id} type="button" onClick={() => go(r)} className="grid gap-1.5 rounded-xl border border-line p-3 text-start hover:bg-surface-2">
+                <span className="flex flex-wrap items-center gap-2">
+                  <b>طلب شراء رقم <span className="num">{r.number}</span></b>
+                  <Badge tone={REQUEST_STATUS[r.status]?.tone ?? "neutral"} size="sm">{REQUEST_STATUS[r.status]?.ar ?? r.status}</Badge>
+                  <span className="text-[13px] text-muted">من {r.keeperName || "—"} · مطلوب يوم <span className="num">{fmtDay(r.dueDate)}</span></span>
+                </span>
+                <span className="flex flex-wrap gap-1.5 text-[13px]">{r.lines.map((l) => <span key={l.itemId} className="rounded-lg bg-surface-2 px-2 py-0.5">{l.name.ar} <b className="num">{num(l.qty)}</b> {l.unit}</span>)}</span>
+              </button>
+            ))}
+          </section>
+        ) : null}
         {p.toSend.length ? (
           <section className="grid gap-2">
             <h3 className="flex items-center gap-2 text-[15px] font-bold"><Send className="size-4" />مطلوب تنفيذها</h3>
             {p.toSend.map((r) => {
-              const lines = r.lines.filter((l) => waitingToSend(l) && kinds.includes(lineKind(l, p.itemById)));
+              const lines = r.lines.filter((l) => waitingToSend(l) && mineLine(p.staff, p.lists, l, r, p.stores));
               return (
                 <button key={r.id} type="button" onClick={() => go(r)} className="grid gap-1.5 rounded-xl border border-line p-3 text-start hover:bg-surface-2">
                   <span className="flex flex-wrap items-center gap-2">

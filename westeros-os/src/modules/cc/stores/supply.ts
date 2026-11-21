@@ -8,7 +8,7 @@
  *   4. only then the stock moves: out of the warehouse it was sent from, into the branch warehouse
  */
 import type { Db } from "@/data/hooks";
-import type { MfgBatch, MfgLists, MfgProduct, StockItem, StockRequest, StockRequestEvent, StockRequestLine, StorageLocation } from "@/data/types";
+import type { MfgBatch, MfgLists, MfgProduct, StockItem, StockLevel, StockRequest, StockRequestEvent, StockRequestLine, StorageLocation } from "@/data/types";
 import { nowIso } from "@/lib/time";
 import { applyMoves, levelId } from "@/modules/inventory/stock";
 import { memberCan } from "../perms";
@@ -25,10 +25,33 @@ type Actor = { id: string; name: string; role: string } | null | undefined;
 export const lineKind = (l: Pick<StockRequestLine, "kind" | "itemId">, itemById?: Map<string, Pick<StockItem, "kind">>): LineKind =>
   l.kind ?? (itemById?.get(l.itemId)?.kind === "raw" ? "raw" : "made");
 
-/** the kinds this member is responsible for */
-export function handlesKinds(member: Actor, lists: MfgLists | null | undefined): LineKind[] {
-  if (!member) return [];
-  return [...(memberCan(member, lists, "supply.raw") ? (["raw"] as const) : []), ...(memberCan(member, lists, "supply.made") ? (["made"] as const) : [])];
+/** the warehouses and what they hold: who keeps the warehouse a requested product is stored in */
+export interface StoreCtx {
+  locations: Pick<StorageLocation, "id" | "branchId" | "keeperId" | "active">[];
+  levels: Pick<StockLevel, "itemId" | "locationId" | "qty">[];
+}
+
+/**
+ * The warehouses a line is supplied from: the active ones outside the asking branch that hold the product,
+ * else (none holds it) every active warehouse outside that branch.
+ */
+export function sourcesOf(line: Pick<StockRequestLine, "itemId">, req: Pick<StockRequest, "branchId">, stores: StoreCtx) {
+  const outside = stores.locations.filter((l) => l.active && l.branchId !== req.branchId);
+  const holding = outside.filter((l) => stores.levels.some((v) => v.locationId === l.id && v.itemId === line.itemId && v.qty > 0));
+  return holding.length ? holding : outside;
+}
+
+/**
+ * Is this line for this member? The owner handles every line. Anyone else needs "إشعارات وتنفيذ طلبات التوريد"
+ * on their role and must keep (امين المخزن) one of the warehouses the product is stored in; when none of those
+ * warehouses has a keeper, everyone with the permission is told.
+ */
+export function mineLine(member: Actor, lists: MfgLists | null | undefined, line: Pick<StockRequestLine, "itemId">, req: Pick<StockRequest, "branchId">, stores: StoreCtx): boolean {
+  if (!member) return false;
+  if (member.role === "owner") return true;
+  if (!memberCan(member, lists, "supply.handle")) return false;
+  const keepers = new Set(sourcesOf(line, req, stores).map((l) => l.keeperId).filter(Boolean));
+  return keepers.size ? keepers.has(member.id) : true;
 }
 
 const day = (iso: string) => new Date(iso).toLocaleDateString("en-CA", { timeZone: "Africa/Cairo" });
@@ -40,17 +63,19 @@ export const waitingToReceive = (l: StockRequestLine) => (l.sentQty ?? 0) > 0 &&
 
 /**
  * What waits for this member:
- *   toSend     open requests with lines of a kind they handle that were not sent (a request postponed to a later day waits until that day)
+ *   toSend     open requests with lines from the warehouses they keep that were not sent (a request postponed to a later day waits until that day)
  *   toReceive  requests they asked for with lines that were sent and not received
  */
-export function pendingFor(member: Actor, lists: MfgLists | null | undefined, requests: StockRequest[], itemById?: Map<string, Pick<StockItem, "kind">>, now = nowIso()) {
-  const kinds = handlesKinds(member, lists);
+export function pendingFor(member: Actor, lists: MfgLists | null | undefined, requests: StockRequest[], stores: StoreCtx, now = nowIso()) {
   const today = day(now);
   const open = requests.filter((r) => r.kind === "supply" && requestOpen(r));
   const toSend = !member ? [] : open.filter((r) =>
-    r.status !== "rejected" && !(r.status === "postponed" && r.dueDate && r.dueDate > today) && r.lines.some((l) => waitingToSend(l) && kinds.includes(lineKind(l, itemById))));
+    r.status !== "rejected" && !(r.status === "postponed" && r.dueDate && r.dueDate > today) && r.lines.some((l) => waitingToSend(l) && mineLine(member, lists, l, r, stores)));
   const toReceive = !member ? [] : open.filter((r) => r.keeperId === member.id && r.lines.some(waitingToReceive));
-  return { toSend, toReceive, count: toSend.length + toReceive.length };
+  // طلب شراء: the employees responsible for purchasing see every open request (a postponed one from its new date)
+  const toBuy = !member || !memberCan(member, lists, "purchase.handle") ? [] : requests.filter((r) =>
+    r.kind === "purchase" && requestOpen(r) && !(r.status === "postponed" && r.dueDate && r.dueDate > today));
+  return { toSend, toReceive, toBuy, count: toSend.length + toReceive.length + toBuy.length };
 }
 
 const event = (actor: Actor, action: string, note?: string): StockRequestEvent => ({ at: nowIso(), by: actor?.id ?? null, name: actor?.name ?? "", action, ...(note ? { note } : {}) });
