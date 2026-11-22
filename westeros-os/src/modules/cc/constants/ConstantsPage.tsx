@@ -1,7 +1,7 @@
 /** 4- ثوابت النظام: the definitions of the document, in tabs by the main menu they belong to (2026-11-22): المخازن والفروع, التصنيع. */
 import { AreaGate, useArea } from "../useAccess";
 import { useState, type ReactNode } from "react";
-import { Factory, Plus, Settings2, Trash2, Warehouse, X } from "lucide-react";
+import { Factory, Landmark, Plus, Settings2, Trash2, Warehouse, X } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { RouteTabs } from "@/modules/marketing/ui";
 import { useDb, useLive } from "@/data/hooks";
@@ -9,10 +9,11 @@ import type { CodeRange, MfgCategoryDef, MfgLists, MfgMeatType, MfgSettings, Mfg
 import { uuid } from "@/lib/id";
 import { PageHeader } from "@/shell/PageHeader";
 import { Num } from "@/modules/production/ui";
-import { Button, Card, CardHeader, EmptyState, IconButton, Input, Segmented, Select, useToast } from "@/ui";
+import { Button, Card, CardHeader, EmptyState, IconButton, Input, Select, useToast } from "@/ui";
 import { codeRanges, rangeProblem, rawRanges, specOf, STORE_TYPES, type CodeKind } from "../lib";
 import { useCc } from "../useCc";
 import FinanceConstants from "./FinanceConstants";
+import { FINANCE_ON } from "../finance/flag";
 
 const BASE_LABEL: Record<MfgUnitDef["base"], string> = { g: "وزن (جرام)", ml: "حجم (مل)", pc: "عدد (قطعة)" };
 
@@ -20,14 +21,16 @@ export default function ConstantsPage() {
   return <AreaGate id="constants"><ConstantsPageBody /></AreaGate>;
 }
 
-/** the main menus that have constants; المستخدمين keeps its roles and الحسابات its settings on their own screens */
+/** the main menus that have constants (المستخدمين keeps its roles on its own screen) */
 const CONSTANT_TABS = [
   { to: "/constants", end: true, label: "المخازن والفروع", icon: <Warehouse /> },
   { to: "/constants/mfg", label: "التصنيع", icon: <Factory /> },
+  ...(FINANCE_ON ? [{ to: "/constants/finance", label: "الحسابات", icon: <Landmark /> }] : []),
 ];
 
 function ConstantsPageBody() {
-  const tab = useLocation().pathname.replace(/\/+$/, "").endsWith("/mfg") ? "mfg" : "stores";
+  const path = useLocation().pathname.replace(/\/+$/, "");
+  const tab = path.endsWith("/mfg") ? "mfg" : path.endsWith("/finance") ? "finance" : "stores";
   const readOnly = !useArea().edit;
   const cc = useCc();
   const db = useDb();
@@ -36,7 +39,6 @@ function ConstantsPageBody() {
   const saleCats = useLive("menuCategories", { orderBy: [{ field: "sort" }] }).data;
   const menuItems = useLive("menuItems").data;
   const { toast } = useToast();
-  const [tab, setTab] = useState<"mfg" | "finance">("mfg");
   if (!s) return <EmptyState icon={<Settings2 />} title="لا توجد ثوابت لهذا المطعم" />;
   const lists = cc.lists;
   const patch = (p: Partial<MfgSettings>) => db.update("mfgSettings", s.id, p);
@@ -96,10 +98,9 @@ function ConstantsPageBody() {
       {/* one tab per main menu, holding the constants its screens choose from */}
       <RouteTabs label="ثوابت النظام" items={CONSTANT_TABS} />
       {readOnly ? <p className="rounded-xl border border-line px-3 py-2 text-[13.5px] text-muted">للمشاهدة بس: الدور بتاعك مالوش صلاحية تعديل ثوابت النظام.</p> : null}
-      <Segmented label="أقسام الثوابت" className="max-sm:grid max-sm:w-full max-sm:grid-cols-2 sm:w-fit" value={tab} onChange={setTab} options={[{ value: "mfg", label: "التصنيع والمخازن" }, { value: "finance", label: "الحسابات" }]} />
       {tab === "finance" ? <FinanceConstants readOnly={readOnly} /> : null}
       {/* without تعديل every field and button of the page is locked */}
-      <fieldset disabled={readOnly} className={tab === "mfg" ? "contents" : "hidden"}>
+      <fieldset disabled={readOnly} className={tab === "finance" ? "hidden" : "contents"}>
       <div className="grid items-start gap-5 lg:grid-cols-2">
         {tab === "stores" ? (
           <>
