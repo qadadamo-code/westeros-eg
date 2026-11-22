@@ -149,6 +149,29 @@ export interface FinSettingsData {
   currency: string;
   /** the other currencies accounts may be kept in, each with its last exchange rate (1 unit = rate in the system's currency) */
   currencies: { code: string; rate: number }[];
+  /** خدمة التوصيل: the delivery methods and how their fees are collected and shared (ثوابت النظام > خدمة التوصيل) */
+  delivery?: { methods: DeliveryMethod[] };
+}
+
+/** طريقة توصيل: who delivers, how the fee is collected, and whose share of the fee is it. */
+export interface DeliveryMethod {
+  id: string;
+  name: string;
+  /** شركة خارجية · توصيل تابع للمطعم */
+  type: "external" | "own";
+  /** the delivery company's name (external) */
+  company: string;
+  /** خارج الفاتورة (not recorded) · يومي من الكاشير · رسوم شهرية ثابتة; both of the last two put the fee on the invoice */
+  collection: "outside" | "daily" | "monthly";
+  /** the fixed monthly fee paid to the company (collection = monthly) */
+  monthlyFee: Units;
+  /** لصالح مين: the delivery company, the driver of the order, named employees, or the restaurant itself */
+  beneficiary: "company" | "driver" | "employees" | "restaurant";
+  /** names of the employees (beneficiary = employees) */
+  employeeIds: string[];
+  /** نسبة التحصيل: the beneficiary's share of the fee, 0 to 100; the rest goes to the revenue account */
+  sharePct: number;
+  active: boolean;
 }
 
 /** One row per restaurant. */

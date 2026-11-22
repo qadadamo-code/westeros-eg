@@ -1,9 +1,10 @@
 /** المبيعات: ملخص مبيعات اليوم أو الوردية لكل فرع بقيد واحد، وتسوية مستحقات طلبات والفيزا والمحافظ. */
 import type { Db } from "@/data/hooks";
-import type { FinAccount, FinDoc, FinEntry, FinLine } from "@/data/financeTypes";
+import type { DeliveryMethod, FinAccount, FinDoc, FinEntry, FinLine } from "@/data/financeTypes";
 import type { Units } from "@/lib/money";
 import { JournalError } from "./journal";
 import { journalContext, postSystem, reverseEntry, type Actor } from "./journalOps";
+import { BENEFICIARY_LABEL, DRIVER, driverAccount, feeSplit, methodPayableAccount, methodsOf, onInvoice, shareOf } from "./delivery";
 
 export const SALES_DAY = "sales-day";
 export const SETTLEMENT = "settlement";
@@ -17,11 +18,15 @@ export const CHANNELS = [
 export const PAY_KEYS = ["wallet.card", "wallet.instapay", "wallet.vodafone", "aggregator.talabat"] as const;
 
 export interface SalesPay { accountId: string; amount: Units }
+/** رسوم توصيل طريقة توصيل في اليوم، والمندوب لما الرسوم لصالحه */
+export interface SalesDeliveryFee { methodId: string; driverId: string | null; amount: Units }
 export interface SalesInput {
   shift: string;
   /** posting key → what was sold on the channel, before discounts */
   channels: Record<string, Units>;
   fees: Units;
+  /** the day's delivery fees per delivery method (خدمة التوصيل); each is shared between its beneficiary and the revenue account */
+  delivery?: SalesDeliveryFee[];
   discounts: Units;
   returns: Units;
   /** service charge and tips collected for the staff; outside the sales and the tax */
@@ -37,22 +42,30 @@ export interface SalesData extends SalesInput { net: Units; vat: Units; due: Uni
 export const salesOf = (d: FinDoc) => d.data as unknown as SalesData;
 
 /** Net of tax per head, the tax, what should have been collected and the over or short against what was. */
-export function salesTotals(d: Pick<SalesInput, "channels" | "fees" | "discounts" | "returns" | "tips" | "vatBp" | "inclusive" | "payments">) {
+export function salesTotals(d: Pick<SalesInput, "channels" | "fees" | "delivery" | "discounts" | "returns" | "tips" | "vatBp" | "inclusive" | "payments">) {
   const net = (x: Units) => (d.inclusive ? Math.round((x * 10_000) / (10_000 + d.vatBp)) : x);
   const channels: Record<string, Units> = Object.fromEntries(CHANNELS.map((c) => [c.key, net(d.channels[c.key] ?? 0)]));
-  const fees = net(d.fees), discounts = net(d.discounts), returns = net(d.returns);
+  const deliveryFees = (d.delivery ?? []).map((l) => net(l.amount));
+  const fees = net(d.fees) + deliveryFees.reduce((s, x) => s + x, 0), discounts = net(d.discounts), returns = net(d.returns);
   const sales = Object.values(channels).reduce((s, x) => s + x, 0);
   const taxable = sales + fees - discounts - returns;
-  const typed = CHANNELS.reduce((s, c) => s + (d.channels[c.key] ?? 0), 0) + d.fees - d.discounts - d.returns;
+  const typed = CHANNELS.reduce((s, c) => s + (d.channels[c.key] ?? 0), 0) + d.fees + (d.delivery ?? []).reduce((s, l) => s + l.amount, 0) - d.discounts - d.returns;
   const vat = d.inclusive ? typed - taxable : Math.round((taxable * d.vatBp) / 10_000);
   const due = taxable + vat + d.tips;
   const paid = d.payments.reduce((s, p) => s + p.amount, 0);
-  return { channels, fees, discounts, returns, sales, taxable, vat, due, paid, diff: paid - due };
+  return { channels, fees, deliveryFees, discounts, returns, sales, taxable, vat, due, paid, diff: paid - due };
 }
 
-export function salesProblem(v: { date: string; branchId: string | null } & SalesInput): string {
+export function salesProblem(v: { date: string; branchId: string | null } & SalesInput, methods: DeliveryMethod[] = []): string {
   if (!v.date) return "اختر التاريخ";
-  if ([...Object.values(v.channels), v.fees, v.discounts, v.returns, v.tips].some((x) => x < 0) || v.payments.some((p) => p.amount < 0)) return "المبالغ لا تكون بالسالب";
+  if ([...Object.values(v.channels), v.fees, v.discounts, v.returns, v.tips, ...(v.delivery ?? []).map((l) => l.amount)].some((x) => x < 0) || v.payments.some((p) => p.amount < 0)) return "المبالغ لا تكون بالسالب";
+  for (const l of v.delivery ?? []) {
+    if (!l.amount) continue;
+    const m = methods.find((x) => x.id === l.methodId);
+    if (!m) return "اختر طريقة التوصيل";
+    if (!onInvoice(m)) return `رسوم ${m.name} خارج الفاتورة ولا تتسجل`;
+    if (m.beneficiary === "driver" && feeSplit(m, l.amount).party && !l.driverId) return `اختر المندوب لرسوم ${m.name}`;
+  }
   if (v.vatBp < 0 || v.vatBp > 10_000) return "نسبة الضريبة غير صحيحة";
   const t = salesTotals(v);
   if (!t.sales && !t.fees) return "اكتب مبيعات قناة واحدة على الأقل";
@@ -62,9 +75,13 @@ export function salesProblem(v: { date: string; branchId: string | null } & Sale
   return "";
 }
 
-export interface SalesAccounts { channel: (key: string) => string; fees: string; discounts: string; returns: string; vat: string; tips: string; diff: string }
+export interface SalesAccounts {
+  channel: (key: string) => string; fees: string; discounts: string; returns: string; vat: string; tips: string; diff: string;
+  /** the account the beneficiary's share of delivery line i is credited to (a current liability or the driver's account) */
+  feeParty?: (i: number) => string;
+}
 /** القيد: what was collected against the sales of each channel, the tax and the staff's tips; the over or short closes it. */
-export function salesLines(v: SalesInput, ids: SalesAccounts, branchId: string | null): FinLine[] {
+export function salesLines(v: SalesInput, ids: SalesAccounts, branchId: string | null, methods: DeliveryMethod[] = []): FinLine[] {
   const t = salesTotals(v);
   const b = { branchId };
   const lines: FinLine[] = v.payments.filter((p) => p.amount).map((p) => ({ account: p.accountId, debit: p.amount, credit: 0, ...b }));
@@ -72,7 +89,18 @@ export function salesLines(v: SalesInput, ids: SalesAccounts, branchId: string |
   if (t.returns) lines.push({ account: ids.returns, debit: t.returns, credit: 0, memo: "مرتجعات", ...b });
   if (t.diff < 0) lines.push({ account: ids.diff, debit: -t.diff, credit: 0, memo: "عجز خزينة", ...b });
   for (const c of CHANNELS) if (t.channels[c.key]) lines.push({ account: ids.channel(c.key), debit: 0, credit: t.channels[c.key], memo: `مبيعات ${c.label}`, ...b });
-  if (t.fees) lines.push({ account: ids.fees, debit: 0, credit: t.fees, memo: "رسوم التوصيل", ...b });
+  // نسبة التحصيل: each method's share goes to its beneficiary, the rest of the fees to the revenue account
+  let feeRevenue = t.fees;
+  (v.delivery ?? []).forEach((l, i) => {
+    const m = methods.find((x) => x.id === l.methodId);
+    const net = t.deliveryFees[i];
+    if (!m || !net) return;
+    const { party } = feeSplit(m, net);
+    if (!party || !ids.feeParty) return;
+    feeRevenue -= party;
+    lines.push({ account: ids.feeParty(i), debit: 0, credit: party, memo: `رسوم توصيل ${m.name} لصالح ${m.beneficiary === "company" ? m.company || m.name : BENEFICIARY_LABEL[m.beneficiary]}`, ...b });
+  });
+  if (feeRevenue) lines.push({ account: ids.fees, debit: 0, credit: feeRevenue, memo: "رسوم التوصيل", ...b });
   if (t.vat) lines.push({ account: ids.vat, debit: 0, credit: t.vat, memo: "ضريبة القيمة المضافة", ...b });
   if (v.tips) lines.push({ account: ids.tips, debit: 0, credit: v.tips, memo: "خدمة وإكراميات للموظفين", ...b });
   if (t.diff > 0) lines.push({ account: ids.diff, debit: 0, credit: t.diff, memo: "زيادة خزينة", ...b });
@@ -94,8 +122,23 @@ const nextNo = (docs: FinDoc[]) => String(Math.max(0, ...docs.map((d) => Number(
 
 /** ملخص مبيعات: one document and one entry for a branch's day (or one shift of it). */
 export async function postSalesDay(db: Db, v: { date: string; branchId: string | null } & SalesInput, actor: Actor): Promise<FinDoc> {
-  const problem = salesProblem(v);
+  const [settingsRow] = await db.list("finSettings");
+  const methods = methodsOf(settingsRow?.data ?? {});
+  const problem = salesProblem(v, methods);
   if (problem) throw new JournalError(problem);
+  // the accounts the shares of the delivery fees go to, opened before the entry is built
+  const delivery = (v.delivery ?? []).filter((l) => l.amount);
+  const partyIds: string[] = [];
+  for (const l of delivery) {
+    const m = methods.find((x) => x.id === l.methodId)!;
+    if (!shareOf(m)) { partyIds.push(""); continue; }
+    if (m.beneficiary === "driver") {
+      const drv = l.driverId ? await db.get("finDocs", l.driverId) : null;
+      if (!drv || drv.kind !== DRIVER) throw new JournalError("المندوب غير موجود");
+      partyIds.push((await driverAccount(db, drv)).id);
+    } else partyIds.push((await methodPayableAccount(db, m)).id);
+  }
+  v = { ...v, delivery };
   const j = await journalContext(db);
   const docs = await db.list("finDocs", { where: { kind: SALES_DAY } });
   const shift = v.shift.trim();
@@ -107,7 +150,7 @@ export async function postSalesDay(db: Db, v: { date: string; branchId: string |
   const doc = await db.insert("finDocs", { kind: SALES_DAY, code: nextNo(docs), name: shift || "اليوم كله", branchId: v.branchId, status: "posted", date: v.date, data: data as unknown as Record<string, unknown> });
   const e = await postSystem(db, {
     date: v.date, memo: `مبيعات ${v.date.split("-").reverse().join("/")}${shift ? ` (${shift})` : ""}`, branchId: v.branchId, kind: "auto", sourceType: SALES_DAY, sourceId: doc.id, meta: { orders: v.orders, shift },
-    lines: salesLines(input, { channel: (k) => idOf(j, k), fees: idOf(j, "sales.fees"), discounts: idOf(j, "sales.discounts"), returns: idOf(j, "sales.returns"), vat: idOf(j, "vat.output"), tips: idOf(j, "tips.payable"), diff: idOf(j, "cash.diff") }, v.branchId),
+    lines: salesLines(input, { channel: (k) => idOf(j, k), fees: idOf(j, "sales.fees"), discounts: idOf(j, "sales.discounts"), returns: idOf(j, "sales.returns"), vat: idOf(j, "vat.output"), tips: idOf(j, "tips.payable"), diff: idOf(j, "cash.diff"), feeParty: (i) => partyIds[i] }, v.branchId, methods),
   }, j);
   return db.update("finDocs", doc.id, { data: { ...data, entryId: e?.id ?? null } as unknown as Record<string, unknown> });
 }

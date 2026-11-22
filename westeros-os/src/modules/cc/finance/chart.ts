@@ -47,6 +47,7 @@ export const DEFAULT_TREE: SeedAccount[] = [
   a("110902", "تأمين مقدم", "Prepaid insurance"),
   a("1110", "ضريبة القيمة المضافة مدخلات", "Input VAT", { kind: "tax", key: "vat.input" }),
   a("1111", "إنتاج تحت التشغيل", "Work in progress", { kind: "inventory", key: "stock.wip", auto: true }),
+  a("1112", "ذمم مندوبي التوصيل", "Delivery drivers receivable", { kind: "customer", key: "delivery.drivers" }),
   a("12", "الأصول الثابتة", "Fixed assets", { kind: "fixed_asset", cashflow: "investing" }),
   a("1201", "معدات المطبخ", "Kitchen equipment", { kind: "fixed_asset", cashflow: "investing", key: "asset.kitchen" }),
   a("1202", "تجهيزات وديكور", "Fit-out and decor", { kind: "fixed_asset", cashflow: "investing", key: "asset.fitout" }),
@@ -69,6 +70,7 @@ export const DEFAULT_TREE: SeedAccount[] = [
   a("2106", "إكراميات ورسوم خدمة مستحقة للموظفين", "Tips and service payable to staff", { key: "tips.payable" }),
   a("2107", "أرصدة عملاء مقدمة", "Customer deposits", { kind: "customer", key: "customer.deposits" }),
   a("2108", "بضاعة مستلمة لم تصل فاتورتها", "Goods received not invoiced", { key: "purchases.accrued", auto: true }),
+  a("2109", "رسوم توصيل مستحقة للغير", "Delivery fees payable", { key: "delivery.fees.payable" }),
   a("22", "التزامات طويلة الأجل", "Long-term liabilities", { cashflow: "financing" }),
   a("2201", "قروض", "Loans", { cashflow: "financing", key: "loans" }),
 

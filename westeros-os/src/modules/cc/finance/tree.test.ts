@@ -26,7 +26,7 @@ describe("codes", () => {
     expect(nextCode("1102", rows)).toBe("110201");
     expect(nextCode("110102", rows)).toBe("11010201");
     expect(nextCode("62", rows)).toBe("6207");
-    expect(nextCode("11", rows)).toBe("1112");
+    expect(nextCode("11", rows)).toBe("1113");
   });
   it("refuses a sixth level", () => {
     const deep = [...rows, { ...rows[0], id: "x", code: "11010201", parentCode: "110102", name: { ar: "خزينة فرع", en: "" } }];

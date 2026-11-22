@@ -1,5 +1,5 @@
 /** المبيعات: ملخص مبيعات كل يوم أو وردية بقيد واحد، وتسوية ما ينتظر التحصيل من طلبات والفيزا والمحافظ. */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeftRight, Plus, ReceiptText, Trash2 } from "lucide-react";
 import { useDb, useLive } from "@/data/hooks";
@@ -10,7 +10,8 @@ import { fmtDay } from "../lib";
 import { ExportButton } from "../ui";
 import { EntryView } from "./Journal";
 import { useActor, useFinPerms } from "./perms";
-import { cancelDoc, CHANNELS, PAY_KEYS, postSalesDay, postSettlement, SALES_DAY, salesOf, salesProblem, salesTotals, SETTLEMENT, settlementOf, settlementProblem, settlementTotal, waitingAccounts, type SalesInput } from "./sales";
+import { cancelDoc, CHANNELS, PAY_KEYS, postSalesDay, postSettlement, SALES_DAY, salesOf, salesProblem, salesTotals, SETTLEMENT, settlementOf, settlementProblem, settlementTotal, waitingAccounts, type SalesDeliveryFee, type SalesInput } from "./sales";
+import { DRIVER, feeSplit, methodsOf, onInvoice, shareOf } from "./delivery";
 import { netByCode } from "./statements";
 import { MONEY_LABEL, moneyAccounts } from "./treasury";
 import { AccountSelect, BranchSelect, Confirm, esc, fmt, fromText, PeriodPicker, periodOf, printDoc, PrintButton, printTable, toText, today, type Period, Toolbar } from "./ui";
@@ -120,13 +121,20 @@ function DayDialog({ fin, last, onClose, onSaved }: { fin: Fin; last?: FinDoc; o
   }, [fin.ix, fin.accounts, fin.settings.links, d.branchId]);
   const [extra, setExtra] = useState<string[]>([]);
   const [pay, setPay] = useState<Record<string, string>>({});
+  // خدمة التوصيل: one fee line per delivery method, and one more per driver when the fee is shared with the driver
+  const methods = useMemo(() => methodsOf(fin.settings).filter((m) => m.active && onInvoice(m)), [fin.settings]);
+  const drivers = useLive("finDocs").data.filter((x) => x.kind === DRIVER && x.status === "active");
+  const [fees, setFees] = useState<{ key: string; methodId: string; driverId: string; amount: string }[]>(() => methods.map((m) => ({ key: m.id, methodId: m.id, driverId: "", amount: "" })));
+  // the settings may arrive after the dialog opened
+  useEffect(() => { if (!fees.length && methods.length) setFees(methods.map((m) => ({ key: m.id, methodId: m.id, driverId: "", amount: "" }))); }, [methods, fees.length]);
+  const delivery: SalesDeliveryFee[] = fees.map((f) => ({ methodId: f.methodId, driverId: f.driverId || null, amount: fromText(f.amount) })).filter((f) => f.amount);
   const accounts = [...new Set([...base, ...extra])];
   const input: SalesInput = {
-    shift: d.shift, channels: Object.fromEntries(CHANNELS.map((c) => [c.key, fromText(ch[c.key] ?? "")])), fees: fromText(d.fees), discounts: fromText(d.discounts), returns: fromText(d.returns), tips: fromText(d.tips),
+    shift: d.shift, channels: Object.fromEntries(CHANNELS.map((c) => [c.key, fromText(ch[c.key] ?? "")])), fees: methods.length ? 0 : fromText(d.fees), delivery, discounts: fromText(d.discounts), returns: fromText(d.returns), tips: fromText(d.tips),
     vatBp: Math.round((Number(d.vat) || 0) * 100), inclusive: d.inclusive, payments: accounts.map((id) => ({ accountId: id, amount: fromText(pay[id] ?? "") })).filter((p) => p.amount), orders: Math.max(0, Math.round(Number(d.orders) || 0)), note: d.note,
   };
   const t = salesTotals(input);
-  const problem = salesProblem({ date: d.date, branchId: d.branchId || null, ...input });
+  const problem = salesProblem({ date: d.date, branchId: d.branchId || null, ...input }, methods);
   const save = async () => {
     setBusy(true);
     try { const doc = await postSalesDay(db, { date: d.date, branchId: d.branchId || null, ...input }, actor); toast({ tone: "success", title: `تم تسجيل مبيعات اليوم رقم ${doc.code}` }); onSaved(doc); }
@@ -153,18 +161,40 @@ function DayDialog({ fin, last, onClose, onSaved }: { fin: Fin; last?: FinDoc; o
             <Switch checked={d.inclusive} onChange={(v) => setD({ ...d, inclusive: v })} label="الأرقام شاملة الضريبة" description={d.inclusive ? "السيستم يطلع الضريبة من الأرقام المكتوبة" : "السيستم يضيف الضريبة فوق الأرقام المكتوبة"} />
             <div className="grid gap-3 sm:grid-cols-2">
               {CHANNELS.map((c) => <div key={c.key}>{money(`مبيعات ${c.label}`, ch[c.key] ?? "", (v) => setCh({ ...ch, [c.key]: v }))}</div>)}
-              {money("رسوم التوصيل المحصلة", d.fees, (v) => setD({ ...d, fees: v }))}
+              {methods.length ? null : money("رسوم التوصيل المحصلة", d.fees, (v) => setD({ ...d, fees: v }), "عرف طرق التوصيل من ثوابت النظام عشان الرسوم تتوزع حسب نسبة التحصيل")}
               {money("خصومات وعروض", d.discounts, (v) => setD({ ...d, discounts: v }), "تنزل من المبيعات")}
               {money("مرتجعات", d.returns, (v) => setD({ ...d, returns: v }))}
               {money("خدمة وإكراميات", d.tips, (v) => setD({ ...d, tips: v }), "تتسجل مستحقة للموظفين، خارج الضريبة")}
             </div>
+            {methods.length ? (
+              <div className="grid gap-2 border-t border-line pt-3">
+                <h4 className="text-[14px] font-bold">رسوم التوصيل المحصلة</h4>
+                {fees.map((f, i) => {
+                  const m = methods.find((x) => x.id === f.methodId);
+                  if (!m) return null;
+                  const set = (p: Partial<typeof f>) => setFees(fees.map((x, j) => (j === i ? { ...x, ...p } : x)));
+                  const split = feeSplit(m, fromText(f.amount));
+                  const forDriver = m.beneficiary === "driver" && shareOf(m) > 0;
+                  return (
+                    <div key={f.key} className="grid gap-1">
+                      <div className={cn("grid items-end gap-2", forDriver ? "grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]" : "grid-cols-[minmax(0,1fr)_auto]")}>
+                        {money(m.name, f.amount, (v) => set({ amount: v }))}
+                        {forDriver ? <Select label="المندوب" value={f.driverId} onChange={(e) => set({ driverId: e.target.value })} options={[{ value: "", label: drivers.length ? "اختر" : "عرف المندوبين من ثوابت النظام" }, ...drivers.map((x) => ({ value: x.id, label: x.name }))]} /> : null}
+                        {forDriver ? <Button variant="ghost" size="sm" icon={<Plus />} onClick={() => setFees([...fees.slice(0, i + 1), { key: `${m.id}-${Date.now()}`, methodId: m.id, driverId: "", amount: "" }, ...fees.slice(i + 1)])}>مندوب</Button> : <span />}
+                      </div>
+                      {split.party ? <span className="text-[12.5px] text-muted">{shareOf(m)}% لصالح {forDriver ? (drivers.find((x) => x.id === f.driverId)?.name ?? "المندوب") : m.beneficiary === "company" ? m.company : "الموظفين"}، والباقي إيرادات</span> : null}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null}
           </div>
           <div className="grid content-start gap-3 rounded-xl border border-line p-3">
             <h3 className="text-[15px] font-bold">المحصل</h3>
             <div className="grid gap-3 sm:grid-cols-2">
               {accounts.map((id) => { const a = fin.byId.get(id); return a ? <div key={id}>{money(a.name.ar, pay[id] ?? "", (v) => setPay({ ...pay, [id]: v }))}</div> : null; })}
             </div>
-            <AccountSelect fin={fin} label="تحصيل على حساب آخر" placeholder="بنك، محفظة، عميل آجل" value="" onChange={(v) => { if (v) setExtra([...extra, v]); }} filter={(a) => !accounts.includes(a.id) && (a.kind === "cash" || a.kind === "bank" || a.kind === "wallet" || a.kind === "customer")} />
+            <AccountSelect fin={fin} label="تحصيل على حساب آخر" placeholder="بنك، محفظة، عميل آجل، مندوب لسه ما حاسبش" value="" onChange={(v) => { if (v) setExtra([...extra, v]); }} filter={(a) => !accounts.includes(a.id) && (a.kind === "cash" || a.kind === "bank" || a.kind === "wallet" || a.kind === "customer")} />
             <div className="grid gap-1 border-t border-line pt-2 text-[14px]">
               {[["المبيعات بدون ضريبة", t.taxable], ["الضريبة", t.vat], ["خدمة وإكراميات", input.tips], ["المطلوب تحصيله", t.due], ["المحصل", t.paid]].map(([l, v], i) => <div key={l as string} className={cn("flex justify-between", i >= 3 && "font-bold")}><span className={i < 3 ? "text-muted" : ""}>{l}</span><span className="num" dir="ltr">{fmt(v as number)}</span></div>)}
             </div>
