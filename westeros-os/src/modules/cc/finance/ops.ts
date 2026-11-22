@@ -7,7 +7,7 @@ import { DEFAULT_LINKS } from "./chart";
 import { accountProblem, ChartError, deleteProblem, indexChart, moveProblem, nextCode, seedRows, typeOfCode, usageOf } from "./tree";
 
 export const DEFAULT_SETTINGS: FinSettingsData = {
-  yearStartMonth: 1, startDate: null, periods: {}, links: DEFAULT_LINKS, costing: "last", approvalLimit: null, kitchenAllocation: "none", kitchenShares: {}, rules: [], stockByWarehouse: true, standardCosts: {}, transitDays: 3,
+  yearStartMonth: 1, startDate: null, periods: {}, links: DEFAULT_LINKS, costing: "last", approvalLimit: null, kitchenAllocation: "none", kitchenShares: {}, rules: [], stockByWarehouse: true, standardCosts: {}, transitDays: 3, currency: "EGP", currencies: [],
 };
 export const settingsOf = (row: FinSettings | null | undefined): FinSettingsData => ({ ...DEFAULT_SETTINGS, ...(row?.data ?? {}), links: { ...DEFAULT_LINKS, ...(row?.data?.links ?? {}) } });
 
@@ -17,7 +17,7 @@ export async function saveSettings(db: Db, patch: Partial<FinSettingsData>) {
   return db.insert("finSettings", { data: patch });
 }
 
-export type AccountFields = Pick<FinAccount, "code" | "name" | "parentCode" | "postable" | "kind" | "cashflow" | "branchId" | "requireCentre" | "allowManual" | "alertMin" | "alertMax" | "active" | "note">;
+export type AccountFields = Pick<FinAccount, "code" | "name" | "parentCode" | "postable" | "kind" | "cashflow" | "branchId" | "requireCentre" | "allowManual" | "alertMin" | "alertMax" | "active" | "note"> & { currency?: string | null };
 
 /** Adds or edits an account. A leaf that gets its first child becomes a parent, which it can only do while it has no lines. */
 export async function saveAccount(db: Db, row: FinAccount | null, f: AccountFields): Promise<FinAccount> {
@@ -32,6 +32,7 @@ export async function saveAccount(db: Db, row: FinAccount | null, f: AccountFiel
     if (used.lines && !f.postable) throw new ChartError("الحساب عليه حركات، لا يتحول إلى تجميعي قبل نقل حركاته لحساب فرعي");
     if (used.children && f.postable) throw new ChartError("الحساب تحته حسابات فرعية، يبقى تجميعي");
     if (row.system && !f.active) throw new ChartError("حساب نظام لا يتوقف");
+    if (used.lines && f.currency !== undefined && (f.currency || null) !== (row.currency || null)) throw new ChartError("الحساب عليه حركات، عملته ثابتة");
     const saved = await db.update("finAccounts", row.id, { ...f, name: { ar: f.name.ar.trim(), en: f.name.en.trim() }, code: f.code.trim(), type });
     // the children name their parent by its code
     if (f.code !== row.code) for (const k of accounts.filter((x) => x.parentCode === row.code)) await db.update("finAccounts", k.id, { parentCode: f.code });

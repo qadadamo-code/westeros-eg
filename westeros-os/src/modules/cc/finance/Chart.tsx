@@ -13,6 +13,7 @@ import { useFinPerms } from "./perms";
 import { balanceOf, CASHFLOWS, deleteProblem, isDebit, KINDS, MAX_LEVEL, movement, moveProblem, nextCode, rollup, typeInfo, TYPES, usageOf } from "./tree";
 import { AccountSelect, Amount, BranchSelect, fmt, fromText, periodLabel, periodOf, PeriodPicker, PrintButton, printTable, toText, type Period, Toolbar } from "./ui";
 import { useFinance, type Fin } from "./useFinance";
+import { baseOf, currencyName, isForeign } from "./currency";
 
 const err = (e: unknown) => String((e as Error).message ?? e);
 
@@ -127,6 +128,7 @@ export default function Chart() {
                         {!a.active ? <Badge size="sm" tone="neutral">موقوف</Badge> : null}
                         {!a.allowManual && a.postable ? <Badge size="sm" tone="info">تلقائي فقط</Badge> : null}
                         {a.branchId ? <Badge size="sm" tone="neutral">{fin.branchName(a.branchId)}</Badge> : null}
+                        {a.postable && isForeign(a, fin.settings) ? <Badge size="sm" tone="brass">{a.currency}</Badge> : null}
                         {warn ? <Badge size="sm" tone="warn">{warn}</Badge> : null}
                       </span>
                     </td>
@@ -186,7 +188,7 @@ function AccountDialog({ fin, row, parent: firstParent, onClose }: { fin: Fin; r
   const [d, setD] = useState(() => ({
     code: row?.code ?? suggest(parent), ar: row?.name.ar ?? "", en: row?.name.en ?? "", postable: row?.postable ?? true, kind: row?.kind ?? parent?.kind ?? "general",
     cashflow: row?.cashflow ?? parent?.cashflow ?? "operating", branchId: row?.branchId ?? parent?.branchId ?? "", requireCentre: row?.requireCentre ?? false, allowManual: row?.allowManual ?? true,
-    alertMin: toText(row?.alertMin), alertMax: toText(row?.alertMax), active: row?.active ?? true, note: row?.note ?? "",
+    alertMin: toText(row?.alertMin), alertMax: toText(row?.alertMax), active: row?.active ?? true, note: row?.note ?? "", currency: row?.currency ?? "",
   }));
   // a new account follows the parent that is picked
   useEffect(() => {
@@ -200,6 +202,7 @@ function AccountDialog({ fin, row, parent: firstParent, onClose }: { fin: Fin; r
   const fields: AccountFields = {
     code: d.code.trim(), name: { ar: d.ar, en: d.en }, parentCode: root ? null : parent?.code ?? null, postable: d.postable, kind: d.kind, cashflow: d.cashflow, branchId: d.branchId || null,
     requireCentre: d.requireCentre, allowManual: d.allowManual, alertMin: d.alertMin.trim() ? fromText(d.alertMin) : null, alertMax: d.alertMax.trim() ? fromText(d.alertMax) : null, active: d.active, note: d.note.trim(),
+    ...(d.postable ? { currency: d.currency || null } : {}),
   };
   const level = parent ? fin.ix.level(parent.code) + 1 : 1;
   return (
@@ -219,6 +222,9 @@ function AccountDialog({ fin, row, parent: firstParent, onClose }: { fin: Fin; r
         <Select label="نوع الحساب الخاص" value={d.kind} onChange={(e) => setD({ ...d, kind: e.target.value as FinAccount["kind"] })} options={KINDS.map((k) => ({ value: k.id, label: k.ar }))} />
         <Select label="بند التدفقات النقدية" value={d.cashflow ?? "operating"} onChange={(e) => setD({ ...d, cashflow: e.target.value as NonNullable<FinAccount["cashflow"]> })} options={CASHFLOWS.map((k) => ({ value: k.id, label: k.ar }))} />
         <BranchSelect fin={fin} label="الفرع" className="w-full" value={d.branchId ?? ""} onChange={(v) => setD({ ...d, branchId: v })} />
+        {d.postable ? <Select label="عملة الحساب" value={d.currency} disabled={locked} onChange={(e) => setD({ ...d, currency: e.target.value })}
+          options={[{ value: "", label: `العملة الأساسية (${currencyName(baseOf(fin.settings))})` }, ...(fin.settings.currencies ?? []).filter((c) => c.code !== baseOf(fin.settings)).map((c) => ({ value: c.code, label: `${currencyName(c.code)} (${c.code})` })), ...(d.currency && !(fin.settings.currencies ?? []).some((c) => c.code === d.currency) ? [{ value: d.currency, label: `${currencyName(d.currency)} (${d.currency})` }] : [])]}
+          hint={locked ? "الحساب عليه حركات، عملته ثابتة" : (fin.settings.currencies ?? []).length ? "التحويل منه لحساب بعملة تانية يطلب سعر الصرف" : "تضيف عملات تانية من ثوابت النظام، خانة الحسابات"} /> : null}
         <Input label="تنبيه لو الرصيد أقل من" dir="ltr" inputMode="decimal" placeholder="بدون" value={d.alertMin} onChange={(e) => setD({ ...d, alertMin: e.target.value })} />
         <Input label="تنبيه لو الرصيد أكبر من" dir="ltr" inputMode="decimal" placeholder="بدون" value={d.alertMax} onChange={(e) => setD({ ...d, alertMax: e.target.value })} />
         <div className="grid gap-2 sm:col-span-2">

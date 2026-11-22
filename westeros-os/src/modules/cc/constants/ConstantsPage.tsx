@@ -7,9 +7,10 @@ import type { CodeRange, MfgCategoryDef, MfgLists, MfgMeatType, MfgSettings, Mfg
 import { uuid } from "@/lib/id";
 import { PageHeader } from "@/shell/PageHeader";
 import { Num } from "@/modules/production/ui";
-import { Button, Card, CardHeader, EmptyState, IconButton, Input, Select, useToast } from "@/ui";
+import { Button, Card, CardHeader, EmptyState, IconButton, Input, Segmented, Select, useToast } from "@/ui";
 import { codeRanges, rangeProblem, rawRanges, specOf, STORE_TYPES, type CodeKind } from "../lib";
 import { useCc } from "../useCc";
+import FinanceConstants from "./FinanceConstants";
 
 const BASE_LABEL: Record<MfgUnitDef["base"], string> = { g: "وزن (جرام)", ml: "حجم (مل)", pc: "عدد (قطعة)" };
 
@@ -26,6 +27,7 @@ function ConstantsPageBody() {
   const saleCats = useLive("menuCategories", { orderBy: [{ field: "sort" }] }).data;
   const menuItems = useLive("menuItems").data;
   const { toast } = useToast();
+  const [tab, setTab] = useState<"mfg" | "finance">("mfg");
   if (!s) return <EmptyState icon={<Settings2 />} title="لا توجد ثوابت لهذا المطعم" />;
   const lists = cc.lists;
   const patch = (p: Partial<MfgSettings>) => db.update("mfgSettings", s.id, p);
@@ -83,8 +85,10 @@ function ConstantsPageBody() {
     <div className="grid gap-5">
       <PageHeader icon={<Settings2 />} title="ثوابت النظام" />
       {readOnly ? <p className="rounded-xl border border-line px-3 py-2 text-[13.5px] text-muted">للمشاهدة بس: الدور بتاعك مالوش صلاحية تعديل ثوابت النظام.</p> : null}
+      <Segmented label="أقسام الثوابت" className="max-sm:grid max-sm:w-full max-sm:grid-cols-2 sm:w-fit" value={tab} onChange={setTab} options={[{ value: "mfg", label: "التصنيع والمخازن" }, { value: "finance", label: "الحسابات" }]} />
+      {tab === "finance" ? <FinanceConstants readOnly={readOnly} /> : null}
       {/* without تعديل every field and button of the page is locked */}
-      <fieldset disabled={readOnly} className="contents">
+      <fieldset disabled={readOnly} className={tab === "mfg" ? "contents" : "hidden"}>
       <div className="grid items-start gap-5 lg:grid-cols-2">
         <Chips title="تعريف وحدة التخزين لمواد الخام" subtitle="حذف الوحدة من هنا يشيلها من القائمة فقط، والخامات المسجلة بها تفضل كما هي" values={lists.storageUnits} onChange={(storageUnits) => setLists({ storageUnits })} placeholder="وحدة تخزين جديدة" />
 

@@ -4,7 +4,7 @@ import type { FinAccount, FinDoc, FinEntry } from "@/data/financeTypes";
 import type { Units } from "@/lib/money";
 import { fiscalYear, JournalError, openDate } from "./journal";
 import { journalContext, postSystem, submitEntry, type Actor } from "./journalOps";
-import { saveAccount } from "./ops";
+import { saveAccount, saveSettings } from "./ops";
 import { nextCode } from "./tree";
 import { BANK_RECON, CASH_COUNT, monthEnd, nextVoucherNo, PREPAID, prepaidDue, VOUCHER_LABEL, voucherLines, voucherProblem, type BankReconData, type PrepaidData, type VoucherInput } from "./treasury";
 
@@ -19,10 +19,19 @@ export async function saveVoucher(db: Db, v: VoucherInput, actor: Actor): Promis
   if (v.type === "expense" && v.vat && !vat) throw new JournalError("حساب ضريبة المدخلات غير موجود في ربط الحسابات");
   const what = v.type === "expense" ? j.byId.get(v.otherId)?.name.ar ?? VOUCHER_LABEL.expense : v.type === "transfer" ? `تحويل من ${j.byId.get(v.moneyId)?.name.ar ?? ""} إلى ${j.byId.get(v.otherId)?.name.ar ?? ""}` : VOUCHER_LABEL[v.type];
   const memo = v.memo.trim() || `${what}${v.party.trim() ? `: ${v.party.trim()}` : ""}`;
-  return submitEntry(db, null, {
-    date: v.date, memo, lines: voucherLines(v, vat?.id), branchId: v.branchId, kind: v.type, attachments: v.attachments ?? [], sourceType: "voucher", sourceId: `${v.type}:${year}:${voucherNo}`,
-    meta: { voucherNo, party: v.party.trim(), method: v.method ?? "", ref: v.ref?.trim() ?? "" },
+  const lines = voucherLines(v, vat?.id);
+  if (!lines.length) throw new JournalError("راجع المبلغ وسعر الصرف");
+  // آخر سعر صرف: the next voucher in this currency starts from it
+  const rates = new Map((j.settings.currencies ?? []).map((c) => [c.code, c.rate]));
+  for (const l of lines) if (l.fx && l.fx.currency !== (j.settings.currency || "EGP") && l.fx.rate > 0) rates.set(l.fx.currency, l.fx.rate);
+  const fxMeta = v.fx && lines.some((l) => l.fx) ? { fx: { from: v.fx.money, to: v.fx.other ?? null, rate: v.fx.rate, amount: v.amount, received: lines.find((l) => l.account === v.otherId)?.fx?.amount ?? null } } : {};
+  const saved = await submitEntry(db, null, {
+    date: v.date, memo, lines, branchId: v.branchId, kind: v.type, attachments: v.attachments ?? [], sourceType: "voucher", sourceId: `${v.type}:${year}:${voucherNo}`,
+    meta: { voucherNo, party: v.party.trim(), method: v.method ?? "", ref: v.ref?.trim() ?? "", ...fxMeta },
   }, actor);
+  const known = j.settings.currencies ?? [];
+  if ([...rates].some(([code, rate]) => known.find((c) => c.code === code)?.rate !== rate)) await saveSettings(db, { currencies: [...rates].map(([code, rate]) => ({ code, rate })) });
+  return saved;
 }
 
 const PARENT_KEY: Record<string, string> = { cash: "cash.branches", bank: "banks", wallet: "wallets" };
