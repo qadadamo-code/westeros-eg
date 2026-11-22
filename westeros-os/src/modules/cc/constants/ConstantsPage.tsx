@@ -1,7 +1,9 @@
-/** 4- ثوابت النظام: the nine definitions of the document, in its order, then the lists its other sections refer to. */
+/** 4- ثوابت النظام: the definitions of the document, in tabs by the main menu they belong to (2026-11-22): المخازن والفروع, التصنيع. */
 import { AreaGate, useArea } from "../useAccess";
 import { useState, type ReactNode } from "react";
-import { Plus, Settings2, Trash2, X } from "lucide-react";
+import { Factory, Plus, Settings2, Trash2, Warehouse, X } from "lucide-react";
+import { useLocation } from "react-router-dom";
+import { RouteTabs } from "@/modules/marketing/ui";
 import { useDb, useLive } from "@/data/hooks";
 import type { CodeRange, MfgCategoryDef, MfgLists, MfgMeatType, MfgSettings, MfgUnitDef } from "@/data/types";
 import { uuid } from "@/lib/id";
@@ -17,7 +19,14 @@ export default function ConstantsPage() {
   return <AreaGate id="constants"><ConstantsPageBody /></AreaGate>;
 }
 
+/** the main menus that have constants; المستخدمين keeps its roles and الحسابات its settings on their own screens */
+const CONSTANT_TABS = [
+  { to: "/constants", end: true, label: "المخازن والفروع", icon: <Warehouse /> },
+  { to: "/constants/mfg", label: "التصنيع", icon: <Factory /> },
+];
+
 function ConstantsPageBody() {
+  const tab = useLocation().pathname.replace(/\/+$/, "").endsWith("/mfg") ? "mfg" : "stores";
   const readOnly = !useArea().edit;
   const cc = useCc();
   const db = useDb();
@@ -82,27 +91,29 @@ function ConstantsPageBody() {
   return (
     <div className="grid gap-5">
       <PageHeader icon={<Settings2 />} title="ثوابت النظام" />
+      {/* one tab per main menu, holding the constants its screens choose from */}
+      <RouteTabs label="ثوابت النظام" items={CONSTANT_TABS} />
       {readOnly ? <p className="rounded-xl border border-line px-3 py-2 text-[13.5px] text-muted">للمشاهدة بس: الدور بتاعك مالوش صلاحية تعديل ثوابت النظام.</p> : null}
       {/* without تعديل every field and button of the page is locked */}
       <fieldset disabled={readOnly} className="contents">
       <div className="grid items-start gap-5 lg:grid-cols-2">
+        {tab === "stores" ? (
+          <>
         <Chips title="تعريف وحدة التخزين لمواد الخام" subtitle="حذف الوحدة من هنا يشيلها من القائمة فقط، والخامات المسجلة بها تفضل كما هي" values={lists.storageUnits} onChange={(storageUnits) => setLists({ storageUnits })} placeholder="وحدة تخزين جديدة" />
 
         <Card>
-          <CardHeader title="تعريف وحدة التصنيع لمواد الخام" action={<Button size="sm" variant="outline" icon={<Plus />} onClick={() => setLists({ mfgUnits: [...lists.mfgUnits, { name: "وحدة جديدة", base: "g", factor: 1 }] })}>وحدة جديدة</Button>} />
-          <ul className="grid gap-2 px-5 pb-5">
-            {lists.mfgUnits.map((u, i) => (
-              <li key={i} className="grid items-end gap-2 rounded-xl border border-line p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_110px_auto]">
-                <Input label="الاسم" defaultValue={u.name} onBlur={(e) => e.target.value.trim() && e.target.value !== u.name && setLists({ mfgUnits: lists.mfgUnits.map((x, j) => (j === i ? { ...x, name: e.target.value.trim() } : x)) })} />
-                <Select label="النوع" value={u.base} onChange={(e) => setLists({ mfgUnits: lists.mfgUnits.map((x, j) => (j === i ? { ...x, base: e.target.value as MfgUnitDef["base"] } : x)) })} options={(Object.keys(BASE_LABEL) as MfgUnitDef["base"][]).map((b) => ({ value: b, label: BASE_LABEL[b] }))} />
-                <Num label="تساوي" value={u.factor} onChange={(n) => setLists({ mfgUnits: lists.mfgUnits.map((x, j) => (j === i ? { ...x, factor: n > 0 ? n : 1 } : x)) })} />
-                <IconButton label="حذف" disabled={lists.mfgUnits.length <= 1} onClick={() => setLists({ mfgUnits: lists.mfgUnits.filter((_, j) => j !== i) })}><Trash2 /></IconButton>
+          <CardHeader title="أنواع المخازن ودرجة حرارتها" subtitle="أنواع ثابتة: يختار منها نوع المخزن، ونوع تخزين الخام، ونوع مخزن المنتج المصنع" />
+          <ul className="grid gap-2 px-5 pb-5 sm:grid-cols-2">
+            {STORE_TYPES.map((t) => (
+              <li key={t.id} className="flex items-center justify-between gap-3 rounded-xl border border-line px-4 py-3">
+                <span className="font-semibold">{t.name}</span>
+                <span className="num text-[14.5px] text-muted" dir="ltr">{t.temp != null ? `${t.temp}°` : "—"}</span>
               </li>
             ))}
           </ul>
         </Card>
 
-        <Card>
+        <Card className="lg:col-span-2">
           <CardHeader title="تعريف فئات مواد الخام" subtitle="لكل فئة مدى أكواد: بداية الكود وعدد الأصناف. الخام الجديد ياخد أول كود فاضي في فئته" />
           <ul className="grid gap-2 px-5 pb-3">
             {lists.rawCategories.map((c) => (
@@ -118,11 +129,24 @@ function ConstantsPageBody() {
           <AddForm placeholder="فئة خام جديدة" onAdd={(v) => !lists.rawCategories.includes(v) && setLists({ rawCategories: [...lists.rawCategories, v] })} />
         </Card>
 
+          </>
+        ) : (
+          <>
         <Card>
-          <CardHeader title="تعريف فئات أصناف البيع" subtitle="لكل فئة مدى أكواد: بداية الكود وعدد الأصناف. الصنف الجديد ياخد أول كود فاضي في فئته" />
-          <SaleCategories cats={saleCats} used={usedSale} ranges={ranges.sale} onSave={(id, r) => saveRange("sale", id, r)} />
+          <CardHeader title="تعريف وحدة التصنيع لمواد الخام" action={<Button size="sm" variant="outline" icon={<Plus />} onClick={() => setLists({ mfgUnits: [...lists.mfgUnits, { name: "وحدة جديدة", base: "g", factor: 1 }] })}>وحدة جديدة</Button>} />
+          <ul className="grid gap-2 px-5 pb-5">
+            {lists.mfgUnits.map((u, i) => (
+              <li key={i} className="grid items-end gap-2 rounded-xl border border-line p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_110px_auto]">
+                <Input label="الاسم" defaultValue={u.name} onBlur={(e) => e.target.value.trim() && e.target.value !== u.name && setLists({ mfgUnits: lists.mfgUnits.map((x, j) => (j === i ? { ...x, name: e.target.value.trim() } : x)) })} />
+                <Select label="النوع" value={u.base} onChange={(e) => setLists({ mfgUnits: lists.mfgUnits.map((x, j) => (j === i ? { ...x, base: e.target.value as MfgUnitDef["base"] } : x)) })} options={(Object.keys(BASE_LABEL) as MfgUnitDef["base"][]).map((b) => ({ value: b, label: BASE_LABEL[b] }))} />
+                <Num label="تساوي" value={u.factor} onChange={(n) => setLists({ mfgUnits: lists.mfgUnits.map((x, j) => (j === i ? { ...x, factor: n > 0 ? n : 1 } : x)) })} />
+                <IconButton label="حذف" disabled={lists.mfgUnits.length <= 1} onClick={() => setLists({ mfgUnits: lists.mfgUnits.filter((_, j) => j !== i) })}><Trash2 /></IconButton>
+              </li>
+            ))}
+          </ul>
         </Card>
 
+        <Chips title="طريقة التخزين" subtitle="القائمة المعرفة مسبقاً في بيانات المنتج المصنع" values={s.storageMethods} onChange={(storageMethods) => patch({ storageMethods })} placeholder="طريقة تخزين جديدة" />
         <Card className="lg:col-span-2">
           <CardHeader title="تعريف فئات الأصناف المصنعة" subtitle="كود الفئة هو أول رقم في رقم التشغيلة. ولكل فئة مدى أكواد لمنتجاتها: بداية الكود وعدد الأصناف"
             action={<Button size="sm" variant="outline" icon={<Plus />} onClick={() => patch({ productCategories: [...cats, { id: uuid(), name: { ar: "فئة جديدة", en: "New category" }, code: Math.max(0, ...cats.map((c) => c.code)) + 1, burger: null }] })}>فئة جديدة</Button>} />
@@ -139,15 +163,8 @@ function ConstantsPageBody() {
         </Card>
 
         <Card>
-          <CardHeader title="أنواع المخازن ودرجة حرارتها" subtitle="أنواع ثابتة: يختار منها نوع المخزن، ونوع تخزين الخام، ونوع مخزن المنتج المصنع" />
-          <ul className="grid gap-2 px-5 pb-5 sm:grid-cols-2">
-            {STORE_TYPES.map((t) => (
-              <li key={t.id} className="flex items-center justify-between gap-3 rounded-xl border border-line px-4 py-3">
-                <span className="font-semibold">{t.name}</span>
-                <span className="num text-[14.5px] text-muted" dir="ltr">{t.temp != null ? `${t.temp}°` : "—"}</span>
-              </li>
-            ))}
-          </ul>
+          <CardHeader title="تعريف فئات أصناف البيع" subtitle="لكل فئة مدى أكواد: بداية الكود وعدد الأصناف. الصنف الجديد ياخد أول كود فاضي في فئته" />
+          <SaleCategories cats={saleCats} used={usedSale} ranges={ranges.sale} onSave={(id, r) => saveRange("sale", id, r)} />
         </Card>
 
         <Card>
@@ -195,7 +212,8 @@ function ConstantsPageBody() {
           </div>
         </Card>
 
-        <Chips title="طريقة التخزين" subtitle="القائمة المعرفة مسبقاً في بيانات المنتج المصنع" values={s.storageMethods} onChange={(storageMethods) => patch({ storageMethods })} placeholder="طريقة تخزين جديدة" />
+          </>
+        )}
       </div>
       </fieldset>
     </div>

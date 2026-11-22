@@ -113,7 +113,8 @@ function RoleDialog({ cc, role, members, onClose }: { cc: Cc; role: MfgUserType 
       const picked = new Set(ids);
       if (!usersOpen) picked.delete("restore");
       const patch = rolePatch(picked);
-      const level = roleForScreens(patch.screens ?? [], role?.role ?? "kitchen");
+      // the catalog tabs (now on المخازن and التصنيع) still need the level قائمة المنتجات والخامات needed
+      const level = roleForScreens([...(patch.screens ?? []), ...((patch.access ?? []).some((k) => k.startsWith("catalog.")) ? ["cc-catalog"] : [])], role?.role ?? "kitchen");
       const next: MfgUserType = { ...(role ?? { id: uuid() }), ...patch, name: name.trim(), from: f, count: c, role: level } as MfgUserType;
       const list = role ? types.map((t) => (t.id === role.id ? next : t)) : [...types, next];
       // keep each user on this role even after its level changes

@@ -2,7 +2,8 @@ import { useSession } from "@/auth/session";
 import { COST_CONTROL_ONLY } from "@/costControl";
 import { useLive } from "@/data/hooks";
 import { setMoneyHidden } from "@/lib/money";
-import { screensOf, seesPrices, userTypeOf } from "@/modules/cc/lib";
+import { seesPrices, userTypeOf } from "@/modules/cc/lib";
+import { screensOfRole } from "@/modules/cc/access";
 import { setAllowedScreens } from "@/modules/screens";
 
 /**
@@ -14,7 +15,7 @@ export function useScreenAccess(): string {
   const settings = useLive("mfgSettings").data[0];
   const lists = settings?.lists;
   const type = COST_CONTROL_ONLY && staff && staff.role !== "owner" && lists ? userTypeOf(staff, lists) : null;
-  const screens = type ? screensOf(type) : null;
+  const screens = type ? screensOfRole(type) : null;
   setAllowedScreens(screens);
   // prices: the owner always sees them; everyone else needs the permission on their user type
   const hide = COST_CONTROL_ONLY && !!staff && staff.role !== "owner" && (!lists || !type || !seesPrices(type));

@@ -27,6 +27,10 @@ export interface Area {
   acts: Act[];
   /** what an action means on this tab, when it is not plain (shown under the row) */
   note?: string;
+  /** the screen the tab sat on before it moved (2026-11-22: قائمة المنتجات والخامات was split over المخازن and التصنيع) */
+  was?: string;
+  /** a ملخص tab added on 2026-11-22: a role saved before then sees it on every screen it opens */
+  summary?: boolean;
 }
 
 const LISTED: Area[] = [
@@ -38,19 +42,22 @@ const LISTED: Area[] = [
   { id: "stores.count", screen: "cc-stores", label: "جرد المخزن", acts: ["view", "add"] },
   { id: "stores.supply", screen: "cc-stores", label: "طلب توريد", acts: ["view", "add"], note: "التنفيذ والاستلام بيتحددوا من صلاحيات طلبات التوريد تحت. تغيير الفرع بعد الإرسال للإدارة بس." },
   { id: "stores.purchase", screen: "cc-stores", label: "طلب شراء", acts: ["view", "add", "edit", "delete"], note: "التعديل والحذف قبل ما مسؤول المشتريات يبدأ في الطلب." },
-
-  { id: "catalog.raws", screen: "cc-catalog", label: "مواد الخام", acts: ALL },
-  { id: "catalog.products", screen: "cc-catalog", label: "المنتجات المصنعة", acts: ALL },
-  { id: "catalog.sale", screen: "cc-catalog", label: "أصناف البيع", acts: ALL },
+  // the ids stay "catalog.*" so the permissions roles already have keep working after the move
+  { id: "catalog.raws", screen: "cc-stores", was: "cc-catalog", label: "مواد الخام", acts: ALL },
+  { id: "stores.summary", screen: "cc-stores", label: "ملخص المخازن والفروع", acts: ["view"], summary: true },
 
   { id: "constants", screen: "cc-constants", label: "ثوابت النظام", acts: ["view", "edit"] },
 
   { id: "mfg.make", screen: "cc-mfg", label: "تصنيع صنف", acts: ["view", "add"] },
   { id: "mfg.recipes", screen: "cc-mfg", label: "الوصفات", acts: ["view", "add", "edit", "delete"] },
   { id: "mfg.log", screen: "cc-mfg", label: "سجل التشغيلات", acts: ["view", "delete", "export"], note: "الحذف: إلغاء التشغيلة." },
+  { id: "catalog.products", screen: "cc-mfg", was: "cc-catalog", label: "المنتجات المصنعة", acts: ALL },
+  { id: "catalog.sale", screen: "cc-mfg", was: "cc-catalog", label: "أصناف البيع", acts: ALL },
+  { id: "mfg.summary", screen: "cc-mfg", label: "ملخص التصنيع", acts: ["view"], summary: true },
 
   { id: "users.list", screen: "cc-users", label: "المستخدمين", acts: ALL },
   { id: "users.roles", screen: "cc-users", label: "الأدوار", acts: ["view", "add", "edit", "delete"] },
+  { id: "users.summary", screen: "cc-users", label: "ملخص المستخدمين", acts: ["view"], summary: true },
 
   { id: "finance.dashboard", screen: "cc-finance", label: "المؤشرات", acts: ["view"] },
   { id: "finance.chart", screen: "cc-finance", label: "شجرة الحسابات", acts: ["view", "export"] },
@@ -86,10 +93,19 @@ export const accessKey = (area: string, act: Act) => `${area}:${act}`;
  * on every tab of the screens it opened.
  */
 export function accessOf(t: MfgUserType): Set<string> {
-  if (t.access) return new Set(t.access);
+  if (t.access) {
+    const set = new Set(t.access);
+    // a list saved before the ملخص tabs: each one shows on the screens the role already sees
+    if (!t.accessVer)
+      for (const a of areas()) if (a.summary && areas().some((b) => b.screen === a.screen && set.has(accessKey(b.id, "view")))) set.add(accessKey(a.id, "view"));
+    return set;
+  }
   const open = new Set(screensOf(t));
-  return new Set(areas().filter((a) => open.has(a.screen)).flatMap((a) => a.acts.map((x) => accessKey(a.id, x))));
+  return new Set(areas().filter((a) => open.has(a.screen) || (a.was && open.has(a.was))).flatMap((a) => a.acts.map((x) => accessKey(a.id, x))));
 }
+
+/** the screens a role opens: those where it may see at least one tab */
+export const screensOfRole = (t: MfgUserType): string[] => screensFromAccess(accessOf(t));
 
 /** the screens a list of permissions opens: those with مشاهدة on at least one of their tabs */
 export function screensFromAccess(keys: Iterable<string>): string[] {

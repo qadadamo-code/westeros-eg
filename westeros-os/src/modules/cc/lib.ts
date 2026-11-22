@@ -131,7 +131,6 @@ export const DEFAULT_USER_TYPES: MfgUserType[] = [
 export const SCREENS: { id: string; label: string }[] = [
   { id: "cc-summary", label: "الملخص" },
   { id: "cc-stores", label: "المخازن والفروع" },
-  { id: "cc-catalog", label: "قائمة المنتجات والخامات" },
   { id: "cc-constants", label: "ثوابت النظام" },
   { id: "cc-mfg", label: "التصنيع" },
   { id: "cc-users", label: "المستخدمين" },
@@ -143,7 +142,11 @@ const ROLE_SCREENS: Record<MfgUserType["role"], string[]> = {
   manager: ["cc-summary", "cc-stores", "cc-catalog", "cc-constants", "cc-mfg"],
   admin: SCREENS.map((x) => x.id),
 };
-/** The screens a type's users may open: its checklist, else what its permissions level allowed before checklists. */
+/**
+ * The screens a type's users may open, as saved: its checklist, else what its permissions level allowed before checklists.
+ * "cc-catalog" (قائمة المنتجات والخامات) may still be in an old list: its tabs now sit on المخازن and التصنيع, and
+ * `screensOfRole` (access.ts) gives the screens to open.
+ */
 export const screensOf = (t: MfgUserType): string[] => t.screens ?? ROLE_SCREENS[t.role];
 /** رؤية الأسعار والتكاليف: ticked by management on the type; until it is set, only the users-management level sees them. */
 export const seesPrices = (t: MfgUserType): boolean => t.seePrices ?? t.role === "admin";

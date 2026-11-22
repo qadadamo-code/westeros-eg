@@ -4,7 +4,7 @@ import { LocalAdapter } from "@/data/local/LocalAdapter";
 import { makeDb } from "@/data/hooks";
 import { WESTEROS_BRANCH_ID, WESTEROS_RESTAURANT_ID } from "@/data/westeros/seed";
 import { buildTestKitchen } from "@/modules/production/testKitchen";
-import { accessOf, areas, memberMay, screensFromAccess } from "./access";
+import { accessOf, areas, memberMay, screensFromAccess, screensOfRole } from "./access";
 import { DEFAULT_LISTS, listsOf, userTypesOf } from "./lib";
 import { permsOfRole, rolePatch } from "./perms";
 import { exportUsers, importUsers, USER_HEAD } from "./users/usersExcel";
@@ -30,10 +30,25 @@ describe("detailed permissions", () => {
     expect(memberMay(m, lists, "stores.moves", "add")).toBe(false); // no مشاهدة
     expect(memberMay({ id: "o", role: "owner" }, lists, "users.roles", "delete")).toBe(true);
   });
+  it("the catalog tabs moved to المخازن and التصنيع keep the permissions roles had", () => {
+    expect(areas().find((a) => a.id === "catalog.raws")?.screen).toBe("cc-stores");
+    expect(areas().find((a) => a.id === "catalog.sale")?.screen).toBe("cc-mfg");
+    // a role saved with only قائمة المنتجات والخامات opens the two screens, with only the moved tabs
+    const old = { ...chef, screens: ["cc-summary", "cc-catalog"] };
+    const set = accessOf(old);
+    expect([set.has("catalog.raws:edit"), set.has("catalog.products:view"), set.has("stores.warehouses:view"), set.has("stores.summary:view")]).toEqual([true, true, false, false]);
+    expect(screensOfRole(old)).toEqual(["cc-summary", "cc-stores", "cc-mfg"]);
+  });
+  it("a list saved before the ملخص tabs shows them on the screens the role sees, a list saved after decides", () => {
+    const before = accessOf({ ...chef, access: ["mfg.make:view"] });
+    expect([before.has("mfg.summary:view"), before.has("stores.summary:view")]).toEqual([true, false]);
+    const after = accessOf({ ...chef, ...rolePatch(new Set(["acc:mfg.make:view"])) });
+    expect(after.has("mfg.summary:view")).toBe(false);
+  });
   it("the screens follow the tabs ticked for مشاهدة", () => {
     expect(screensFromAccess(["mfg.log:view", "stores.count:add"])).toEqual(["cc-mfg"]);
     const patch = rolePatch(new Set(["acc:mfg.make:view", "acc:mfg.make:add", "supply.handle"]));
-    expect([patch.screens, patch.access, patch.perms]).toEqual([["cc-mfg"], ["mfg.make:view", "mfg.make:add"], ["supply.handle"]]);
+    expect([patch.screens, patch.access, patch.perms, patch.accessVer]).toEqual([["cc-mfg"], ["mfg.make:view", "mfg.make:add"], ["supply.handle"], 2]);
     expect(permsOfRole({ ...chef, ...patch }).has("acc:mfg.make:add")).toBe(true);
   });
 });

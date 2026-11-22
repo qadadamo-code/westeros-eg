@@ -15,7 +15,7 @@ import { useCc, type Cc } from "../useCc";
 
 type MoveType = "opening" | "damage" | "transfer";
 const TYPE_LABEL: Record<MoveType, string> = { opening: "رصيد افتتاحي للمخزن", damage: "اتلاف", transfer: "نقل" };
-const KIND_LABEL: Partial<Record<MoveKind, string>> = {
+export const KIND_LABEL: Partial<Record<MoveKind, string>> = {
   opening: "رصيد افتتاحي", receive: "شراء (دخول)", waste: "اتلاف", transfer_out: "نقل (خروج)", transfer_in: "نقل (دخول)", production_in: "تصنيع (ناتج)", production_out: "تصنيع (مكونات)", count_adjust: "تسوية جرد",
 };
 

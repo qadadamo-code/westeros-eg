@@ -8,7 +8,7 @@ export default defineModule({
   status: "ready",
   icon: Factory,
   title: { ar: "التصنيع", en: "Manufacturing" },
-  description: { ar: "طرق التصنيع الأربع والوصفات", en: "The four manufacturing methods and the recipes" },
+  description: { ar: "تصنيع صنف، الوصفات، سجل التشغيلات، المنتجات المصنعة، أصناف البيع، الملخص", en: "Batches, recipes, runs log, manufactured products, sale items, summary" },
   permission: "production.view",
   homeFor: ["chef", "kitchen"],
   nav: { path: "/manufacturing", group: "service", order: 5, mobile: true },

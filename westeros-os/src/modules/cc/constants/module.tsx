@@ -11,5 +11,5 @@ export default defineModule({
   description: { ar: "الوحدات والفئات وأنواع المخازن والبرجر واللحوم وأسماء الوصفات", en: "Units, categories, warehouse and burger types, meats and recipe names" },
   permission: "production.manage",
   nav: { path: "/constants", group: "service", order: 4 },
-  routes: [{ path: "/constants", element: lazy(() => import("./ConstantsPage")) }],
+  routes: [{ path: "/constants/*", element: lazy(() => import("./ConstantsPage")) }],
 });

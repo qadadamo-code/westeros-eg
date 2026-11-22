@@ -35,11 +35,10 @@ export type SupplyPerm = (typeof SUPPLY_PERMS)[number]["id"] | (typeof PURCHASE_
 
 /** what each screen lets its users do: the line under the screen's tick */
 export const SCREEN_HELP: Record<string, string> = {
-  "cc-summary": "يشوف ملخص المخزون والتصنيع.",
-  "cc-stores": "يفتح المخازن والفروع: أرصدة المخازن، الحركات المخزنية، الجرد، وطلبات التوريد.",
-  "cc-catalog": "يفتح قائمة مواد الخام والمنتجات المصنعة وأصناف البيع.",
+  "cc-summary": "يشوف الملخص العام: الانتاج والمخزون والطلبات.",
+  "cc-stores": "يفتح المخازن والفروع: أرصدة المخازن، الفروع، مواد الخام، الحركات المخزنية، الجرد، طلبات التوريد والشراء، وملخصها.",
   "cc-constants": "يفتح ثوابت النظام ويعدل القوائم اللي السيستم بيختار منها.",
-  "cc-mfg": "يفتح التصنيع: تصنيع صنف، الوصفات، وسجل التشغيلات.",
+  "cc-mfg": "يفتح التصنيع: تصنيع صنف، الوصفات، سجل التشغيلات، المنتجات المصنعة، أصناف البيع، وملخصه.",
   "cc-users": "يفتح المستخدمين والأدوار: يضيف ويعدل الموظفين وصلاحياتهم.",
   "cc-finance": "يفتح الحسابات. اللي يقدر يعمله جوه بيتحدد من صلاحيات الحسابات تحت.",
 };
@@ -98,9 +97,10 @@ export function permsOfRole(t: MfgUserType): Set<string> {
 }
 
 /** a set of permission ids written back onto the role's fields (the database level is worked out by the caller) */
-export function rolePatch(ids: Set<string>): Pick<MfgUserType, "access" | "screens" | "perms" | "seePrices" | "finance" | "restore"> {
+export function rolePatch(ids: Set<string>): Pick<MfgUserType, "access" | "accessVer" | "screens" | "perms" | "seePrices" | "finance" | "restore"> {
   return {
     access: areas().flatMap((a) => a.acts.map((x) => accessKey(a.id, x))).filter((k) => ids.has(`acc:${k}`)),
+    accessVer: 2,
     screens: screensFromAccess([...ids].filter((k) => k.startsWith("acc:")).map((k) => k.slice(4))),
     perms: [...SUPPLY_PERMS, ...PURCHASE_PERMS].map((p) => p.id).filter((p) => ids.has(p)),
     seePrices: ids.has("prices"),
