@@ -1,5 +1,5 @@
 /** الخزينة والبنوك: الخزائن والحسابات البنكية، سندات القبض والصرف، التحويلات، المصروفات، المصروفات المقدمة، جرد الخزينة وتسوية البنك. */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowDownToLine, ArrowLeftRight, ArrowUpFromLine, Banknote, Calculator, Paperclip, Plus, Receipt, Repeat, X } from "lucide-react";
 import { useDb, useLive } from "@/data/hooks";
@@ -15,10 +15,11 @@ import { sheetNumber } from "../xlsx";
 import { amountOf, entryRef, STATUS_LABEL } from "./journal";
 import { EntryView, ToolsDialog } from "./Journal";
 import { useActor, useFinPerms } from "./perms";
-import { autoMatch, BANK_RECON, bankRecon, CASH_COUNT, countedTotal, DENOMINATIONS, METHODS, MONEY_LABEL, moneyAccounts, PREPAID, prepaidSchedule, tafqeet, VOUCHER_LABEL, voucherProblem, type BankReconData, type PrepaidData, type StatementLine, type VoucherInput, type VoucherType } from "./treasury";
+import { autoMatch, BANK_RECON, bankRecon, CASH_COUNT, countedTotal, DENOMINATIONS, METHODS, MONEY_LABEL, moneyAccounts, PREPAID, prepaidSchedule, tafqeet, VOUCHER_LABEL, voucherLines, voucherProblem, needsFx, crossCurrency, type BankReconData, type PrepaidData, type StatementLine, type VoucherInput, type VoucherType } from "./treasury";
 import { addMoneyAccount, ensureBranchTills, postCashCount, runPrepaid, saveBankRecon, savePrepaid, saveVoucher } from "./treasuryOps";
 import { AccountSelect, Amount, BranchSelect, Confirm, esc, fmt, fromText, periodLabel, periodOf, PeriodPicker, printDoc, PrintButton, printTable, sheetDay, toText, today, type Period, Toolbar } from "./ui";
 import { useFinance, type Fin } from "./useFinance";
+import { baseOf, currencyName, currencyOf, currencySymbol, foreignBalance, isForeign, parseRate, rateOf, rateText } from "./currency";
 
 const err = (e: unknown) => String((e as Error)?.message ?? e);
 type Tab = "accounts" | "vouchers" | "prepaid" | "bank";
@@ -54,16 +55,23 @@ export default function Treasury() {
   const money = useMemo(() => moneyAccounts(fin.ix.ordered()), [fin.ix]);
   const day = today();
   const stats = useMemo(() => {
-    const m = new Map<string, { balance: number; inToday: number; outToday: number }>();
-    for (const a of money) m.set(a.id, { balance: 0, inToday: 0, outToday: 0 });
+    const m = new Map<string, { balance: number; inToday: number; outToday: number; lines: FinEntry["lines"]; today: FinEntry["lines"] }>();
+    for (const a of money) m.set(a.id, { balance: 0, inToday: 0, outToday: 0, lines: [], today: [] });
     for (const e of fin.entries) if (e.status === "posted") for (const l of e.lines) {
       const s = m.get(l.account);
       if (!s) continue;
       s.balance += l.debit - l.credit;
-      if (e.date === day) { s.inToday += l.debit; s.outToday += l.credit; }
+      s.lines.push(l);
+      if (e.date === day) { s.inToday += l.debit; s.outToday += l.credit; s.today.push(l); }
     }
     return m;
   }, [fin.entries, money, day]);
+  /** an account kept in another currency: its balance and today's money in its own currency */
+  const own = (a: FinAccount) => {
+    const s = stats.get(a.id)!, code = currencyOf(a, fin.settings);
+    const moved = (side: "debit" | "credit") => s.today.filter((l) => l[side]).reduce((sum, l) => sum + (l.fx?.currency === code ? l.fx.amount : Math.round(l[side] / (rateOf(code, fin.settings) ?? 1))), 0);
+    return { code, balance: foreignBalance(s.lines, code, fin.settings), inToday: moved("debit"), outToday: moved("credit") };
+  };
   const total = [...stats.values()].reduce((s, x) => s + x.balance, 0);
   // charges the prepaid months that are due, once per visit
   const ran = useRef(false);
@@ -80,7 +88,7 @@ export default function Treasury() {
       {tab === "accounts" ? (
         <>
           <div className="flex flex-wrap items-center gap-3">
-            <span className="text-[15px]">إجمالي النقدية والبنوك: <b className="text-[18px]"><Amount value={total} zero="0.00" tone="auto" /></b> ج.م</span>
+            <span className="text-[15px]">إجمالي النقدية والبنوك: <b className="text-[18px]"><Amount value={total} zero="0.00" tone="auto" /></b> {currencySymbol(baseOf(fin.settings))}</span>
             <span className="flex-1" />
             {perms.has("chart.edit") ? <Button variant="outline" onClick={async () => { try { const n = await ensureBranchTills(db); toast({ tone: "success", title: n ? `تم فتح ${n} خزينة` : "كل فرع له خزينة" }); } catch (e) { toast({ tone: "error", title: "تعذر", description: err(e) }); } }}>خزينة لكل فرع</Button> : null}
             {perms.has("chart.edit") ? <Button variant="outline" icon={<Plus />} onClick={() => setAdd(true)}>إضافة خزينة أو بنك</Button> : null}
@@ -97,10 +105,16 @@ export default function Treasury() {
                         <span className="block truncate text-[15.5px] font-bold">{a.name.ar}</span>
                         <span className="num text-[12.5px] text-muted" dir="ltr">{a.code}</span>
                       </button>
-                      <Badge size="sm" tone="neutral">{MONEY_LABEL[a.kind]}</Badge>
+                      <span className="flex shrink-0 gap-1">{isForeign(a, fin.settings) ? <Badge size="sm" tone="brass">{currencyOf(a, fin.settings)}</Badge> : null}<Badge size="sm" tone="neutral">{MONEY_LABEL[a.kind]}</Badge></span>
                     </div>
+                    {isForeign(a, fin.settings) ? (() => { const o = own(a); return <>
+                      <div className="flex items-baseline gap-2"><span className="text-[22px] font-bold"><Amount value={o.balance} zero="0.00" tone="auto" /></span><span className="num text-[14px] font-bold text-brass-text">{o.code}</span></div>
+                      <div className="text-[12.5px] text-muted">تساوي <Amount value={s.balance} zero="0.00" /> {currencySymbol(baseOf(fin.settings))} في الدفاتر</div>
+                      <div className="flex gap-4 text-[13px] text-muted"><span>وارد اليوم <Amount value={o.inToday} zero="0.00" /></span><span>منصرف اليوم <Amount value={o.outToday} zero="0.00" /></span></div>
+                    </>; })() : <>
                     <div className="text-[22px] font-bold"><Amount value={s.balance} zero="0.00" tone="auto" /></div>
                     <div className="flex gap-4 text-[13px] text-muted"><span>وارد اليوم <Amount value={s.inToday} zero="0.00" /></span><span>منصرف اليوم <Amount value={s.outToday} zero="0.00" /></span></div>
+                    </>}
                     {low ? <p className="text-[13px] font-semibold text-danger">{s.balance < 0 ? "الرصيد بالسالب" : "الرصيد أقل من الحد"}</p> : high ? <p className="text-[13px] font-semibold text-danger">الرصيد أعلى من الحد، ورّد للبنك</p> : null}
                     {can ? (
                       <div className="flex flex-wrap gap-1.5 pt-1">
@@ -130,12 +144,16 @@ export default function Treasury() {
   );
 }
 
+function ReadOnlyBox({ label, children }: { label: string; children: ReactNode }) {
+  return <div className="grid gap-1.5"><span className="text-[13px] font-semibold text-ink-2">{label}</span><div className="num flex h-11 items-center rounded-xl border border-line bg-surface px-3.5 text-[15px] font-bold" dir="ltr">{children}</div></div>;
+}
+
 function VoucherDialog({ fin, type, moneyId, onClose, onSaved }: { fin: Fin; type: VoucherType; moneyId?: string; onClose: () => void; onSaved: (e: FinEntry) => void }) {
   const db = useDb();
   const { toast } = useToast();
   const actor = useActor();
   const money = useMemo(() => moneyAccounts(fin.ix.ordered()), [fin.ix]);
-  const [d, setD] = useState({ date: today(), moneyId: moneyId ?? money[0]?.id ?? "", otherId: "", amount: "", vat: "", creditId: "", onCredit: false, party: "", memo: "", branchId: fin.branchId ?? "", centreId: "", method: METHODS[0], ref: "" });
+  const [d, setD] = useState({ date: today(), moneyId: moneyId ?? money[0]?.id ?? "", otherId: "", amount: "", vat: "", creditId: "", onCredit: false, party: "", memo: "", branchId: fin.branchId ?? "", centreId: "", method: METHODS[0], ref: "", rate: "", fromBase: "" });
   const [files, setFiles] = useState<FinEntry["attachments"]>([]);
   const [busy, setBusy] = useState(false);
   const file = useRef<HTMLInputElement>(null);
@@ -144,11 +162,33 @@ function VoucherDialog({ fin, type, moneyId, onClose, onSaved }: { fin: Fin; typ
     type, date: d.date, moneyId: type === "expense" && d.onCredit ? "" : d.moneyId, otherId: d.otherId, amount: fromText(d.amount), vat: type === "expense" ? fromText(d.vat) : 0, creditId: type === "expense" && d.onCredit ? d.creditId : undefined,
     party: d.party, memo: d.memo, branchId: d.branchId || null, centreId: d.centreId || null, method: d.method, ref: d.ref, attachments: files,
   };
+  // العملات: the money account (and the receiving one of a transfer) may be kept in another currency
+  const base = baseOf(fin.settings);
+  const mc = type === "expense" && d.onCredit ? base : currencyOf(fin.byId.get(d.moneyId), fin.settings);
+  const oc = type === "transfer" && d.otherId ? currencyOf(fin.byId.get(d.otherId), fin.settings) : undefined;
+  const fxBase = { base, money: mc, other: oc };
+  const fxOn = needsFx(fxBase, type);
+  const cross = crossCurrency(fxBase, type);
+  const neither = cross && mc !== base && oc !== base;
+  // the rate starts from the last one used: 1 mc in oc for a transfer between two currencies, else 1 mc in the system's currency
+  // from the system's currency to another: the rate is typed the way it is said, 1 dollar = 50 pounds
+  const inverse = cross && mc === base;
+  const lastRate = inverse ? rateOf(oc!, fin.settings) : cross ? ((rateOf(mc, fin.settings) ?? 0) && (rateOf(oc!, fin.settings) ?? 0) ? rateOf(mc, fin.settings)! / rateOf(oc!, fin.settings)! : null) : rateOf(mc !== base ? mc : oc ?? mc, fin.settings);
+  const fxKey = `${mc}>${oc ?? ""}`;
+  const [seen, setSeen] = useState("");
+  if (fxOn && seen !== fxKey) { setSeen(fxKey); setD((x) => ({ ...x, rate: rateText(lastRate), fromBase: rateText(rateOf(mc, fin.settings)) })); }
+  const typed = parseRate(d.rate);
+  const rate = inverse ? (typed ? 1 / typed : 0) : typed;
+  if (fxOn) input.fx = { ...fxBase, rate, ...(neither ? { fromBase: parseRate(d.fromBase) } : {}) };
+  const lines = fxOn ? voucherLines(input, "vat") : [];
+  const value = lines.reduce((sum, l) => sum + l.debit, 0);
+  const received = cross ? Math.round(input.amount * rate) : 0;
+  const sym = (c: string) => (c === base ? currencySymbol(c) : c);
   const problem = voucherProblem(input);
   const limit = fin.settings.approvalLimit;
   const waits = limit != null && input.amount + (input.vat ?? 0) > limit && !actor.canApprove;
   const centres = fin.centres.filter((c) => c.active);
-  const moneyOptions = (skip?: string) => [{ value: "", label: "اختر" }, ...money.filter((a) => a.id !== skip).map((a) => ({ value: a.id, label: `${a.name.ar} (${MONEY_LABEL[a.kind]})` }))];
+  const moneyOptions = (skip?: string) => [{ value: "", label: "اختر" }, ...money.filter((a) => a.id !== skip).map((a) => ({ value: a.id, label: `${a.name.ar} (${MONEY_LABEL[a.kind]}${isForeign(a, fin.settings) ? ` · ${currencyOf(a, fin.settings)}` : ""})` }))];
   const save = async () => {
     setBusy(true);
     try {
@@ -160,12 +200,12 @@ function VoucherDialog({ fin, type, moneyId, onClose, onSaved }: { fin: Fin; typ
   return (
     <Dialog open onClose={onClose} size="lg" title={VOUCHER_LABEL[type]}
       footer={<div className="flex flex-wrap items-center justify-end gap-2">
-        {problem ? <span className="me-auto text-[13px] font-semibold text-danger">{problem}</span> : waits ? <span className="me-auto text-[13px] text-muted">المبلغ فوق حد الاعتماد، السند يذهب للمدير</span> : <span className="me-auto text-[13px] text-muted">{tafqeet(input.amount + (input.vat ?? 0))}</span>}
+        {problem ? <span className="me-auto text-[13px] font-semibold text-danger">{problem}</span> : waits ? <span className="me-auto text-[13px] text-muted">المبلغ فوق حد الاعتماد، السند يذهب للمدير</span> : <span className="me-auto text-[13px] text-muted">{fxOn ? <>القيمة بالعملة الأساسية: <b className="num" dir="ltr">{fmt(value)}</b> {sym(base)}</> : tafqeet(input.amount + (input.vat ?? 0))}</span>}
         <Button variant="ghost" onClick={onClose}>إلغاء</Button><Button loading={busy} disabled={!!problem} onClick={save}>{waits ? "إرسال للاعتماد" : "حفظ وترحيل"}</Button>
       </div>}>
       <div className="grid gap-3 sm:grid-cols-2">
         <Input label="التاريخ" type="date" dir="ltr" value={d.date} onChange={(e) => set({ date: e.target.value })} />
-        <Input label={type === "expense" ? "المبلغ بدون ضريبة (ج.م)" : "المبلغ (ج.م)"} dir="ltr" inputMode="decimal" autoFocus value={d.amount} onChange={(e) => set({ amount: e.target.value })} />
+        <Input label={`${type === "expense" ? "المبلغ بدون ضريبة" : type === "transfer" && cross ? "المبلغ المحول" : "المبلغ"} (${sym(mc)})`} dir="ltr" inputMode="decimal" autoFocus value={d.amount} onChange={(e) => set({ amount: e.target.value })} />
         {type === "expense" ? <div className="sm:col-span-2"><Switch checked={d.onCredit} onChange={(v) => set({ onCredit: v })} label="مصروف آجل (لم يدفع بعد)" description="يتسجل على حساب مورد أو مصروفات مستحقة بدل الخزينة" /></div> : null}
         {type === "expense" && d.onCredit
           ? <AccountSelect fin={fin} label="على حساب" value={d.creditId} onChange={(v) => set({ creditId: v })} filter={(a) => a.type === "liability"} />
@@ -174,7 +214,15 @@ function VoucherDialog({ fin, type, moneyId, onClose, onSaved }: { fin: Fin; typ
           ? <Select label="إلى خزينة أو بنك" value={d.otherId} onChange={(e) => set({ otherId: e.target.value })} options={moneyOptions(d.moneyId)} />
           : <AccountSelect fin={fin} manualOnly label={type === "receipt" ? "من حساب (الدائن)" : type === "payment" ? "إلى حساب (المدين)" : "حساب المصروف"} value={d.otherId} onChange={(v) => set({ otherId: v })}
               filter={type === "expense" ? (a) => a.type === "expense" || a.type === "cogs" : (a) => !["cash", "bank", "wallet"].includes(a.kind)} />}
-        {type === "expense" ? <Input label="ضريبة قيمة مضافة (ج.م)" dir="ltr" inputMode="decimal" value={d.vat} onChange={(e) => set({ vat: e.target.value })} hint={<button type="button" className="text-primary underline-offset-2 hover:underline" onClick={() => set({ vat: toText(Math.round(fromText(d.amount) * 0.14)) })}>احسب 14%</button>} /> : null}
+        {fxOn ? (
+          <div className="grid gap-3 rounded-xl border border-brass/40 bg-brass-soft/40 p-3 sm:col-span-2 sm:grid-cols-2">
+            <Input label={inverse ? `سعر الصرف: 1 ${oc} يساوي كام ${sym(base)}` : cross ? `سعر الصرف: 1 ${mc} يساوي كام ${oc === base ? sym(base) : oc}` : `سعر الصرف: 1 ${mc} يساوي كام ${sym(base)}`} dir="ltr" inputMode="decimal" value={d.rate} onChange={(e) => set({ rate: e.target.value })} hint={lastRate ? `آخر سعر: ${rateText(lastRate)}` : "أول مرة بهذه العملة"} />
+            {cross ? <ReadOnlyBox label={`المبلغ اللي هيوصل (${sym(oc!)})`}>{received ? fmt(received) : "—"}</ReadOnlyBox> : <ReadOnlyBox label={`القيمة بالعملة الأساسية (${sym(base)})`}>{value ? fmt(value) : "—"}</ReadOnlyBox>}
+            {neither ? <Input label={`سعر 1 ${mc} بالعملة الأساسية (${sym(base)})`} dir="ltr" inputMode="decimal" value={d.fromBase} onChange={(e) => set({ fromBase: e.target.value })} hint="عشان القيد يتسجل بالعملة الأساسية" /> : null}
+            <p className="text-[12.5px] text-muted sm:col-span-2">{cross ? `التحويل من ${currencyName(mc)} إلى ${currencyName(oc!)}. القيد يتسجل بالعملة الأساسية، وكل حساب يحتفظ بالمبلغ بعملته.` : `الحساب بعملة ${currencyName(mc)}. اكتب المبلغ بعملته، والقيد يتسجل بالعملة الأساسية بالسعر ده.`}</p>
+          </div>
+        ) : null}
+        {type === "expense" ? <Input label={`ضريبة قيمة مضافة (${sym(mc)})`} dir="ltr" inputMode="decimal" value={d.vat} onChange={(e) => set({ vat: e.target.value })} hint={<button type="button" className="text-primary underline-offset-2 hover:underline" onClick={() => set({ vat: toText(Math.round(fromText(d.amount) * 0.14)) })}>احسب 14%</button>} /> : null}
         {type !== "transfer" ? <Input label={type === "receipt" ? "استلمنا من" : "المستفيد"} value={d.party} onChange={(e) => set({ party: e.target.value })} /> : null}
         <Select label="طريقة الدفع" value={d.method} onChange={(e) => set({ method: e.target.value })} options={METHODS.map((m) => ({ value: m, label: m }))} />
         <Input label="رقم مرجعي (شيك، تحويل، فاتورة)" dir="ltr" value={d.ref} onChange={(e) => set({ ref: e.target.value })} />

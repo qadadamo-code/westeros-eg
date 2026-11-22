@@ -264,7 +264,7 @@ export function EntryView({ fin, entry: e, onClose, onEdit, onCopy, onOpen }: { 
               {e.lines.map((l, i) => (
                 <tr key={i} className="border-t border-line/60">
                   <td className="px-3 py-2">{fin.label(l.account)}{l.centreId || l.branchId ? <span className="block text-[12px] text-muted">{[l.branchId ? fin.branchName(l.branchId) : "", fin.centres.find((c) => c.id === l.centreId)?.name.ar ?? ""].filter(Boolean).join(" · ")}</span> : null}</td>
-                  <td className="px-3 py-2 text-muted">{l.memo ?? ""}</td>
+                  <td className="px-3 py-2 text-muted">{l.memo ?? ""}{l.fx ? <span className="num block text-[12.5px] font-semibold text-brass-text" dir="ltr">{fmt(l.fx.amount)} {l.fx.currency} @ {l.fx.rate}</span> : null}</td>
                   <td className="px-3 py-2 text-end"><Amount value={l.debit} zero="" /></td>
                   <td className="px-3 py-2 text-end"><Amount value={l.credit} zero="" /></td>
                 </tr>

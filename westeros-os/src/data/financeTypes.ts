@@ -50,6 +50,16 @@ export interface FinAccount extends Row {
   alertMax: Units | null;
   active: boolean;
   note: string;
+  /** عملة الحساب: null = the system's own currency (FinSettingsData.currency) */
+  currency?: string | null;
+}
+
+/** What moved in the currency of an account kept in another currency; the line's debit or credit holds its value in the system's currency. */
+export interface FinFx {
+  currency: string;
+  amount: Units;
+  /** 1 unit of `currency` in the system's currency, as used on this line */
+  rate: number;
 }
 
 export interface FinLine {
@@ -60,6 +70,7 @@ export interface FinLine {
   memo?: string;
   centreId?: string | null;
   branchId?: string | null;
+  fx?: FinFx;
 }
 
 export type FinEntryKind = "manual" | "auto" | "opening" | "adjust" | "closing" | "reversal" | "receipt" | "payment" | "transfer" | "expense";
@@ -134,6 +145,10 @@ export interface FinSettingsData {
   standardCosts: Record<string, Units>;
   /** بضاعة بالطريق older than this many days is flagged */
   transitDays: number;
+  /** العملة الأساسية: the currency every amount of the system is kept in ("EGP") */
+  currency: string;
+  /** the other currencies accounts may be kept in, each with its last exchange rate (1 unit = rate in the system's currency) */
+  currencies: { code: string; rate: number }[];
 }
 
 /** One row per restaurant. */

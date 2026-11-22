@@ -1,6 +1,7 @@
 /** الخزينة والبنوك: the pure rules behind vouchers, transfers, expenses, prepaid expenses, cash counts and bank reconciliation. */
 import type { FinAccount, FinDoc, FinEntry, FinLine } from "@/data/financeTypes";
 import { UNITS_PER_MAJOR, type Units } from "@/lib/money";
+import { fx, transferValue } from "./currency";
 
 export const MONEY_KINDS: FinAccount["kind"][] = ["cash", "bank", "wallet"];
 export const MONEY_LABEL: Record<string, string> = { cash: "خزينة", bank: "بنك", wallet: "محفظة إلكترونية" };
@@ -30,10 +31,32 @@ export interface VoucherInput {
   method?: string;
   ref?: string;
   attachments?: FinEntry["attachments"];
+  /**
+   * العملات: present when the money account (or, for a transfer, the receiving one) is kept in another currency than the system's.
+   * Then `amount` and `vat` are typed in the money account's currency.
+   */
+  fx?: VoucherFx;
 }
+export interface VoucherFx {
+  base: string;
+  /** currency of the money account */
+  money: string;
+  /** transfer: currency of the receiving account */
+  other?: string;
+  /** 1 `money` = rate `other` for a transfer between two currencies; otherwise 1 `money` = rate in the system's currency */
+  rate: number;
+  /** transfer between two currencies, neither the system's: 1 `money` in the system's currency */
+  fromBase?: number;
+}
+/** does this voucher need an exchange rate? */
+export const needsFx = (f: Pick<VoucherFx, "base" | "money" | "other"> | undefined, type: VoucherType) => !!f && (f.money !== f.base || (type === "transfer" && !!f.other && f.other !== f.base));
+/** a transfer between two accounts kept in different currencies */
+export const crossCurrency = (f: Pick<VoucherFx, "money" | "other"> | undefined, type: VoucherType) => type === "transfer" && !!f?.other && f.other !== f.money;
 
-/** The balanced lines of a voucher. */
+/** The balanced lines of a voucher, in the system's currency; a line on an account kept in another currency also carries what moved in it. */
 export function voucherLines(v: VoucherInput, vatInputId?: string): FinLine[] {
+  const f = v.fx;
+  if (f && needsFx(f, v.type)) return fxLines(v, f, vatInputId);
   const c = v.centreId ? { centreId: v.centreId } : {};
   const total = v.amount + (v.type === "expense" ? v.vat ?? 0 : 0);
   switch (v.type) {
@@ -47,6 +70,39 @@ export function voucherLines(v: VoucherInput, vatInputId?: string): FinLine[] {
     ];
   }
 }
+function fxLines(v: VoucherInput, f: VoucherFx, vatInputId?: string): FinLine[] {
+  const c = v.centreId ? { centreId: v.centreId } : {};
+  if (v.type === "transfer") {
+    const other = f.other ?? f.money;
+    if (other === f.money) {
+      // the same foreign currency on both sides: valued at the rate typed
+      const value = Math.round(v.amount * f.rate);
+      return [{ account: v.otherId, debit: value, credit: 0, fx: fx(other, v.amount, f.rate) }, { account: v.moneyId, debit: 0, credit: value, fx: fx(f.money, v.amount, f.rate) }];
+    }
+    const t = transferValue(v.amount, { from: f.money, to: other, rate: f.rate, fromBase: f.fromBase }, f.base);
+    if (!t) return [];
+    return [
+      { account: v.otherId, debit: t.value, credit: 0, ...(other !== f.base ? { fx: fx(other, t.received, t.toRate) } : {}) },
+      { account: v.moneyId, debit: 0, credit: t.value, ...(f.money !== f.base ? { fx: fx(f.money, v.amount, t.fromRate) } : {}) },
+    ];
+  }
+  // receipt, payment, expense from an account kept in another currency: typed in its currency, booked at the rate typed
+  const value = Math.round(v.amount * f.rate);
+  const vat = v.type === "expense" ? Math.round((v.vat ?? 0) * f.rate) : 0;
+  const money = (amount: Units, units: Units) => ({ fx: fx(f.money, units, f.rate), amount });
+  switch (v.type) {
+    case "receipt": { const m = money(value, v.amount); return [{ account: v.moneyId, debit: m.amount, credit: 0, fx: m.fx }, { account: v.otherId, debit: 0, credit: value, ...c }]; }
+    case "payment": { const m = money(value, v.amount); return [{ account: v.otherId, debit: value, credit: 0, ...c }, { account: v.moneyId, debit: 0, credit: m.amount, fx: m.fx }]; }
+    default: {
+      const onMoney = !v.creditId;
+      return [
+        { account: v.otherId, debit: value, credit: 0, ...c },
+        ...(vat && vatInputId ? [{ account: vatInputId, debit: vat, credit: 0 }] : []),
+        { account: v.creditId || v.moneyId, debit: 0, credit: value + (vatInputId ? vat : 0), ...(onMoney ? { fx: fx(f.money, v.amount + (vatInputId ? v.vat ?? 0 : 0), f.rate) } : {}) },
+      ];
+    }
+  }
+}
 export function voucherProblem(v: VoucherInput): string {
   if (!v.date) return "اختر التاريخ";
   if (!(v.amount > 0)) return "اكتب المبلغ";
@@ -54,6 +110,10 @@ export function voucherProblem(v: VoucherInput): string {
   if (!v.otherId) return v.type === "transfer" ? "اختر الخزينة أو البنك المستلم" : v.type === "expense" ? "اختر حساب المصروف" : "اختر الحساب المقابل";
   if (v.type === "transfer" && v.otherId === v.moneyId) return "التحويل بين خزينتين مختلفتين";
   if ((v.vat ?? 0) < 0) return "الضريبة لا تكون بالسالب";
+  if (v.fx && needsFx(v.fx, v.type)) {
+    if (!(v.fx.rate > 0)) return "اكتب سعر الصرف";
+    if (crossCurrency(v.fx, v.type) && v.fx.money !== v.fx.base && v.fx.other !== v.fx.base && !(v.fx.fromBase && v.fx.fromBase > 0)) return `اكتب سعر ${v.fx.money} بالعملة الأساسية`;
+  }
   return "";
 }
 /** Vouchers of one type are numbered inside the year: قبض 1، 2 … صرف 1، 2 … */
