@@ -15,6 +15,7 @@ import { MONEY_LABEL, moneyAccounts } from "./treasury";
 import { BranchSelect, Confirm, fmt, fromText, PrintButton, printTable, toText, today, Toolbar } from "./ui";
 import { baseOf } from "./currency";
 import { useAmountCurrency } from "./AmountCurrency";
+import { payrollAdds } from "./staffMoves";
 import { useFinance, type Fin } from "./useFinance";
 
 const err = (e: unknown) => String((e as Error)?.message ?? e);
@@ -156,7 +157,7 @@ function AdvanceDialog({ fin, emp, balance, onClose, onSaved }: { fin: Fin; emp:
   );
 }
 
-const COLS: { key: keyof PayLine; label: string }[] = [{ key: "basic", label: "الأساسي" }, { key: "allowances", label: "بدلات" }, { key: "overtime", label: "إضافي" }, { key: "bonus", label: "حوافز" }, { key: "deductions", label: "خصومات" }, { key: "insEmployee", label: "تأمينات الموظف" }, { key: "tax", label: "ضريبة" }, { key: "advance", label: "خصم سلفة" }];
+const COLS: { key: keyof PayLine; label: string }[] = [{ key: "basic", label: "الأساسي" }, { key: "allowances", label: "بدلات" }, { key: "overtime", label: "إضافي" }, { key: "bonus", label: "حوافز" }, { key: "deductions", label: "خصومات" }, { key: "insEmployee", label: "تأمينات الموظف" }, { key: "tax", label: "ضريبة" }, { key: "advance", label: "خصم سلفة" }, { key: "savings", label: "مدخرات" }];
 
 function RunDialog({ fin, staff, runs, advances, onClose, onSaved }: { fin: Fin; staff: FinDoc[]; runs: FinDoc[]; advances: Map<string, number>; onClose: () => void; onSaved: (d: FinDoc) => void }) {
   const db = useDb();
@@ -169,13 +170,16 @@ function RunDialog({ fin, staff, runs, advances, onClose, onSaved }: { fin: Fin;
   const [off, setOff] = useState<Set<string>>(new Set());
   const [cells, setCells] = useState<Record<string, string>>({});
   const todo = staff.filter((d) => !done.has(d.id));
-  const lineFor = (doc: FinDoc): PayLine => { const b = lineOf(doc); const l = { ...b }; for (const c of COLS) { const t = cells[`${doc.id}:${c.key}`]; if (t !== undefined) (l[c.key] as number) = fromText(t); } return l; };
+  // حركات الموظفين المسجلة على الشهر: حوافز وبونص مبيعات وخصومات ومدخرات
+  const allDocs = useLive("finDocs").data;
+  const adds = useMemo(() => payrollAdds(allDocs, month), [allDocs, month]);
+  const lineFor = (doc: FinDoc): PayLine => { const b = lineOf(doc); const a = adds.get(doc.id); const l = { ...b, ...(a ? { bonus: b.bonus + a.bonus, deductions: b.deductions + a.deductions, savings: a.savings } : {}) }; for (const c of COLS) { const t = cells[`${doc.id}:${c.key}`]; if (t !== undefined) (l[c.key] as number) = fromText(t); } return l; };
   const lines = todo.filter((d) => !off.has(d.id)).map(lineFor);
   const t = payrollTotals(lines);
   const problem = payrollProblem(month, lines, advances);
   const save = async () => {
     setBusy(true);
-    try { const doc = await runPayroll(db, { month, lines, note }, actor); toast({ tone: "success", title: `تم تسجيل ${doc.name}` }); onSaved(doc); }
+    try { const doc = await runPayroll(db, { month, lines, note, moves: todo.filter((d) => !off.has(d.id)).flatMap((d) => adds.get(d.id)?.ids ?? []) }, actor); toast({ tone: "success", title: `تم تسجيل ${doc.name}` }); onSaved(doc); }
     catch (e) { toast({ tone: "error", title: "تعذر الحفظ", description: err(e), duration: 9000 }); } finally { setBusy(false); }
   };
   return (
@@ -184,7 +188,7 @@ function RunDialog({ fin, staff, runs, advances, onClose, onSaved }: { fin: Fin;
       <div className="grid gap-3">
         <div className="flex flex-wrap items-end gap-3">
           <Input label="الشهر" type="month" dir="ltr" wrapClassName="w-48" value={month} onChange={(e) => setMonth(e.target.value)} />
-          <p className="pb-2.5 text-[13px] text-muted">القيد يتسجل بتاريخ آخر يوم في الشهر. {done.size ? `${done.size} موظف له كشف مسجل عن الشهر ولا يظهر هنا.` : ""}</p>
+          <p className="pb-2.5 text-[13px] text-muted">القيد يتسجل بتاريخ آخر يوم في الشهر. الحوافز والخصومات والمدخرات المسجلة على الشهر في حركات الموظفين بتنزل لوحدها. {done.size ? `${done.size} موظف له كشف مسجل عن الشهر ولا يظهر هنا.` : ""}</p>
         </div>
         {todo.length ? (
           <div className="overflow-x-auto thin-scrollbar rounded-xl border border-line"><table className="w-full min-w-[800px] text-[13.5px]">
@@ -195,7 +199,7 @@ function RunDialog({ fin, staff, runs, advances, onClose, onSaved }: { fin: Fin;
                 {COLS.map((c) => <td key={c.key} className="px-1 py-1.5"><input dir="ltr" inputMode="decimal" disabled={!on || (c.key === "advance" && adv <= 0)} aria-label={`${c.label}: ${doc.name}`} placeholder="0" className="num h-9 w-full min-w-[64px] rounded-lg border border-line bg-surface px-2 text-[13.5px] outline-none focus:border-primary disabled:opacity-40" value={cells[`${doc.id}:${c.key}`] ?? toText(l[c.key] as number)} onChange={(e) => setCells({ ...cells, [`${doc.id}:${c.key}`]: e.target.value })} /></td>)}
                 <td className={cn("num px-2 py-1.5 text-end font-bold", netOf(l) < 0 && "text-danger")} dir="ltr">{on ? fmt(netOf(l)) : "—"}</td>
               </tr>); })}</tbody>
-            <tfoot><tr className="border-t border-line bg-surface-2/60 font-bold"><td className="px-2 py-2">الإجمالي</td>{[t.basic, null, t.overtime, t.bonus, t.deductions, t.insEmployee, t.tax, t.advance].map((v, i) => <td key={i} className="num px-2 py-2" dir="ltr">{v == null ? "" : fmt(v, "—")}</td>)}<td className="num px-2 py-2 text-end" dir="ltr">{fmt(t.net)}</td></tr></tfoot>
+            <tfoot><tr className="border-t border-line bg-surface-2/60 font-bold"><td className="px-2 py-2">الإجمالي</td>{[t.basic, null, t.overtime, t.bonus, t.deductions, t.insEmployee, t.tax, t.advance, t.savings].map((v, i) => <td key={i} className="num px-2 py-2" dir="ltr">{v == null ? "" : fmt(v, "—")}</td>)}<td className="num px-2 py-2 text-end" dir="ltr">{fmt(t.net)}</td></tr></tfoot>
           </table></div>
         ) : <p className="rounded-xl border border-line px-3 py-6 text-center text-muted">كل الموظفين لهم كشف مسجل عن هذا الشهر.</p>}
         <Textarea label="ملاحظات" rows={2} value={note} onChange={(e) => setNote(e.target.value)} />

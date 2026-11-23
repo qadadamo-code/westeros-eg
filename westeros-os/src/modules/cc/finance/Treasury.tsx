@@ -41,14 +41,15 @@ export function printVoucher(fin: Fin, e: FinEntry) {
   printDoc(`${VOUCHER_LABEL[type] ?? "سند"} ${e.meta?.voucherNo ?? ""}`, body);
 }
 
-export default function Treasury() {
+/** start: the tab it opens on (سندات القبض والصرف، المصروفات open on the vouchers) · kind: the vouchers it lists first */
+export default function Treasury({ start = "accounts", kind: firstKind = "" }: { start?: Tab; kind?: string } = {}) {
   const fin = useFinance();
   const db = useDb();
   const nav = useNavigate();
   const { toast } = useToast();
   const perms = useFinPerms();
   const can = perms.has("vouchers");
-  const [tab, setTab] = useState<Tab>("accounts");
+  const [tab, setTab] = useState<Tab>(start);
   const [voucher, setVoucher] = useState<{ type: VoucherType; moneyId?: string } | null>(null);
   const [add, setAdd] = useState(false);
   const [count, setCount] = useState<FinAccount | null>(null);
@@ -133,7 +134,7 @@ export default function Treasury() {
           <CashCounts fin={fin} />
         </>
       ) : null}
-      {tab === "vouchers" ? <Vouchers fin={fin} onOpen={setView} /> : null}
+      {tab === "vouchers" ? <Vouchers key={firstKind} fin={fin} first={firstKind} onOpen={setView} /> : null}
       {tab === "prepaid" ? <Prepaid fin={fin} can={can} /> : null}
       {tab === "bank" ? <BankRecon fin={fin} can={can} /> : null}
 
@@ -254,9 +255,9 @@ function VoucherDialog({ fin, type, moneyId, onClose, onSaved }: { fin: Fin; typ
   );
 }
 
-function Vouchers({ fin, onOpen }: { fin: Fin; onOpen: (e: FinEntry) => void }) {
+function Vouchers({ fin, first = "", onOpen }: { fin: Fin; first?: string; onOpen: (e: FinEntry) => void }) {
   const [period, setPeriod] = useState<Period>(periodOf("month", fin.settings.yearStartMonth));
-  const [kind, setKind] = useState("");
+  const [kind, setKind] = useState(first);
   const [q, setQ] = useState("");
   const rows = useMemo(() => fin.entries.filter((e) => (VOUCHER_KINDS as string[]).includes(e.kind) && (!kind || e.kind === kind) && (!period.from || e.date >= period.from) && (!period.to || e.date <= period.to)
     && (!q.trim() || e.memo.includes(q.trim()) || String(e.meta?.party ?? "").includes(q.trim()) || String(e.meta?.voucherNo ?? "") === q.trim() || String(e.meta?.ref ?? "").includes(q.trim())))

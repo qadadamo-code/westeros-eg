@@ -1,6 +1,5 @@
 /** الحسابات: the chart of accounts and, around it, the journal, the reports and the settings. */
 import { Link, Navigate, NavLink, Route, Routes, useLocation } from "react-router-dom";
-import { Armchair, Banknote, BookOpen, FileBarChart, Flag, Gauge, HandCoins, ListTree, Lock, Percent, PiggyBank, ReceiptText, Settings as Cog, SlidersHorizontal, Target, Truck } from "lucide-react";
 import { PageHeader } from "@/shell/PageHeader";
 import { cn } from "@/lib/cn";
 import Assets from "./Assets";
@@ -14,18 +13,19 @@ import Opening from "./Opening";
 import Payroll from "./Payroll";
 import Purchases from "./Purchases";
 import { useFinPerms } from "./perms";
-import { AreaGate, useMay } from "../useAccess";
+import { AreaGate } from "../useAccess";
+import { useFinSections, type FinPage as Page, type FinSection as Group } from "./sections";
+import { BuyingSummary, GeneralSummary, SellingSummary, StaffSummary } from "./Summaries";
 import Reports, { ReportRedirect } from "./Reports";
 import Sales from "./Sales";
 import Settings from "./Settings";
 import Tax from "./Tax";
 import Treasury from "./Treasury";
+import Customers from "./Customers";
+import StaffMoves from "./StaffMoves";
 import { useAutoRates } from "./useRates";
 import { useFinance } from "./useFinance";
 import { useDb } from "@/data/hooks";
-
-interface Page { to: string; label: string; icon: JSX.Element; end?: boolean; area: string }
-interface Group { id: string; label: string; short?: string; icon: JSX.Element; pages: Page[] }
 
 /**
  * التنقل داخل الحسابات: five sections that always fit on one row, and under them the pages of the open section.
@@ -64,37 +64,11 @@ function FinNav({ groups, current }: { groups: Group[]; current: Group }) {
 export default function FinancePage() {
   const perms = useFinPerms();
   const reports = perms.has("reports");
-  const budget = perms.has("budget") || perms.has("profit");
   const { pathname } = useLocation();
-  const may = useMay();
   const fin = useFinance();
   useAutoRates(useDb(), fin.settings, !fin.loading);
-  const all: Group[] = [
-    { id: "home", label: "المؤشرات", icon: <Gauge />, pages: [{ to: "/finance", end: true, label: "المؤشرات", icon: <Gauge />, area: "finance.dashboard" }] },
-    { id: "books", label: "الدفاتر", icon: <BookOpen />, pages: [
-      { to: "/finance/chart", label: "شجرة الحسابات", icon: <ListTree />, area: "finance.chart" },
-      { to: "/finance/journal", label: "القيود اليومية", icon: <BookOpen />, area: "finance.journal" },
-      { to: "/finance/opening", label: "الأرصدة الافتتاحية", icon: <Flag />, area: "finance.opening" },
-      { to: "/finance/centres", label: "مراكز التكلفة", icon: <Target />, area: "finance.centres" },
-    ] },
-    { id: "ops", label: "العمليات", icon: <Banknote />, pages: [
-      { to: "/finance/treasury", label: "الخزينة والبنوك", icon: <Banknote />, area: "finance.treasury" },
-      { to: "/finance/sales", label: "المبيعات", icon: <ReceiptText />, area: "finance.sales" },
-      { to: "/finance/purchases", label: "المشتريات والموردون", icon: <Truck />, area: "finance.purchases" },
-      { to: "/finance/payroll", label: "الرواتب", icon: <HandCoins />, area: "finance.payroll" },
-      { to: "/finance/assets", label: "الأصول الثابتة", icon: <Armchair />, area: "finance.assets" },
-    ] },
-    ...(reports || budget ? [{ id: "reports", label: "التقارير", icon: <FileBarChart />, pages: [
-      ...(reports ? [{ to: "/finance/reports", label: "التقارير المالية", icon: <FileBarChart />, area: "finance.reports" }, { to: "/finance/tax", label: "الضرائب", icon: <Percent />, area: "finance.tax" }] : []),
-      ...(budget ? [{ to: "/finance/budget", label: "الموازنة", icon: <PiggyBank />, area: "finance.budget" }] : []),
-    ] }] : []),
-    { id: "setup", label: "الإقفال والإعدادات", short: "الإعدادات", icon: <Cog />, pages: [
-      { to: "/finance/close", label: "الإقفال", icon: <Lock />, area: "finance.close" },
-      { to: "/finance/settings", label: "الإعدادات وربط الحسابات", icon: <SlidersHorizontal />, area: "finance.settings" },
-    ] },
-  ];
   // the pages this employee may see (المستخدمين ← الأدوار), and the sections left with a page
-  const groups = all.map((g) => ({ ...g, pages: g.pages.filter((p) => may(p.area, "view")) })).filter((g) => g.pages.length);
+  const groups = useFinSections();
   const first = groups[0]?.pages[0]?.to ?? null;
   const gate = (area: string, el: JSX.Element) => <AreaGate id={area} fallback={first}>{el}</AreaGate>;
   const at = (p: Page) => (p.end ? pathname.replace(/\/$/, "") === p.to : pathname === p.to || pathname.startsWith(`${p.to}/`));
@@ -103,15 +77,23 @@ export default function FinancePage() {
   const page = current.pages.find(at) ?? current.pages[0];
   return (
     <div className="grid gap-5">
-      <PageHeader icon={page.icon} kicker={page.label === "المؤشرات" ? undefined : "الحسابات"} title={page.label === "المؤشرات" ? "الحسابات" : page.label} />
+      <PageHeader icon={page.label === "ملخص" ? current.icon : page.icon} kicker={current.id === "home" ? undefined : `الحسابات · ${current.label}`} title={current.id === "home" ? "الحسابات" : page.label === "ملخص" ? `ملخص ${current.label}` : page.label} />
       <FinNav groups={groups} current={current} />
       <Routes>
         <Route index element={gate("finance.dashboard", <Dashboard />)} />
         <Route path="chart" element={gate("finance.chart", <Chart />)} />
         <Route path="journal" element={gate("finance.journal", <Journal />)} />
-        <Route path="treasury" element={gate("finance.treasury", <Treasury />)} />
+        <Route path="general" element={gate("finance.chart", <GeneralSummary />)} />
+        <Route path="buying" element={gate("finance.purchases", <BuyingSummary />)} />
+        <Route path="selling" element={gate("finance.sales", <SellingSummary />)} />
+        <Route path="staff" element={gate("finance.payroll", <StaffSummary />)} />
+        <Route path="treasury" element={gate("finance.treasury", <Treasury key="t" />)} />
+        <Route path="vouchers" element={gate("finance.treasury", <Treasury key="v" start="vouchers" />)} />
+        <Route path="expenses" element={gate("finance.treasury", <Treasury key="e" start="vouchers" kind="expense" />)} />
         <Route path="sales" element={gate("finance.sales", <Sales />)} />
         <Route path="purchases" element={gate("finance.purchases", <Purchases />)} />
+        <Route path="customers" element={gate("finance.sales", <Customers />)} />
+        <Route path="staff-moves" element={gate("finance.payroll", <StaffMoves />)} />
         <Route path="payroll" element={gate("finance.payroll", <Payroll />)} />
         {reports ? <Route path="tax" element={gate("finance.tax", <Tax />)} /> : null}
         <Route path="assets" element={gate("finance.assets", <Assets />)} />

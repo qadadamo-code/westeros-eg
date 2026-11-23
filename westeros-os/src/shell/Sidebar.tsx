@@ -1,6 +1,8 @@
-import { NavLink } from "react-router-dom";
+import { useState } from "react";
+import { NavLink, useLocation } from "react-router-dom";
 import { motion } from "motion/react";
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { ChevronDown, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import type { ModuleDef } from "@/modules/types";
 import { useT, type TKey } from "@/i18n/i18n";
 import { cn } from "@/lib/cn";
 import { IconButton, spring, useReduced } from "@/ui";
@@ -41,7 +43,7 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
               {g.items.map((m) => {
                 const Icon = m.icon;
                 return (
-                  <li key={m.id}>
+                  <li key={m.id} className="relative">
                     <NavLink
                       to={m.nav!.path}
                       title={collapsed ? loc(m.title) : undefined}
@@ -66,6 +68,7 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
                         </>
                       )}
                     </NavLink>
+                    {m.nav!.useSub && !collapsed ? <SubNav m={m} /> : null}
                   </li>
                 );
               })}
@@ -78,5 +81,40 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
         <UserMenu side="top" align="start" full={!collapsed} />
       </div>
     </motion.aside>
+  );
+}
+
+/** القائمة الفرعية المنسدلة تحت عنصر (الحسابات ← أقسامها): open while you are inside it, and the arrow opens or folds it. */
+function SubNav({ m }: { m: ModuleDef }) {
+  const items = m.nav!.useSub!();
+  const { pathname } = useLocation();
+  const here = pathname === m.nav!.path || pathname.startsWith(`${m.nav!.path}/`);
+  const [open, setOpen] = useState<boolean | null>(null);
+  const shown = open ?? here;
+  const lit = (p: { to: string; end: boolean }) => (p.end ? pathname.replace(/\/$/, "") === p.to : pathname === p.to || pathname.startsWith(`${p.to}/`));
+  if (!items.length) return null;
+  return (
+    <>
+      <button type="button" aria-label={shown ? "طي القائمة الفرعية" : "فتح القائمة الفرعية"} aria-expanded={shown} onClick={() => setOpen(!shown)}
+        className="absolute end-1.5 top-1.5 grid size-8 place-items-center rounded-lg text-muted transition-colors hover:bg-surface-3/70 hover:text-ink">
+        <ChevronDown className={cn("size-4 transition-transform", shown && "rotate-180")} aria-hidden />
+      </button>
+      {shown ? (
+        <ul className="mt-0.5 grid gap-0.5 border-s border-line ps-2 ms-5">
+          {items.map((it) => {
+            const on = it.paths.some(lit);
+            const Icon = it.Icon;
+            return (
+              <li key={it.to}>
+                <NavLink to={it.to} end className={cn("flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-[13.5px] font-semibold transition-colors", on ? "bg-brass-soft text-ink" : "text-ink-2 hover:bg-surface-3/70 hover:text-ink")} aria-current={on ? "page" : undefined}>
+                  <Icon className={cn("size-4 shrink-0", on && "text-brass-text")} aria-hidden />
+                  <span className="min-w-0 flex-1 truncate">{it.label}</span>
+                </NavLink>
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+    </>
   );
 }

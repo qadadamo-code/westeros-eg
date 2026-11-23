@@ -2,6 +2,7 @@ import { lazy } from "react";
 import { Landmark } from "lucide-react";
 import { defineModule } from "../../types";
 import { FINANCE_ON } from "./flag";
+import { useFinanceSub } from "./sections";
 
 /** الحسابات: chart of accounts, journal, treasury, reports and closing, fed automatically by the other sections. */
 export default defineModule({
@@ -12,7 +13,7 @@ export default defineModule({
   title: { ar: "الحسابات", en: "Accounts" },
   description: { ar: "شجرة الحسابات، القيود، الخزينة والبنوك، التقارير المالية والإقفال", en: "Chart of accounts, journal, treasury, financial reports and closing" },
   permission: "accounting.view",
-  nav: { path: "/finance", group: "service", order: 6 },
+  nav: { path: "/finance", group: "service", order: 6, useSub: useFinanceSub },
   routes: [{ path: "/finance/*", element: lazy(() => import("./FinancePage")) }],
   keywords: ["شجرة الحسابات", "قيد", "قيود", "ميزان", "خزينة", "بنك", "حسابات", "accounts", "journal", "ledger"],
 });

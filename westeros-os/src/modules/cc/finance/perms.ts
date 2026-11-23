@@ -12,6 +12,7 @@ export const FIN_PERMS = [
   { id: "journal.enter", label: "إدخال قيد يدوي" },
   { id: "journal.approve", label: "اعتماد وعكس قيد" },
   { id: "vouchers", label: "سندات القبض والصرف والمصروفات" },
+  { id: "customers", label: "الزبائن: إضافة وتعديل وحذف واستيراد" },
   { id: "reports", label: "التقارير المالية" },
   { id: "profit", label: "عرض الأرباح وحقوق الملكية" },
   { id: "budget", label: "الموازنة التقديرية" },
