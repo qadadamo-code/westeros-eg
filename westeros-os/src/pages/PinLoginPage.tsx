@@ -145,7 +145,20 @@ export function PinLoginPage() {
                     ))}
                   </div>
                 ) : !list.length ? (
-                  <EmptyState title={t("pin.noStaff")} />
+                  s.user ? (
+                    <EmptyState title={t("pin.noStaff")} />
+                  ) : (
+                    <EmptyState
+                      icon={<Mail />}
+                      title={t("pin.deviceOut")}
+                      body={t("pin.deviceOutHint")}
+                      action={
+                        <Link to="/login" className="font-semibold text-primary underline-offset-4 hover:underline">
+                          {t("pin.emailInstead")}
+                        </Link>
+                      }
+                    />
+                  )
                 ) : (
                   <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                     {list.map((m, i) => (

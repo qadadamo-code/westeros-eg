@@ -36,6 +36,7 @@ export const dict = {
   "shell.themeSystem": { ar: "زي الجهاز", en: "System" },
   "shell.lock": { ar: "اقفل الشاشة", en: "Lock screen" },
   "shell.signOut": { ar: "اخرج", en: "Sign out" },
+  "shell.signOutDevice": { ar: "اخرج من الجهاز خالص", en: "Sign this device out" },
   "shell.switchUser": { ar: "غيّر المستخدم", en: "Switch user" },
   "shell.resetDemo": { ar: "رجّع البيانات التجريبية", en: "Reset demo data" },
   "shell.restaurant": { ar: "المطعم", en: "Restaurant" },
@@ -98,6 +99,8 @@ export const dict = {
   "pin.demoHint": { ar: "PIN التجربة: {pin}", en: "Demo PIN: {pin}" },
   "pin.needsDevice": { ar: "الجهاز ده محتاج مدير يسجّل دخول مرة واحدة الأول", en: "A manager needs to sign this device in once first" },
   "pin.noStaff": { ar: "مفيش حد ليه PIN لسه", en: "Nobody has a PIN yet" },
+  "pin.deviceOut": { ar: "الجهاز خرج من الحساب، فالأسماء مش ظاهرة", en: "This device is signed out, so names are hidden" },
+  "pin.deviceOutHint": { ar: "ادخل بإيميل المالك مرة واحدة، وبعدها أسماء كل اللي ليهم PIN هتظهر هنا", en: "Sign in once with the owner's email, then everyone with a PIN shows here" },
   "pin.digit": { ar: "رقم {n}", en: "Digit {n}" },
 
   "approval.title": { ar: "محتاجين موافقة المدير", en: "Manager approval needed" },

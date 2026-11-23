@@ -95,8 +95,13 @@ export function UserMenu({ side = "bottom", align = "end", full }: { side?: "top
               </MenuItem>
             ) : null}
             {s.user ? (
-              <MenuItem icon={<LogOut />} danger onClick={() => (close(), void s.signOut())}>
-                {t("shell.signOut")}
+              <MenuItem
+                icon={<LogOut />}
+                danger
+                // a PIN user only ends their own turn: the device stays signed in so the names screen keeps working
+                onClick={() => (close(), s.method === "pin" && s.deviceRestaurantId ? s.lock() : void s.signOut())}
+              >
+                {s.method === "pin" && s.deviceRestaurantId ? t("shell.signOut") : t("shell.signOutDevice")}
               </MenuItem>
             ) : null}
           </div>
