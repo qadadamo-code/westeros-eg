@@ -22,13 +22,12 @@ export function channelOf(mode: OrderMode, source: OrderSource): SalesChannel {
   return mode;
 }
 
-/** Channel price wins, then branch price, then the base price. */
-export function priceFor(item: Pick<MenuItem, "price" | "channelPrices" | "branchPrices">, channel: SalesChannel | null, branchId?: string | null): Units {
+/** Channel price wins, then branch price, then the base price; the item's discount (المنيو) comes off it. */
+export function priceFor(item: Pick<MenuItem, "price" | "channelPrices" | "branchPrices" | "discount">, channel: SalesChannel | null, branchId?: string | null): Units {
   const c = channel ? item.channelPrices?.[channel] : undefined;
-  if (c != null && c > 0) return c;
   const b = branchId ? item.branchPrices?.[branchId] : undefined;
-  if (b != null && b > 0) return b;
-  return item.price;
+  const base = c != null && c > 0 ? c : b != null && b > 0 ? b : item.price;
+  return Math.max(0, base - (item.discount ?? 0));
 }
 
 const mins = (hhmm: string) => {

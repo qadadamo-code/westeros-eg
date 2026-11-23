@@ -1,0 +1,7537 @@
+{
+ "readAt": "2026-11-23",
+ "categories": [
+  {
+   "ref": "9096",
+   "name": {
+    "en": "Grilled Beef Burger",
+    "ar": "برجر اللحم المشوي"
+   },
+   "image": "https://api.bonbell.net/1137/cat/1760269515_%D9%83%D9%84%D8%A7%D8%B3%D9%8A%D9%83-%D8%A8%D9%8A%D9%81.jpg",
+   "visible": true,
+   "items": [
+    {
+     "ref": "82653",
+     "name": {
+      "en": "Classic Beef Burger",
+      "ar": "كلاسيك بيف برجر"
+     },
+     "price": 195.0,
+     "discountPct": 0.0,
+     "prep": 15,
+     "calories": null,
+     "description": "Pure beef patty inside a toasted brioche bun, with an American cheddar cheese, lettuce, onion, tomato, pickles & Westeros sauce.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769710985_%D9%83%D9%84%D8%A7%D8%B3%D9%8A%D9%83-%D8%A8%D9%8A%D9%81.jpg",
+     "groups": [
+      {
+       "name": "Size",
+       "nameAr": "الوزن",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Double Beef (300gm)",
+         "price": 85.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Triple Beef (450gm)",
+         "price": 170.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "كومبو",
+       "nameAr": "كومبو",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Combo (Fries + Big Cola)",
+         "price": 65.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fries + Coleslaw)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fries + V Cola)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "Extras",
+       "nameAr": "اضافات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 3,
+       "options": [
+        {
+         "name": "Add 2 Mozzarella Sticks",
+         "price": 40.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add 2 Onion Rings",
+         "price": 30.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Cheddar Sauce",
+         "price": 20.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add American Cheese Slice",
+         "price": 20.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Salami Slice",
+         "price": 15.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Jalapeno",
+         "price": 15.0,
+         "minQty": 1,
+         "maxQty": 2
+        }
+       ]
+      },
+      {
+       "name": "Notes",
+       "nameAr": "ملاحظات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 5,
+       "options": [
+        {
+         "name": "Spicy",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Cheese",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Onion",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Tomato",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Lettuce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Mayo/Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Pickles",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "90099",
+     "name": {
+      "en": "Smoky Beef Burger 🌶️",
+      "ar": "سموكي بيف برجر 🌶️"
+     },
+     "price": 205.0,
+     "discountPct": 0.0,
+     "prep": 15,
+     "calories": null,
+     "description": "Pure beef patty inside a toasted brioche bun, on top spicy Smokey mix of caramelized onion & creamy BBQ sauce, with an American cheddar cheese, lettuce & mayonnaise.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769711014_%D8%B3%D9%85%D9%88%D9%83%D9%8A%20%D8%A8%D9%8A%D9%81.jpg",
+     "groups": [
+      {
+       "name": "Size (Optional)",
+       "nameAr": "الوزن (اختياري)",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Double Beef (300gm)",
+         "price": 85.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Triple Beef (450gm)",
+         "price": 170.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "كومبو",
+       "nameAr": "كومبو",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Combo (Fries + Big Cola)",
+         "price": 65.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fries + Coleslaw)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fries + V Cola)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "Extras",
+       "nameAr": "اضافات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 3,
+       "options": [
+        {
+         "name": "Add 2 Mozzarella Sticks",
+         "price": 40.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add 2 Onion Rings",
+         "price": 30.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Cheddar Sauce",
+         "price": 20.0,
+         "minQty": 1,
+         "maxQty": 1
+        },
+        {
+         "name": "Add American Cheese Slice",
+         "price": 20.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Salami Slice",
+         "price": 15.0,
+         "minQty": 1,
+         "maxQty": 1
+        },
+        {
+         "name": "Add Jalapeno",
+         "price": 15.0,
+         "minQty": 1,
+         "maxQty": 2
+        }
+       ]
+      },
+      {
+       "name": "Notes",
+       "nameAr": "ملاحظات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 5,
+       "options": [
+        {
+         "name": "Spicy",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Lettuce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Mayo/Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Cheese",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "90103",
+     "name": {
+      "en": "Brownie Beef Burger",
+      "ar": "براوني بيف برجر"
+     },
+     "price": 195.0,
+     "discountPct": 0.0,
+     "prep": 15,
+     "calories": null,
+     "description": "Pure beef patty inside a toasted brioche bun, on top Brownie mix of mushroom, caramelized onion & demi-glace sauce, with an American cheddar cheese, lettuce & mayonnaise.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769711022_%D8%A8%D8%B1%D8%A7%D9%88%D9%86%D9%8A%20%D8%A8%D9%8A%D9%81.jpg",
+     "groups": [
+      {
+       "name": "Size",
+       "nameAr": "الوزن",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Double Beef (300gm)",
+         "price": 85.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Triple Beef (450gm)",
+         "price": 170.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "كومبو",
+       "nameAr": "كومبو",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Combo (Fries + Big Cola)",
+         "price": 65.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fries + Coleslaw)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fries + V Cola)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "Extras",
+       "nameAr": "اضافات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 3,
+       "options": [
+        {
+         "name": "Add 2 Mozzarella Sticks",
+         "price": 40.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add 2 Onion Rings",
+         "price": 30.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Cheddar Sauce",
+         "price": 20.0,
+         "minQty": 1,
+         "maxQty": 1
+        },
+        {
+         "name": "Add American Cheese Slice",
+         "price": 20.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Salami Slice",
+         "price": 15.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Jalapeno",
+         "price": 15.0,
+         "minQty": 1,
+         "maxQty": 2
+        }
+       ]
+      },
+      {
+       "name": "Notes",
+       "nameAr": "ملاحظات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 5,
+       "options": [
+        {
+         "name": "Spicy",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Cheese",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Lettuce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Mayo/Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "90100",
+     "name": {
+      "en": "White Mushroom Beef Burger",
+      "ar": "وايت مشروم بيف برجر"
+     },
+     "price": 215.0,
+     "discountPct": 0.0,
+     "prep": 15,
+     "calories": null,
+     "description": "Pure beef patty inside a toasted brioche bun, on top White Mushroom mix of mushroom & creamy sauce, with an American cheddar cheese, lettuce & mayonnaise.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769711034_%D9%88%D8%A7%D9%8A%D8%AA%20%D9%85%D8%B4%D8%B1%D9%88%D9%85%20%D8%A8%D9%8A%D9%81.jpg",
+     "groups": [
+      {
+       "name": "Size",
+       "nameAr": "الوزن",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Double Beef (300gm)",
+         "price": 85.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Triple Beef (450gm)",
+         "price": 170.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "كومبو",
+       "nameAr": "كومبو",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Combo (Fries + Big Cola)",
+         "price": 65.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fries + Coleslaw)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fries + V Cola)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "Extras",
+       "nameAr": "اضافات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 3,
+       "options": [
+        {
+         "name": "Add 2 Mozzarella Sticks",
+         "price": 40.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add 2 Onion Rings",
+         "price": 30.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Cheddar Sauce",
+         "price": 20.0,
+         "minQty": 1,
+         "maxQty": 1
+        },
+        {
+         "name": "Add American Cheese Slice",
+         "price": 20.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Salami Slice",
+         "price": 15.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Jalapeno",
+         "price": 15.0,
+         "minQty": 1,
+         "maxQty": 2
+        }
+       ]
+      },
+      {
+       "name": "Notes",
+       "nameAr": "ملاحظات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 5,
+       "options": [
+        {
+         "name": "Spicy",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Cheese",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Lettuce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Mayo/Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "90101",
+     "name": {
+      "en": "Stark Beef Burger",
+      "ar": "ستارك بيف برجر"
+     },
+     "price": 205.0,
+     "discountPct": 0.0,
+     "prep": 15,
+     "calories": null,
+     "description": "Pure beef patty inside a toasted brioche bun, with an American cheddar cheese, onion rings, salami, lettuce, tomato & Stark sauce.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769711044_%D8%B3%D8%AA%D8%A7%D8%B1%D9%83%20%D8%A8%D9%8A%D9%81.jpg",
+     "groups": [
+      {
+       "name": "Size",
+       "nameAr": "الوزن",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Double Beef (300gm)",
+         "price": 85.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Triple Beef (450gm)",
+         "price": 170.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "كومبو",
+       "nameAr": "كومبو",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Combo (Fries + Big Cola)",
+         "price": 65.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fries + Coleslaw)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fries + V Cola)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "Extras",
+       "nameAr": "اضافات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 3,
+       "options": [
+        {
+         "name": "Add 2 Mozzarella Sticks",
+         "price": 40.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add 2 Onion Rings",
+         "price": 30.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Cheddar Sauce",
+         "price": 20.0,
+         "minQty": 1,
+         "maxQty": 1
+        },
+        {
+         "name": "Add American Cheese Slice",
+         "price": 20.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Salami Slice",
+         "price": 15.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Jalapeno",
+         "price": 15.0,
+         "minQty": 1,
+         "maxQty": 2
+        }
+       ]
+      },
+      {
+       "name": "Notes",
+       "nameAr": "ملاحظات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 5,
+       "options": [
+        {
+         "name": "Spicy",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Cheese",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Tomato",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Onion",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Lettuce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Mayo/Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "90102",
+     "name": {
+      "en": "Mondial Beef Burger",
+      "ar": "مونديال بيف برجر"
+     },
+     "price": 225.0,
+     "discountPct": 0.0,
+     "prep": 15,
+     "calories": null,
+     "description": "Pure beef patty inside a toasted brioche bun, with mozzarella sticks, cheddar cheese sauce, BBQ sauce & Westeros sauce, with jalapeno & lettuce.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769711054_%D9%85%D9%88%D9%86%D8%AF%D9%8A%D8%A7%D9%84%20%D8%A8%D9%8A%D9%81.jpg",
+     "groups": [
+      {
+       "name": "Size",
+       "nameAr": "الوزن",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Double Beef (300gm)",
+         "price": 85.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Triple Beef (450gm)",
+         "price": 170.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "كومبو",
+       "nameAr": "كومبو",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Combo (Fries + Big Cola)",
+         "price": 65.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fries + Coleslaw)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fries + V Cola)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "Extras",
+       "nameAr": "اضافات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 3,
+       "options": [
+        {
+         "name": "Add 2 Mozzarella Sticks",
+         "price": 40.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add 2 Onion Rings",
+         "price": 30.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Cheddar Sauce",
+         "price": 20.0,
+         "minQty": 1,
+         "maxQty": 1
+        },
+        {
+         "name": "Add American Cheese Slice",
+         "price": 20.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Salami Slice",
+         "price": 15.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Jalapeno",
+         "price": 15.0,
+         "minQty": 1,
+         "maxQty": 2
+        }
+       ]
+      },
+      {
+       "name": "Notes",
+       "nameAr": "ملاحظات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 5,
+       "options": [
+        {
+         "name": "Spicy",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Cheese",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Lettuce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Mayo/Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "ref": "9414",
+   "name": {
+    "en": "Grilled Chicken Burger",
+    "ar": "برجر الدجاج المشوي"
+   },
+   "image": "https://api.bonbell.net/1137/cat/1760269549_%D9%88%D8%A7%D9%8A%D8%AA-%D9%85%D8%B4%D8%B1%D9%88%D9%85-%D8%AA%D8%B4%D9%83%D9%86.jpg",
+   "visible": true,
+   "items": [
+    {
+     "ref": "90105",
+     "name": {
+      "en": "Classic Chicken Burger",
+      "ar": "كلاسيك تشكن برجر"
+     },
+     "price": 175.0,
+     "discountPct": 0.0,
+     "prep": 15,
+     "calories": null,
+     "description": "Grilled minced chicken breast inside a toasted brioche bun, with an American cheddar cheese, lettuce, onion, tomato, pickles & Westeros sauce.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769711086_%D9%83%D9%84%D8%A7%D8%B3%D9%8A%D9%83%20%D8%AA%D8%B4%D9%83%D9%86.jpg",
+     "groups": [
+      {
+       "name": "Size",
+       "nameAr": "الوزن",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Double Chicken (300gm)",
+         "price": 75.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Triple Chicken (450gm)",
+         "price": 150.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "كومبو",
+       "nameAr": "كومبو",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Combo (Fries + Big Cola)",
+         "price": 65.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fries + Coleslaw)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fries + V Cola)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "Extras",
+       "nameAr": "الاضافات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 3,
+       "options": [
+        {
+         "name": "Add 2 Mozzarella Sticks",
+         "price": 40.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add 2 Onion Rings",
+         "price": 30.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Cheddar Sauce",
+         "price": 20.0,
+         "minQty": 1,
+         "maxQty": 1
+        },
+        {
+         "name": "Add American Cheese Slice",
+         "price": 20.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Salami Slice",
+         "price": 15.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Jalapeno",
+         "price": 15.0,
+         "minQty": 1,
+         "maxQty": 2
+        }
+       ]
+      },
+      {
+       "name": "Nots",
+       "nameAr": "ملاحظات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 5,
+       "options": [
+        {
+         "name": "Without Cheese",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Onion",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Tomato",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Lettuce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Mayo/Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "90108",
+     "name": {
+      "en": "Smoky Chicken Burger 🌶️",
+      "ar": "سموكي تشكن برجر 🌶️"
+     },
+     "price": 185.0,
+     "discountPct": 0.0,
+     "prep": 15,
+     "calories": null,
+     "description": "Grilled minced chicken breast inside a toasted brioche bun, on top spicy Smokey mix of caramelized onion & creamy BBQ sauce, with an American cheddar cheese, lettuce & mayonnaise.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769711093_%D8%B3%D9%85%D9%88%D9%83%D9%8A%20%D8%AA%D8%B4%D9%83%D9%86.jpg",
+     "groups": [
+      {
+       "name": "Size",
+       "nameAr": "الوزن",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Double Chicken (300gm)",
+         "price": 75.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Triple Chicken (450gm)",
+         "price": 150.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "كومبو",
+       "nameAr": "كومبو",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Combo (Fries + Big Cola)",
+         "price": 65.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fries + Coleslaw)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fries + V Cola)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "Extras",
+       "nameAr": "اضافات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 3,
+       "options": [
+        {
+         "name": "Add 2 Mozzarella Sticks",
+         "price": 40.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add 2 Onion Rings",
+         "price": 30.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Cheddar Sauce",
+         "price": 20.0,
+         "minQty": 1,
+         "maxQty": 1
+        },
+        {
+         "name": "Add American Cheese Slice",
+         "price": 20.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Salami Slice",
+         "price": 15.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Jalapeno",
+         "price": 15.0,
+         "minQty": 1,
+         "maxQty": 2
+        }
+       ]
+      },
+      {
+       "name": "Notes",
+       "nameAr": "ملاحظات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 5,
+       "options": [
+        {
+         "name": "Spicy",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Cheese",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Lettuce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Mayo/Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "90109",
+     "name": {
+      "en": "White Mushroom Chicken Burger",
+      "ar": "وايت مشروم تشكن برجر"
+     },
+     "price": 195.0,
+     "discountPct": 0.0,
+     "prep": 15,
+     "calories": null,
+     "description": "Grilled minced chicken breast inside a toasted brioche bun, on top White Mushroom mix of mushroom & creamy sauce, with an American cheddar cheese, lettuce & mayonnaise.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769711104_%D9%88%D8%A7%D9%8A%D8%AA-%D9%85%D8%B4%D8%B1%D9%88%D9%85-%D8%AA%D8%B4%D9%83%D9%86.jpg",
+     "groups": [
+      {
+       "name": "Size",
+       "nameAr": "الوزن",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Double Chicken (300gm)",
+         "price": 75.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Triple Chicken (450gm)",
+         "price": 150.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "كومبو",
+       "nameAr": "كومبو",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Combo (Fries + Big Cola)",
+         "price": 65.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fries + Coleslaw)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fries + V Cola)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "Extras",
+       "nameAr": "اضافات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 3,
+       "options": [
+        {
+         "name": "Add 2 Mozzarella Sticks",
+         "price": 40.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Add 2 Onion Rings",
+         "price": 30.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Cheddar Sauce",
+         "price": 20.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Add American Cheese Slice",
+         "price": 20.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Salami Slice",
+         "price": 15.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Jalapeno",
+         "price": 15.0,
+         "minQty": 0,
+         "maxQty": 2
+        }
+       ]
+      },
+      {
+       "name": "Notes",
+       "nameAr": "ملاحظات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 5,
+       "options": [
+        {
+         "name": "Spicy",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Cheese",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Lettuce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Mayo/Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "90114",
+     "name": {
+      "en": "Stark Chicken Burger",
+      "ar": "ستارك تشكن برجر"
+     },
+     "price": 185.0,
+     "discountPct": 0.0,
+     "prep": 15,
+     "calories": null,
+     "description": "Grilled minced chicken breast inside a toasted brioche bun, with an American cheddar cheese, onion rings, salami, lettuce, tomato & Stark sauce.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769711111_%D8%B3%D8%AA%D8%A7%D8%B1%D9%83%20%D8%AA%D8%B4%D9%83%D9%86.jpg",
+     "groups": [
+      {
+       "name": "Size",
+       "nameAr": "الوزن",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Double Chicken (300gm)",
+         "price": 75.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Triple Chicken (450gm)",
+         "price": 150.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "كومبو",
+       "nameAr": "كومبو",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Combo (Fries + Coleslaw)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fries + Coleslaw)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fries + V Cola)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "Extras",
+       "nameAr": "اضافات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 3,
+       "options": [
+        {
+         "name": "Add 2 Mozzarella Sticks",
+         "price": 40.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Add 2 Onion Rings",
+         "price": 30.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Cheddar Sauce",
+         "price": 20.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Add American Cheese Slice",
+         "price": 20.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Salami Slice",
+         "price": 15.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Jalapeno",
+         "price": 15.0,
+         "minQty": 0,
+         "maxQty": 2
+        }
+       ]
+      },
+      {
+       "name": "Notes",
+       "nameAr": "ملاحظات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 5,
+       "options": [
+        {
+         "name": "Spicy",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Cheese",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Tomato",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Onion",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Lettuce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Mayo/Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "90115",
+     "name": {
+      "en": "Mondial Chicken Burger",
+      "ar": "مونديال تشكن برجر"
+     },
+     "price": 205.0,
+     "discountPct": 0.0,
+     "prep": 15,
+     "calories": null,
+     "description": "Grilled minced chicken breast inside a toasted brioche bun, with mozzarella sticks, cheddar cheese sauce, BBQ sauce & Westeros sauce, with jalapeno & lettuce.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769711151_%D9%85%D9%88%D9%86%D8%AF%D9%8A%D8%A7%D9%84%20%D8%AA%D8%B4%D9%83%D9%86.jpg",
+     "groups": [
+      {
+       "name": "Size",
+       "nameAr": "الوزن",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Double Chicken (300gm)",
+         "price": 75.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Triple Chicken (450gm)",
+         "price": 150.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "كومبو",
+       "nameAr": "كومبو",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Combo (Fries + Big Cola)",
+         "price": 65.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fries + Coleslaw)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fries + V Cola)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "Extras",
+       "nameAr": "اضافات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 3,
+       "options": [
+        {
+         "name": "Add 2 Mozzarella Sticks",
+         "price": 40.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Add 2 Onion Rings",
+         "price": 30.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Cheddar Sauce",
+         "price": 20.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Add American Cheese Slice",
+         "price": 20.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Salami Slice",
+         "price": 15.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Jalapeno",
+         "price": 15.0,
+         "minQty": 0,
+         "maxQty": 2
+        }
+       ]
+      },
+      {
+       "name": "Notes",
+       "nameAr": "ملاحظات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 5,
+       "options": [
+        {
+         "name": "Spicy",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Cheese",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Lettuce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Mayo/Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "153486",
+     "name": {
+      "en": "Chicken Steak Burger",
+      "ar": "تشكن ستيك برجر"
+     },
+     "price": 175.0,
+     "discountPct": 0.0,
+     "prep": 15,
+     "calories": null,
+     "description": "Grilled chicken breast inside a toasted brioche bun, with lettuce, onion, pickles & Westeros sauce.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769711165_%D8%AA%D8%B4%D9%8A%D9%83%D9%86%20%D8%B3%D8%AA%D9%8A%D9%83%20%D8%A8%D8%B1%D8%AC%D8%B1%2003.jpg",
+     "groups": [
+      {
+       "name": "Combo",
+       "nameAr": "كومبو",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Combo (Fries + Big Cola)",
+         "price": 65.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fries + V Cola)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fries + Coleslaw)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "Extras",
+       "nameAr": "اضافات",
+       "required": false,
+       "multi": true,
+       "min": 0,
+       "max": 5,
+       "options": [
+        {
+         "name": "Extra Grilled Chicken",
+         "price": 65.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Add 2 Mozzarella Sticks",
+         "price": 40.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Add 2 Onion Rings",
+         "price": 30.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Add Cheddar Sauce",
+         "price": 20.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Add American Cheese Slice",
+         "price": 20.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Salami Slice",
+         "price": 15.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Add Jalapeno",
+         "price": 15.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "Notes",
+       "nameAr": "ملاحظات",
+       "required": false,
+       "multi": true,
+       "min": 0,
+       "max": 10,
+       "options": [
+        {
+         "name": "Spicy",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Onion",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Lettuce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Pickles",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Mayo/Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "ref": "16050",
+   "name": {
+    "en": "Cordon Bleu Burger",
+    "ar": "برجر كوردن بلو"
+   },
+   "image": "https://api.bonbell.net/1137/cat/1788701416_Mushroom-Melt.jpg",
+   "visible": true,
+   "items": [
+    {
+     "ref": "160561",
+     "name": {
+      "en": "BleuBurg",
+      "ar": "بلوبيرج"
+     },
+     "price": 260.0,
+     "discountPct": 17.307692307692307,
+     "prep": 20,
+     "calories": null,
+     "description": "Chicken Cordon Bleu piece (190g) filled with mozzarella cheese & salami, lettuce, pickles & Westeros sauce",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": true,
+     "image": "https://api.bonbell.net/1137/1789576082_Bleuburg.jpg",
+     "groups": [
+      {
+       "name": "Combo",
+       "nameAr": "كومبو",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Combo (Fries + Big Cola)",
+         "price": 65.0,
+         "minQty": 1,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fries + V Cola)",
+         "price": 80.0,
+         "minQty": 1,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fries + Coleslaw)",
+         "price": 80.0,
+         "minQty": 1,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "الاضافات",
+       "nameAr": "الاضافات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 5,
+       "options": [
+        {
+         "name": "Add 2 Mozzarella Sticks",
+         "price": 40.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add 2 Onion Rings",
+         "price": 30.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Cheddar Sauce",
+         "price": 20.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add American Cheese Slice",
+         "price": 20.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Salami Slice",
+         "price": 15.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Jalapeno",
+         "price": 15.0,
+         "minQty": 1,
+         "maxQty": 2
+        }
+       ]
+      },
+      {
+       "name": "ملاحظات",
+       "nameAr": "ملاحظات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 5,
+       "options": [
+        {
+         "name": "Without Lettuce",
+         "price": 0.0,
+         "minQty": 1,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Mayo/Sauce",
+         "price": 0.0,
+         "minQty": 1,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Pickles",
+         "price": 0.0,
+         "minQty": 1,
+         "maxQty": 1
+        },
+        {
+         "name": "Spicy",
+         "price": 0.0,
+         "minQty": 1,
+         "maxQty": 1
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "160562",
+     "name": {
+      "en": "Fire Blast 🌶️",
+      "ar": "فير بلاست 🌶️"
+     },
+     "price": 270.0,
+     "discountPct": 16.666666666666668,
+     "prep": 20,
+     "calories": null,
+     "description": "Chicken Cordon Bleu piece (190g) filled with mozzarella cheese & salami, lettuce, pickled onion & Spicy Knockout sauce.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": true,
+     "image": "https://api.bonbell.net/1137/1789576093_Fire%20Blast.jpg",
+     "groups": [
+      {
+       "name": "Combo",
+       "nameAr": "كومبو",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Combo (Fries + Big Cola)",
+         "price": 65.0,
+         "minQty": 1,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fries + V Cola)",
+         "price": 80.0,
+         "minQty": 1,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fries + Coleslaw)",
+         "price": 80.0,
+         "minQty": 1,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "اضافات",
+       "nameAr": "اضافات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 5,
+       "options": [
+        {
+         "name": "Add 2 Mozzarella Sticks",
+         "price": 40.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add 2 Onion Rings",
+         "price": 30.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Cheddar Sauce",
+         "price": 20.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add American Cheese Slice",
+         "price": 20.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Salami Slice",
+         "price": 15.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Jalapeno",
+         "price": 15.0,
+         "minQty": 1,
+         "maxQty": 2
+        }
+       ]
+      },
+      {
+       "name": "ملاحظات",
+       "nameAr": "ملاحظات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 5,
+       "options": [
+        {
+         "name": "Without Lettuce",
+         "price": 0.0,
+         "minQty": 1,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Onion",
+         "price": 0.0,
+         "minQty": 1,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Mayo/Sauce",
+         "price": 0.0,
+         "minQty": 1,
+         "maxQty": 1
+        },
+        {
+         "name": "Spicy",
+         "price": 0.0,
+         "minQty": 1,
+         "maxQty": 1
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "160563",
+     "name": {
+      "en": "Mushroom Melt",
+      "ar": "مشروم ميلت"
+     },
+     "price": 280.0,
+     "discountPct": 16.071428571428573,
+     "prep": 20,
+     "calories": null,
+     "description": "Chicken Cordon Bleu piece (190g) filled with mozzarella cheese & salami, creamy mushroom sauce, lettuce & Mayonnaise.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": true,
+     "image": "https://api.bonbell.net/1137/1789576104_Mushroom-Melt.jpg",
+     "groups": [
+      {
+       "name": "Combo",
+       "nameAr": "كومبو",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Combo (Fries + Big Cola)",
+         "price": 65.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fries + V Cola)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fries + Coleslaw)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "اضافات",
+       "nameAr": "اضافات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 5,
+       "options": [
+        {
+         "name": "Add 2 Mozzarella Sticks",
+         "price": 40.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add 2 Onion Rings",
+         "price": 30.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Cheddar Sauce",
+         "price": 20.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add American Cheese Slice",
+         "price": 20.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Salami Slice",
+         "price": 15.0,
+         "minQty": 1,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Jalapeno",
+         "price": 15.0,
+         "minQty": 1,
+         "maxQty": 2
+        }
+       ]
+      },
+      {
+       "name": "ملاحظات",
+       "nameAr": "ملاحظات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 5,
+       "options": [
+        {
+         "name": "Without Lettuce",
+         "price": 0.0,
+         "minQty": 1,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Mayo/Sauce",
+         "price": 0.0,
+         "minQty": 1,
+         "maxQty": 1
+        },
+        {
+         "name": "Spicy",
+         "price": 0.0,
+         "minQty": 1,
+         "maxQty": 1
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "ref": "9415",
+   "name": {
+    "en": "Crispy Chicken Burger",
+    "ar": "برجر الدجاج كرسبي"
+   },
+   "image": "https://api.bonbell.net/1137/cat/1760269611_%D8%AF%D9%8A%D9%86%D8%A7%D9%85%D9%8A%D8%AA-%D9%83%D8%B1%D8%B3%D8%A8%D9%8A.jpg",
+   "visible": false,
+   "items": [
+    {
+     "ref": "90117",
+     "name": {
+      "en": "Knock Out Crispy 🌶️",
+      "ar": "نوك آوت كرسبي 🌶️"
+     },
+     "price": 175.0,
+     "discountPct": 0.0,
+     "prep": 15,
+     "calories": null,
+     "description": "Crispy chicken fillet inside a toasted brioche bun, with lettuce, tomato & spicy Knock Out sauce.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769711230_%D9%86%D9%88%D9%83%20%D8%A7%D9%88%D8%AA%20%D9%83%D8%B1%D8%B3%D8%A8%D9%8A.jpg",
+     "groups": [
+      {
+       "name": "Size",
+       "nameAr": "الحجم",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Single Crispy",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Double Crispy (2 Pieces)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Triple Crispy (3 Pieces)",
+         "price": 160.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "كومبو",
+       "nameAr": "كومبو",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Combo (Fries + Big Cola)",
+         "price": 65.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fries + Coleslaw)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fries + V Cola)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "Extras",
+       "nameAr": "اضافات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 3,
+       "options": [
+        {
+         "name": "Add 2 Mozzarella Sticks",
+         "price": 40.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Add 2 Onion Rings",
+         "price": 30.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Cheddar Sauce",
+         "price": 20.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Add American Cheese Slice",
+         "price": 20.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Salami Slice",
+         "price": 15.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Jalapeno",
+         "price": 15.0,
+         "minQty": 0,
+         "maxQty": 2
+        }
+       ]
+      },
+      {
+       "name": "Notes",
+       "nameAr": "ملاحظات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 5,
+       "options": [
+        {
+         "name": "Spicy",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Tomato",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Lettuce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Mayo/Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "135366",
+     "name": {
+      "en": "Classic Crispy",
+      "ar": "كلاسيك كرسبي"
+     },
+     "price": 175.0,
+     "discountPct": 0.0,
+     "prep": 15,
+     "calories": null,
+     "description": "Crispy chicken fillet inside a toasted brioche bun, with lettuce, tomato & Westeros sauce.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769711238_%D9%83%D9%84%D8%A7%D8%B3%D9%8A%D9%83%20%D9%83%D8%B1%D8%B3%D8%A8%D9%8A.jpg",
+     "groups": [
+      {
+       "name": "Size",
+       "nameAr": "الحجم",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Single Crispy",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Double Crispy (2 Pieces)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Triple Crispy (3 Pieces)",
+         "price": 160.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "كومبو",
+       "nameAr": "كومبو",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Combo (Fries + Big Cola)",
+         "price": 65.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fries + Coleslaw)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fries + V Cola)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "Extras",
+       "nameAr": "اضافات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 3,
+       "options": [
+        {
+         "name": "Add 2 Mozzarella Sticks",
+         "price": 40.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Add 2 Onion Rings",
+         "price": 30.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Cheddar Sauce",
+         "price": 20.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Add American Cheese Slice",
+         "price": 20.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Salami Slice",
+         "price": 15.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Jalapeno",
+         "price": 15.0,
+         "minQty": 0,
+         "maxQty": 2
+        }
+       ]
+      },
+      {
+       "name": "Notes",
+       "nameAr": "ملاحظات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 5,
+       "options": [
+        {
+         "name": "Spicy",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Tomato",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Lettuce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Mayo/Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "90120",
+     "name": {
+      "en": "Dynamite Crispy 🌶️",
+      "ar": "ديناميت كرسبي 🌶️"
+     },
+     "price": 185.0,
+     "discountPct": 0.0,
+     "prep": 15,
+     "calories": null,
+     "description": "Crispy chicken fillet inside a toasted brioche bun, with jalapeno, lettuce, Dynamite & Ranch sauces.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769711246_%D8%AF%D9%8A%D9%86%D8%A7%D9%85%D9%8A%D8%AA-%D9%83%D8%B1%D8%B3%D8%A8%D9%8A.jpg",
+     "groups": [
+      {
+       "name": "Size",
+       "nameAr": "الحجم",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Single Crispy",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Double Crispy (2 Pieces)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Triple Crispy (3 Pieces)",
+         "price": 160.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "كومبو",
+       "nameAr": "كومبو",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Combo (Fries + Big Cola)",
+         "price": 65.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fries + Coleslaw)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fries + V Cola)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "Extras",
+       "nameAr": "اضافات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 3,
+       "options": [
+        {
+         "name": "Add 2 Mozzarella Sticks",
+         "price": 40.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Add 2 Onion Rings",
+         "price": 30.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Cheddar Sauce",
+         "price": 20.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Add American Cheese Slice",
+         "price": 20.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Salami Slice",
+         "price": 15.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Jalapeno",
+         "price": 15.0,
+         "minQty": 0,
+         "maxQty": 2
+        }
+       ]
+      },
+      {
+       "name": "Notes",
+       "nameAr": "ملاحظات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 5,
+       "options": [
+        {
+         "name": "Spicy",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Lettuce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Mayo/Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "90118",
+     "name": {
+      "en": "Rocket Crispy Burger",
+      "ar": "روكيت كرسبي"
+     },
+     "price": 175.0,
+     "discountPct": 0.0,
+     "prep": 15,
+     "calories": null,
+     "description": "Crispy chicken fillet inside a toasted brioche bun, with Rocca, salami, jalapeno & mayonnaise.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769711254_%D8%B1%D9%88%D9%83%D9%8A%D8%AA%20%D9%83%D8%B1%D8%B3%D8%A8%D9%8A.jpg",
+     "groups": [
+      {
+       "name": "الحجم",
+       "nameAr": "الحجم",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Single Crispy",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Double Crispy (2 Pieces)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Triple Crispy (3 Pieces)",
+         "price": 160.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "كومبو",
+       "nameAr": "كومبو",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Combo (Fries + Big Cola)",
+         "price": 65.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fries + Coleslaw)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fries + V Cola)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "Extras",
+       "nameAr": "اضافات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 3,
+       "options": [
+        {
+         "name": "Add 2 Mozzarella Sticks",
+         "price": 40.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Add 2 Onion Rings",
+         "price": 30.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Cheddar Sauce",
+         "price": 20.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Add American Cheese Slice",
+         "price": 20.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Salami Slice",
+         "price": 15.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Jalapeno",
+         "price": 15.0,
+         "minQty": 0,
+         "maxQty": 2
+        }
+       ]
+      },
+      {
+       "name": "Notes",
+       "nameAr": "ملاحظات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 5,
+       "options": [
+        {
+         "name": "Spicy",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Mayo/Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "90119",
+     "name": {
+      "en": "White Mushroom Crispy",
+      "ar": "وايت مشروم كرسبي"
+     },
+     "price": 215.0,
+     "discountPct": 0.0,
+     "prep": 15,
+     "calories": null,
+     "description": "Crispy chicken fillet inside a toasted brioche bun, on top White Mushroom mix of mushroom and creamy sauce, with an American cheddar cheese, lettuce & mayonnaise.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769711264_%D9%88%D8%A7%D9%8A%D8%AA%20%D9%85%D8%B4%D8%B1%D9%88%D9%85%20%D9%83%D8%B1%D8%B3%D8%A8%D9%8A.jpg",
+     "groups": [
+      {
+       "name": "الحجم",
+       "nameAr": "الحجم",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Single Crispy",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Double Crispy (2 Pieces)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Triple Crispy (3 Pieces)",
+         "price": 160.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "كومبو",
+       "nameAr": "كومبو",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Combo (Fries + Big Cola)",
+         "price": 65.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fries + Coleslaw)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fries + V Cola)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "Extras",
+       "nameAr": "اضافات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 3,
+       "options": [
+        {
+         "name": "Add 2 Mozzarella Sticks",
+         "price": 40.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Add 2 Onion Rings",
+         "price": 30.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Cheddar Sauce",
+         "price": 20.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Add Salami Slice",
+         "price": 15.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Add Jalapeno",
+         "price": 15.0,
+         "minQty": 0,
+         "maxQty": 2
+        }
+       ]
+      },
+      {
+       "name": "Notes",
+       "nameAr": "ملاحظات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 5,
+       "options": [
+        {
+         "name": "Spicy",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Cheese",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Lettuce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Mayo/Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "ref": "13690",
+   "name": {
+    "en": "Chicken Sandwiches",
+    "ar": "ساندويشات الدجاج"
+   },
+   "image": "https://api.bonbell.net/1137/cat/1748885060_%D9%83%D9%88%D9%85%D8%A7%D9%86%D8%AF%D9%88.jpg",
+   "visible": true,
+   "items": [
+    {
+     "ref": "134727",
+     "name": {
+      "en": "Colonel",
+      "ar": "كولونيل"
+     },
+     "price": 185.0,
+     "discountPct": 0.0,
+     "prep": 15,
+     "calories": null,
+     "description": "Crispy chicken bites inside Vienna bun, with lettuce, Ranch sauce & Stark sauce, and melted mozzarella cheese on top.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1789571756_Colonel.jpg",
+     "groups": [
+      {
+       "name": "اجعله كومبو",
+       "nameAr": "اجعله كومبو",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Combo (Fries + Big Cola)",
+         "price": 65.0,
+         "minQty": 0,
+         "maxQty": 0
+        },
+        {
+         "name": "Combo (Fries + Coleslaw)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 0
+        },
+        {
+         "name": "Combo (Fries + V Cola)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 0
+        }
+       ]
+      },
+      {
+       "name": "Notes",
+       "nameAr": "ملاحظات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 5,
+       "options": [
+        {
+         "name": "Without Cheese",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Lettuce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Mayo/Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Spicy",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Extra Cheese",
+         "price": 20.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Add Jalapeno",
+         "price": 15.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "134730",
+     "name": {
+      "en": "Commando🌶️",
+      "ar": "كوماندو🌶️"
+     },
+     "price": 195.0,
+     "discountPct": 0.0,
+     "prep": 15,
+     "calories": null,
+     "description": "Crispy chicken bites inside Vienna bun, with lettuce, jalapeno & spicy Knockout sauce, and melted cheddar cheese on top.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1789571773_Commando.jpg",
+     "groups": [
+      {
+       "name": "اجعله كومبو",
+       "nameAr": "اجعله كومبو",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Combo (Fries + Big Cola)",
+         "price": 65.0,
+         "minQty": 0,
+         "maxQty": 0
+        },
+        {
+         "name": "Combo (Fries + Coleslaw)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 0
+        },
+        {
+         "name": "Combo (Fries + V Cola)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 0
+        }
+       ]
+      },
+      {
+       "name": "Notes",
+       "nameAr": "ملاحظات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 5,
+       "options": [
+        {
+         "name": "Without Cheese",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Lettuce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Mayo/Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Spicy",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Extra Cheese",
+         "price": 20.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Extra Jalapeno",
+         "price": 15.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "134734",
+     "name": {
+      "en": "Cajun🌶️",
+      "ar": "كاجون🌶️"
+     },
+     "price": 225.0,
+     "discountPct": 0.0,
+     "prep": 15,
+     "calories": null,
+     "description": "Chicken breast slices cooked with onion, mushroom & creamy spicy Cajun sauce, and melted mozzarella cheese on top.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1789576146_Cajun.jpg",
+     "groups": [
+      {
+       "name": "اجعله كومبو",
+       "nameAr": "اجعله كومبو",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Combo (Fries + Big Cola)",
+         "price": 65.0,
+         "minQty": 0,
+         "maxQty": 0
+        },
+        {
+         "name": "Combo (Fries + Coleslaw)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 0
+        },
+        {
+         "name": "Combo (Fries + V Cola)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 0
+        }
+       ]
+      },
+      {
+       "name": "Extras",
+       "nameAr": "ملاحظات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 5,
+       "options": [
+        {
+         "name": "Without Cheese",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Onion",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Mushroom",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Spicy",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Extra Cheese",
+         "price": 20.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Add Jalapeno",
+         "price": 15.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "134736",
+     "name": {
+      "en": "Picasso",
+      "ar": "بيكاسو"
+     },
+     "price": 235.0,
+     "discountPct": 0.0,
+     "prep": 15,
+     "calories": null,
+     "description": "Chicken breast slices cooked with mushroom & Special creamy sun-dried tomato sauce, and melted mozzarella cheese on top.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1789576166_Picasso.jpg",
+     "groups": [
+      {
+       "name": "اجعله كومبو",
+       "nameAr": "اجعله كومبو",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Combo (Fries + Big Cola)",
+         "price": 65.0,
+         "minQty": 0,
+         "maxQty": 0
+        },
+        {
+         "name": "Combo (Fries + Coleslaw)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 0
+        },
+        {
+         "name": "Combo (Fries + V Cola)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 0
+        }
+       ]
+      },
+      {
+       "name": "Notes",
+       "nameAr": "ملاحظات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 5,
+       "options": [
+        {
+         "name": "Without Cheese",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Mushroom",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Spicy",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Extra Cheese",
+         "price": 20.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Add Jalapeno",
+         "price": 15.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "134739",
+     "name": {
+      "en": "Pesto",
+      "ar": "بيستو"
+     },
+     "price": 235.0,
+     "discountPct": 0.0,
+     "prep": 15,
+     "calories": null,
+     "description": "Chicken breast slices cooked with mushroom, black olive & creamy Pesto sauce, and melted mozzarella cheese on top.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": false,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1789576179_Pesto.jpg",
+     "groups": [
+      {
+       "name": "اجعله كومبو",
+       "nameAr": "اجعله كومبو",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Combo (Fries + Big Cola)",
+         "price": 65.0,
+         "minQty": 0,
+         "maxQty": 0
+        },
+        {
+         "name": "Combo (Fries + Coleslaw)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 0
+        },
+        {
+         "name": "Combo (Fries + V Cola)",
+         "price": 80.0,
+         "minQty": 0,
+         "maxQty": 0
+        }
+       ]
+      },
+      {
+       "name": "Notes",
+       "nameAr": "ملاحظات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 5,
+       "options": [
+        {
+         "name": "Without Cheese",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Mushroom",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Spicy",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Add Jalapeno",
+         "price": 15.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Extra Cheese",
+         "price": 20.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "ref": "15666",
+   "name": {
+    "en": "Happy Meals",
+    "ar": "وجبات الاطفال"
+   },
+   "image": "https://api.bonbell.net/1137/cat/1761997365_crispy-meal-boys.jpg",
+   "visible": true,
+   "items": [
+    {
+     "ref": "155364",
+     "name": {
+      "en": "Kids Box",
+      "ar": "كيدز بوكس"
+     },
+     "price": 185.0,
+     "discountPct": 8.108108108,
+     "prep": 15,
+     "calories": null,
+     "description": "- Beef or Chicken medium size burger with American cheddar cheese & Westeros sauce, with fries, pure juice & toy. - Or Chicken Nuggets with fries, pure juice & toy.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769711292_crispy-meal-boys.jpg",
+     "groups": [
+      {
+       "name": "نوع الوجبة",
+       "nameAr": "نوع الوجبة",
+       "required": true,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Beef Burger",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Chicken Burger",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Chicken Nuggets",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "ملاحظات",
+       "nameAr": "ملاحظات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 5,
+       "options": [
+        {
+         "name": "Without Cheese",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Mayo/Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Boy toy",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Girl toy",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Apple Juice",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Mango Juice",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Grape Juice",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "ref": "9416",
+   "name": {
+    "en": "Offers %",
+    "ar": "عروض %"
+   },
+   "image": "https://api.bonbell.net/1137/cat/1769713843_Duo.Beef.Box.jpg",
+   "visible": true,
+   "items": [
+    {
+     "ref": "160337",
+     "name": {
+      "en": "Bundle 1",
+      "ar": "بندل 1"
+     },
+     "price": 300.0,
+     "discountPct": 18.333333333333,
+     "prep": 15,
+     "calories": null,
+     "description": "Stark Chicken Burger + Cheese Fries + V7 Cola",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1784985965_WhatsApp%20Image%202026-05-19%20at%201.25.27%20PM%20(1).jpeg",
+     "groups": []
+    },
+    {
+     "ref": "160338",
+     "name": {
+      "en": "Bundle 2",
+      "ar": "بندل 2"
+     },
+     "price": 405.0,
+     "discountPct": 22.22222222222222,
+     "prep": 15,
+     "calories": null,
+     "description": "Classic Double Chicken Burger (300gm) + Cole slaw Salad + Crunchy Cake",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1784986134_WhatsApp%20Image%202026-05-19%20at%201.25.27%20PM.jpeg",
+     "groups": []
+    },
+    {
+     "ref": "160339",
+     "name": {
+      "en": "Bundle 3",
+      "ar": "بندل 3"
+     },
+     "price": 400.0,
+     "discountPct": 18.75,
+     "prep": 15,
+     "calories": null,
+     "description": "Colonel Sandwich + Alfredo Fries + Tropical Italian Soda",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1784986602_WhatsApp%20Image%202026-05-19%20at%201.25.28%20PM.jpeg",
+     "groups": []
+    },
+    {
+     "ref": "160340",
+     "name": {
+      "en": "Bundle 4",
+      "ar": "بندل 4"
+     },
+     "price": 670.0,
+     "discountPct": 16.417910447761194,
+     "prep": 15,
+     "calories": null,
+     "description": "2 Grilled Chicken Burgers (Classic, Smoky, Stark) + Share Box + 2 V7 Cola",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1784988449_WhatsApp%20Image%202026-05-19%20at%201.35.50%20PM.jpeg",
+     "groups": [
+      {
+       "name": "Choose 2 Burgers",
+       "nameAr": "اختر 2 برجر",
+       "required": true,
+       "multi": true,
+       "min": 2,
+       "max": 2,
+       "options": [
+        {
+         "name": "Classic Chicken Burger",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Smokey Chicken Burger",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Stark Chicken Burger",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        }
+       ]
+      },
+      {
+       "name": "Choose 2 Sauces",
+       "nameAr": "اختر 2 صوص",
+       "required": true,
+       "multi": true,
+       "min": 2,
+       "max": 2,
+       "options": [
+        {
+         "name": "Ranch Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Knock Out Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Dynamite Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Stark Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "BBQ Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Cheddar Cheese Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Westeros Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "90122",
+     "name": {
+      "en": "Duo Beef Box",
+      "ar": "ديو بيف بوكس"
+     },
+     "price": 550.0,
+     "discountPct": 10.0,
+     "prep": 20,
+     "calories": null,
+     "description": "2 Beef Burgers of your choice + fries + 2 sauces + 2 soft drinks.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769713681_Duo%20Beef%20Box.jpg",
+     "groups": [
+      {
+       "name": "Choose 2 Burgers",
+       "nameAr": "اختر 2 برجر",
+       "required": true,
+       "multi": true,
+       "min": 2,
+       "max": 2,
+       "options": [
+        {
+         "name": "Classic Beef Burger",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Smokey Beef Burger",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "White Mushroom Beef Bruger",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Stark Beef Burger",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Mondial Beef Burger",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Brownie Beef Burger",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        }
+       ]
+      },
+      {
+       "name": "Choose 2 Sauces",
+       "nameAr": "اختر 2 صوص",
+       "required": true,
+       "multi": true,
+       "min": 2,
+       "max": 2,
+       "options": [
+        {
+         "name": "Ranch Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Knock Out Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Dynamite Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Stark Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "BBQ Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Westeros Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Cheddar Cheese Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        }
+       ]
+      },
+      {
+       "name": "Notes",
+       "nameAr": "ملاحظات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 6,
+       "options": [
+        {
+         "name": "Spicy",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Without Cheese",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Without Onion",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Without Tomato",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Without Lettuce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Without Mayo/Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "90123",
+     "name": {
+      "en": "Duo Chicken Box",
+      "ar": "ديو تشكن بوكس"
+     },
+     "price": 520.0,
+     "discountPct": 8.653846153846153,
+     "prep": 20,
+     "calories": null,
+     "description": "2 Chicken Burgers of your choice + fries + 2 sauces + 2 soft drinks.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769713687_Duo%20Chicken%20Box.jpg",
+     "groups": [
+      {
+       "name": "Choose 2 Burgers",
+       "nameAr": "اختر 2 برجر",
+       "required": true,
+       "multi": true,
+       "min": 2,
+       "max": 2,
+       "options": [
+        {
+         "name": "Classic Chicken Burger",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Smokey Chicken Burger",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "White Mushroom Chicken Bruger",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Stark Chicken Burger",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Mondial Chicken Burger",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        }
+       ]
+      },
+      {
+       "name": "Choose 2 Sauces",
+       "nameAr": "اختر 2 صوص",
+       "required": true,
+       "multi": true,
+       "min": 2,
+       "max": 2,
+       "options": [
+        {
+         "name": "Ranch Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Knock Out Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Dynamite Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Stark Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "BBQ Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Westeros Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Cheddar Cheese Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        }
+       ]
+      },
+      {
+       "name": "Notes",
+       "nameAr": "ملاحظات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 6,
+       "options": [
+        {
+         "name": "Spicy",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Without Cheese",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Without Onion",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Without Tomato",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Without Lettuce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Without Mayo/Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "90125",
+     "name": {
+      "en": "Share Box",
+      "ar": "شير بوكس"
+     },
+     "price": 315.0,
+     "discountPct": 20.6349,
+     "prep": 20,
+     "calories": null,
+     "description": "4 Chicken Nuggets + 4 Onion Rings + 4 Cheddar Jalapeno minis + 2 Mozzarella Sticks + Fries + 2 Sauces.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769713697_Share%20Box.jpg",
+     "groups": [
+      {
+       "name": "Choose 2 Sauces",
+       "nameAr": "اختر 2 صوص",
+       "required": true,
+       "multi": true,
+       "min": 2,
+       "max": 2,
+       "options": [
+        {
+         "name": "Ranch Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Knock Out Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Dynamite Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Stark Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "BBQ Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Cheddar Cheese Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Westeros Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "153225",
+     "name": {
+      "en": "Snack Box",
+      "ar": "سناك بوكس"
+     },
+     "price": 160.0,
+     "discountPct": 15.625,
+     "prep": 15,
+     "calories": null,
+     "description": "Beef or Chicken medium size burger with American cheddar cheese and Westeros sauce with fries & small cola",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769714307_%D8%B3%D9%86%D8%A7%D9%83%D8%B3-%D8%A8%D9%88%D9%83%D8%B3-%D8%AA%D8%B4%D9%8A%D9%83%D9%86.jpg",
+     "groups": [
+      {
+       "name": "نوع البرجر",
+       "nameAr": "نوع البرجر",
+       "required": true,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Beef Snack Burger",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Chicken Snack Burger",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "ملاحظات",
+       "nameAr": "ملاحظات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 5,
+       "options": [
+        {
+         "name": "Spicy",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Cheese",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Mayo/Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "154507",
+     "name": {
+      "en": "Cardio Diet Meal",
+      "ar": "كارديو دايت ميل"
+     },
+     "price": 195.0,
+     "discountPct": 0.0,
+     "prep": 20,
+     "calories": 570,
+     "description": "Grilled Chicken Breast (200g), Basmati rice with vegetables (570 Calories - 53g Protein - 63g Carbohydrates - 14g Fats)",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": false,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769713758_%D9%83%D8%A7%D8%B1%D8%AF%D9%8A%D9%88%20%D8%AF%D8%A7%D9%8A%D8%AA%20%D9%85%D9%8A%D9%84.jpg",
+     "groups": [
+      {
+       "name": "Combo",
+       "nameAr": "كومبو",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Combo (Fitness Salad+Fresh Orange Juice)",
+         "price": 120.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fitness Salad+V7 Diet Cola)",
+         "price": 110.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "Extras",
+       "nameAr": "اضافات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 3,
+       "options": [
+        {
+         "name": "Extra Grilled Chicken",
+         "price": 65.0,
+         "minQty": 0,
+         "maxQty": 3
+        },
+        {
+         "name": "Extra Jalapeno",
+         "price": 15.0,
+         "minQty": 0,
+         "maxQty": 3
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "153227",
+     "name": {
+      "en": "Dumbbells Diet Meal",
+      "ar": "دمبلز دايت ميل"
+     },
+     "price": 185.0,
+     "discountPct": 0.0,
+     "prep": 15,
+     "calories": 350,
+     "description": "Grilled Chicken Breast (200gm), Sweet corn, lettuce, tomato, pickles & Jalapenos. (350 Calories - 50g Protein - 20g Carbohydrates - 5g Fats)",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": false,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769713769_%D8%AF%D9%85%D8%A8%D9%84%D8%B2-%D8%AF%D8%A7%D9%8A%D8%AA-%D9%85%D9%8A%D9%84.jpg",
+     "groups": [
+      {
+       "name": "Combo",
+       "nameAr": "كومبو",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Combo (Fitness Salad+Fresh Orange Juice)",
+         "price": 120.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fitness Salad+V7 Diet Cola)",
+         "price": 110.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "Extra",
+       "nameAr": "اضافات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 5,
+       "options": [
+        {
+         "name": "Extra Grilled Chicken",
+         "price": 65.0,
+         "minQty": 0,
+         "maxQty": 3
+        },
+        {
+         "name": "Extra Jalapeno",
+         "price": 15.0,
+         "minQty": 0,
+         "maxQty": 3
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "153226",
+     "name": {
+      "en": "Kids Box",
+      "ar": "كيدز بوكس"
+     },
+     "price": 185.0,
+     "discountPct": 8.108108108,
+     "prep": 15,
+     "calories": null,
+     "description": "Beef, Chicken or Crispy medium size burger with American cheddar cheese, Westeros sauce and lettuce, with fries, pure juice & toy.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": false,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769713745_crispy-meal-boys.jpg",
+     "groups": [
+      {
+       "name": "Burger Type",
+       "nameAr": "نوع البرجر",
+       "required": true,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Beef Burger",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Chicken Burger",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Crispy Kids Burger",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "ملاحظات",
+       "nameAr": "ملاحظات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 5,
+       "options": [
+        {
+         "name": "Without Cheese",
+         "price": 0.0,
+         "minQty": 1,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Mayo/Sauce",
+         "price": 0.0,
+         "minQty": 1,
+         "maxQty": 1
+        },
+        {
+         "name": "Boy toy",
+         "price": 0.0,
+         "minQty": 1,
+         "maxQty": 1
+        },
+        {
+         "name": "Girl toy",
+         "price": 0.0,
+         "minQty": 1,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "نكهة العصير",
+       "nameAr": "نوع العصير",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Apple Juice",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Mango Juice",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Grape Juice",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "ref": "15640",
+   "name": {
+    "en": "Health Meals",
+    "ar": "وجبات صحية"
+   },
+   "image": "https://api.bonbell.net/1137/cat/1769714239_%D8%B3%D8%B3%D8%B3.png",
+   "visible": true,
+   "items": [
+    {
+     "ref": "154962",
+     "name": {
+      "en": "Dumbbells Diet Meal",
+      "ar": "دمبلز دايت ميل"
+     },
+     "price": 215.0,
+     "discountPct": 0.0,
+     "prep": 20,
+     "calories": 350,
+     "description": "Grilled Chicken Breast (200gm), Sweet corn, lettuce, tomato, pickles & Jalapenos. (350 Calories - 50g Protein - 20g Carbohydrates - 5g Fats)",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769714359_%D8%AF%D8%A7%D9%8A%D8%AA-%D9%85%D9%8A%D9%84---%D8%AF%D9%85%D8%A8%D9%84%D8%B2-(2).png",
+     "groups": [
+      {
+       "name": "Combo",
+       "nameAr": "كومبو",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Combo (Fitness Salad+Fresh Orange Juice)",
+         "price": 120.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fitness Salad+V7 Diet Cola)",
+         "price": 110.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "Extras",
+       "nameAr": "اضافات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 5,
+       "options": [
+        {
+         "name": "Extra Grilled Chicken",
+         "price": 65.0,
+         "minQty": 0,
+         "maxQty": 3
+        },
+        {
+         "name": "Extra Jalapeno",
+         "price": 15.0,
+         "minQty": 0,
+         "maxQty": 2
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "154963",
+     "name": {
+      "en": "Cardio Diet Meal",
+      "ar": "كارديو دايت ميل"
+     },
+     "price": 225.0,
+     "discountPct": 0.0,
+     "prep": 20,
+     "calories": 570,
+     "description": "Grilled Chicken Breast (200g), Basmati rice with vegetables (570 Calories - 53g Protein - 63g Carbohydrates - 14g Fats)",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769714369_%D9%83%D8%A7%D8%B1%D8%AF%D9%8A%D9%88%20%D8%AF%D8%A7%D9%8A%D8%AA%20%D9%85%D9%8A%D9%84(1).jpg",
+     "groups": [
+      {
+       "name": "Combo",
+       "nameAr": "كومبو",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Combo (Fitness Salad+Fresh Orange Juice)",
+         "price": 120.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fitness Salad+V7 Diet Cola)",
+         "price": 110.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "Extras",
+       "nameAr": "اضافات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 5,
+       "options": [
+        {
+         "name": "Extra Grilled Chicken",
+         "price": 65.0,
+         "minQty": 0,
+         "maxQty": 3
+        },
+        {
+         "name": "Extra Jalapeno",
+         "price": 15.0,
+         "minQty": 0,
+         "maxQty": 2
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "159440",
+     "name": {
+      "en": "Mix Diet Meal",
+      "ar": "مكس دايت ميل"
+     },
+     "price": 255.0,
+     "discountPct": 0.0,
+     "prep": 15,
+     "calories": 635,
+     "description": "Grilled Chicken Breast (200gm), Basmati Rice, Sweet corn, tomato, pickles & Jalapenos. (635Calories - 55g Protein - 75g Carbohydrates - 15g Fats)",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1779720544_002%20-%20Copy.png",
+     "groups": [
+      {
+       "name": "Combo",
+       "nameAr": "كومبو",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Combo (Fitness Salad+Fresh Orange Juice)",
+         "price": 120.0,
+         "minQty": 1,
+         "maxQty": 1
+        },
+        {
+         "name": "Combo (Fitness Salad+V7 Diet Cola)",
+         "price": 110.0,
+         "minQty": 1,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "Extra",
+       "nameAr": "اضافات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 6,
+       "options": [
+        {
+         "name": "Extra Grilled Chicken",
+         "price": 65.0,
+         "minQty": 1,
+         "maxQty": 3
+        },
+        {
+         "name": "Extra Jalapeno",
+         "price": 15.0,
+         "minQty": 1,
+         "maxQty": 3
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "154964",
+     "name": {
+      "en": "Fitness Salad",
+      "ar": "سلطة فتنيس"
+     },
+     "price": 95.0,
+     "discountPct": 0.0,
+     "prep": 15,
+     "calories": 170,
+     "description": "Lettuce, Rocca, Pickled onion, Kidney bean & Lemon sauce. (170 Calories - 11g Protein - 30g Carbohydrates - 0.5g Fats)",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769711509_%D8%B3%D9%84%D8%B7%D8%A9%20%D9%81%D8%AA%D9%86%D9%8A%D8%B3.jpg",
+     "groups": [
+      {
+       "name": "Extras",
+       "nameAr": "اضافات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 5,
+       "options": [
+        {
+         "name": "Extra Grilled Chicken",
+         "price": 65.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Extra Jalapeno",
+         "price": 15.0,
+         "minQty": 0,
+         "maxQty": 2
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "154965",
+     "name": {
+      "en": "Fresh Orange Juice",
+      "ar": "عصير برتقال فريش"
+     },
+     "price": 55.0,
+     "discountPct": 0.0,
+     "prep": 10,
+     "calories": 135,
+     "description": "",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769711529_%D8%B9%D8%B5%D9%8A%D8%B1%20%D8%A8%D8%B1%D8%AA%D9%82%D8%A7%D9%84.png",
+     "groups": []
+    },
+    {
+     "ref": "154966",
+     "name": {
+      "en": "V7 Cola Diet",
+      "ar": "في7 كولا دايت"
+     },
+     "price": 30.0,
+     "discountPct": 0.0,
+     "prep": 1,
+     "calories": null,
+     "description": "",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1760268171_v%20cola%20diet.JPG",
+     "groups": []
+    }
+   ]
+  },
+  {
+   "ref": "9417",
+   "name": {
+    "en": "Fries",
+    "ar": "البطاطس"
+   },
+   "image": "https://api.bonbell.net/1137/cat/1761846505_%D8%A8%D8%A7%D8%B1%D8%A8%D9%83%D9%8A%D9%88-%D9%81%D8%B1%D8%A7%D9%8A%D8%B2.jpg",
+   "visible": true,
+   "items": [
+    {
+     "ref": "158678",
+     "name": {
+      "en": "French Fries (S)",
+      "ar": "فرايز (S)"
+     },
+     "price": 40.0,
+     "discountPct": 0.0,
+     "prep": 10,
+     "calories": null,
+     "description": "",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1773597057_%D9%81%D8%B1%D8%A7%D9%8A%D8%B2.jpg",
+     "groups": []
+    },
+    {
+     "ref": "90128",
+     "name": {
+      "en": "French Fries (L)",
+      "ar": "فرايز (L)"
+     },
+     "price": 60.0,
+     "discountPct": 0.0,
+     "prep": 5,
+     "calories": null,
+     "description": "",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769711585_%D9%81%D8%B1%D8%A7%D9%8A%D8%B2.jpg",
+     "groups": []
+    },
+    {
+     "ref": "90129",
+     "name": {
+      "en": "Cheese Fries",
+      "ar": "تشيز فرايز"
+     },
+     "price": 85.0,
+     "discountPct": 0.0,
+     "prep": 5,
+     "calories": null,
+     "description": "Fries with cheddar cheese sauce & jalapeno on top.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769711931_%D8%AA%D8%B4%D9%8A%D8%B2%20%D9%81%D8%B1%D8%A7%D9%8A%D8%B2.jpg",
+     "groups": [
+      {
+       "name": "Extras",
+       "nameAr": "اضافات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 2,
+       "options": [
+        {
+         "name": "Extra Cheese",
+         "price": 20.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Extra Jalapeno",
+         "price": 15.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "90130",
+     "name": {
+      "en": "Dynamite Fries 🌶️",
+      "ar": "ديناميت فرايز 🌶️"
+     },
+     "price": 135.0,
+     "discountPct": 0.0,
+     "prep": 15,
+     "calories": null,
+     "description": "Fries with cheddar cheese sauce on top and crispy chicken bites with Dynamite & Ranch sauces.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769711939_%D8%AF%D9%8A%D9%86%D8%A7%D9%85%D9%8A%D8%AA%20%D9%81%D8%B1%D8%A7%D9%8A%D8%B2.jpg",
+     "groups": [
+      {
+       "name": "Extras",
+       "nameAr": "اضافات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 2,
+       "options": [
+        {
+         "name": "Extra Cheese",
+         "price": 20.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Extra Jalapeno",
+         "price": 15.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "90131",
+     "name": {
+      "en": "BBQ Fries",
+      "ar": "باربكيو فرايز"
+     },
+     "price": 140.0,
+     "discountPct": 0.0,
+     "prep": 15,
+     "calories": null,
+     "description": "Fries with cheddar cheese sauce on top, and minced meat, BBQ sauce & jalapeno",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769711948_%D8%A8%D8%A7%D8%B1%D8%A8%D9%83%D9%8A%D9%88-%D9%81%D8%B1%D8%A7%D9%8A%D8%B2.jpg",
+     "groups": [
+      {
+       "name": "Extras",
+       "nameAr": "اضافات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 2,
+       "options": [
+        {
+         "name": "Extra Cheese",
+         "price": 20.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Extra Jalapeno",
+         "price": 15.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "134740",
+     "name": {
+      "en": "Alfredo Fries",
+      "ar": "ألفريدو فرايز"
+     },
+     "price": 145.0,
+     "discountPct": 0.0,
+     "prep": 15,
+     "calories": null,
+     "description": "Fries with creamy mushroom Alfredo sauce, on top melted mozzarella cheese.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769711550_%D8%A7%D9%84%D9%81%D8%B1%D9%8A%D8%AF%D9%88%20%D9%81%D8%B1%D8%A7%D9%8A%D8%B2.jpg",
+     "groups": [
+      {
+       "name": "Notes",
+       "nameAr": "ملاحظات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 3,
+       "options": [
+        {
+         "name": "Spicy",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Extra Cheese",
+         "price": 20.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Add Jalapeno",
+         "price": 15.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "134743",
+     "name": {
+      "en": "Cowboy Fries",
+      "ar": "كاوبوي فرايز"
+     },
+     "price": 145.0,
+     "discountPct": 0.0,
+     "prep": 15,
+     "calories": null,
+     "description": "Fries with Special creamy sun-dried tomato sauce, jalapeno & salami slices, and melted mozzarella cheese on top.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769711557_%D9%83%D8%A7%D9%88%D8%A8%D9%88%D9%8A-%D9%81%D8%B1%D8%A7%D9%8A%D8%B2.png",
+     "groups": [
+      {
+       "name": "Notes",
+       "nameAr": "ملاحظات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 5,
+       "options": [
+        {
+         "name": "Spicy",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Extra Cheese",
+         "price": 20.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Extra Jalapeno",
+         "price": 15.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "ref": "9418",
+   "name": {
+    "en": "Appetizers",
+    "ar": "المقبلات"
+   },
+   "image": "https://api.bonbell.net/1137/cat/1760269741_%D8%B3%D8%AA%D8%A7%D8%B1%D9%83-%D8%A8%D8%A7%D9%8A%D8%AA%D8%B3.jpg",
+   "visible": true,
+   "items": [
+    {
+     "ref": "160564",
+     "name": {
+      "en": "Chicken Nuggets",
+      "ar": "تشكن ناجيتس"
+     },
+     "price": 170.0,
+     "discountPct": 17.647058823529,
+     "prep": 15,
+     "calories": null,
+     "description": "Minced chicken breast coated with crunchy panko breadcrumbs. (6 Pieces)",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": true,
+     "image": "https://api.bonbell.net/1137/1788701253_Chicken%20Nuggets.jpg",
+     "groups": []
+    },
+    {
+     "ref": "90132",
+     "name": {
+      "en": "Dynamite Bites 🌶️",
+      "ar": "ديناميت بايتس 🌶️"
+     },
+     "price": 135.0,
+     "discountPct": 0.0,
+     "prep": 15,
+     "calories": null,
+     "description": "Crispy chicken bites with dynamite sauce with lettuce",
+     "channels": [
+      "Delivery",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769711996_%D8%AF%D9%8A%D9%86%D8%A7%D9%85%D9%8A%D8%AA%20%D8%A8%D8%A7%D9%8A%D8%AA%D8%B3.jpg",
+     "groups": []
+    },
+    {
+     "ref": "90133",
+     "name": {
+      "en": "Stark Bites",
+      "ar": "ستارك بايتس"
+     },
+     "price": 135.0,
+     "discountPct": 0.0,
+     "prep": 15,
+     "calories": null,
+     "description": "Crispy chicken bites dipped in stark sauce with lettuce",
+     "channels": [
+      "Delivery",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769712006_%D8%B3%D8%AA%D8%A7%D8%B1%D9%83-%D8%A8%D8%A7%D9%8A%D8%AA%D8%B3.jpg",
+     "groups": []
+    },
+    {
+     "ref": "90134",
+     "name": {
+      "en": "Crispy Bites",
+      "ar": "كرسبي بايتس"
+     },
+     "price": 115.0,
+     "discountPct": 0.0,
+     "prep": 15,
+     "calories": null,
+     "description": "Crispy chicken fillet pieces",
+     "channels": [
+      "Delivery",
+      "Take away"
+     ],
+     "visible": false,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769712048_%D9%83%D8%B1%D8%B3%D8%A8%D9%8A%20%D8%A8%D8%A7%D9%8A%D8%AA%D8%B3.png",
+     "groups": []
+    },
+    {
+     "ref": "90136",
+     "name": {
+      "en": "Cheddar Jalapeno Sticks 🌶️",
+      "ar": "اصابع شيدر هالبينو 🌶️"
+     },
+     "price": 90.0,
+     "discountPct": 0.0,
+     "prep": 10,
+     "calories": null,
+     "description": "",
+     "channels": [
+      "Delivery",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769712060_%D8%A7%D8%B5%D8%A7%D8%A8%D8%B9%20%D8%B4%D9%8A%D8%AF%D8%B1%20%D9%87%D8%A7%D9%84%D8%A8%D9%8A%D9%86%D9%88.png",
+     "groups": []
+    },
+    {
+     "ref": "90135",
+     "name": {
+      "en": "Mozzarella Sticks",
+      "ar": "اصابع موزريلا"
+     },
+     "price": 80.0,
+     "discountPct": 0.0,
+     "prep": 10,
+     "calories": null,
+     "description": "",
+     "channels": [
+      "Delivery",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769712068_%D8%A7%D8%B5%D8%A7%D8%A8%D8%B9%20%D9%85%D9%88%D8%B2%D8%B1%D9%8A%D9%84%D8%A7.png",
+     "groups": []
+    },
+    {
+     "ref": "90137",
+     "name": {
+      "en": "Onion Rings",
+      "ar": "حلقات بصل"
+     },
+     "price": 60.0,
+     "discountPct": 0.0,
+     "prep": 10,
+     "calories": null,
+     "description": "",
+     "channels": [
+      "Delivery",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769712118_%D8%AD%D9%84%D9%82%D8%A7%D8%AA%20%D8%A8%D8%B5%D9%84.png",
+     "groups": []
+    },
+    {
+     "ref": "90138",
+     "name": {
+      "en": "Coleslaw",
+      "ar": "سلطة كولسلو"
+     },
+     "price": 35.0,
+     "discountPct": 0.0,
+     "prep": 0,
+     "calories": null,
+     "description": "",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769712134_%D8%B3%D9%84%D8%B7%D8%A9-%D9%83%D9%88%D9%84%D8%B3%D9%84%D9%88.png",
+     "groups": []
+    },
+    {
+     "ref": "90139",
+     "name": {
+      "en": "Mayo Sweet Corn",
+      "ar": "سلطة ذرة"
+     },
+     "price": 45.0,
+     "discountPct": 0.0,
+     "prep": 0,
+     "calories": null,
+     "description": "",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769712142_%D8%B3%D9%84%D8%B7%D8%A9%20%D8%A7%D9%84%D8%B0%D8%B1%D8%A9.png",
+     "groups": []
+    }
+   ]
+  },
+  {
+   "ref": "9833",
+   "name": {
+    "en": "Salads",
+    "ar": "السلطات"
+   },
+   "image": "https://api.bonbell.net/1137/cat/1760269881_%D8%B3%D9%84%D8%B7%D8%A9-%D8%AA%D8%B4%D9%83%D9%86-%D8%B1%D8%A7%D9%86%D8%B4.jpg",
+   "visible": true,
+   "items": [
+    {
+     "ref": "154508",
+     "name": {
+      "en": "Fitness Salad",
+      "ar": "سلطة فتنيس"
+     },
+     "price": 95.0,
+     "discountPct": 0.0,
+     "prep": 15,
+     "calories": 170,
+     "description": "Lettuce, Rocca, Pickled onion, Kidney bean & Lemon sauce. (170 Calories - 11g Protein - 30g Carbohydrates - 0.5g Fats)",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769712158_%D8%B3%D9%84%D8%B7%D8%A9%20%D9%81%D8%AA%D9%86%D9%8A%D8%B3.jpg",
+     "groups": [
+      {
+       "name": "Extras",
+       "nameAr": "اضافات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 5,
+       "options": [
+        {
+         "name": "Extra Grilled Chicken",
+         "price": 65.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Extra Jalapeno",
+         "price": 15.0,
+         "minQty": 0,
+         "maxQty": 2
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "135267",
+     "name": {
+      "en": "Chicken Caesar Salad",
+      "ar": "سلطة سيزر بالدجاج"
+     },
+     "price": 125.0,
+     "discountPct": 0.0,
+     "prep": 15,
+     "calories": null,
+     "description": "Lettuce covered with Caesar sauce, topped with a grilled chicken breast, cheese & toasted bread bites.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769712182_%D8%B3%D9%84%D8%B7%D8%A9%20%D8%B3%D9%8A%D8%B2%D8%B1%20%D8%A8%D8%A7%D9%84%D8%AF%D8%AC%D8%A7%D8%AC.jpg",
+     "groups": [
+      {
+       "name": "Notes",
+       "nameAr": "ملاحظات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 2,
+       "options": [
+        {
+         "name": "Without Cheese",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Mayo/Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "Extras",
+       "nameAr": "اضافات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 2,
+       "options": [
+        {
+         "name": "Extra Grilled Chicken",
+         "price": 65.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Extra Jalapeno",
+         "price": 15.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "135268",
+     "name": {
+      "en": "Chicken Ranch Salad",
+      "ar": "سلطة تشكن رانش"
+     },
+     "price": 135.0,
+     "discountPct": 0.0,
+     "prep": 15,
+     "calories": null,
+     "description": "Lettuce, tomato, pickled onion & black olive covered with Ranch sauce & toped with a grilled Chicken breast & nachos.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769712189_%D8%B3%D9%84%D8%B7%D8%A9-%D8%AA%D8%B4%D9%83%D9%86-%D8%B1%D8%A7%D9%86%D8%B4.jpg",
+     "groups": [
+      {
+       "name": "Notes",
+       "nameAr": "ملاحظات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 3,
+       "options": [
+        {
+         "name": "Without Onion",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Tomato",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Without Mayo/Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "Extras",
+       "nameAr": "اضافات",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 2,
+       "options": [
+        {
+         "name": "Extra Jalapeno",
+         "price": 15.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Extra Grilled Chicken",
+         "price": 65.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "101492",
+     "name": {
+      "en": "Cole Slaw",
+      "ar": "كولسلو"
+     },
+     "price": 35.0,
+     "discountPct": 0.0,
+     "prep": 0,
+     "calories": null,
+     "description": "Cabbage, carrot & sweet mayonnaise sauce.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769712202_%D8%B3%D9%84%D8%B7%D8%A9-%D9%83%D9%88%D9%84%D8%B3%D9%84%D9%88.png",
+     "groups": []
+    },
+    {
+     "ref": "101493",
+     "name": {
+      "en": "Mayo Sweet Corn",
+      "ar": "سلطة ذرة"
+     },
+     "price": 45.0,
+     "discountPct": 0.0,
+     "prep": 0,
+     "calories": null,
+     "description": "Sweet corn, paprika, pickle, onion, dill mixed with mayonnaise.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769712209_%D8%B3%D9%84%D8%B7%D8%A9%20%D8%A7%D9%84%D8%B0%D8%B1%D8%A9.png",
+     "groups": []
+    }
+   ]
+  },
+  {
+   "ref": "9419",
+   "name": {
+    "en": "Dipping Sauces",
+    "ar": "الصوصات"
+   },
+   "image": "https://api.bonbell.net/1137/cat/17207691881722954681.jpg",
+   "visible": true,
+   "items": [
+    {
+     "ref": "90140",
+     "name": {
+      "en": "Ranch Sauce",
+      "ar": "صوص رانش"
+     },
+     "price": 20.0,
+     "discountPct": 0.0,
+     "prep": 0,
+     "calories": null,
+     "description": "",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769712263_%D8%B1%D8%A7%D9%86%D8%B4%20%D8%B5%D9%88%D8%B5.jpg",
+     "groups": []
+    },
+    {
+     "ref": "90141",
+     "name": {
+      "en": "Knock Out Sauce 🌶️",
+      "ar": "صوص نوك آوت 🌶️"
+     },
+     "price": 20.0,
+     "discountPct": 0.0,
+     "prep": 0,
+     "calories": null,
+     "description": "",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769712370_%D9%86%D9%88%D9%83%20%D8%A2%D9%88%D8%AA%20%D8%B5%D9%88%D8%B5.jpg",
+     "groups": []
+    },
+    {
+     "ref": "90144",
+     "name": {
+      "en": "BBQ Sauce",
+      "ar": "صوص باربكيو"
+     },
+     "price": 20.0,
+     "discountPct": 0.0,
+     "prep": 0,
+     "calories": null,
+     "description": "",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769712377_%D8%A8%D8%A7%D8%B1%D8%A8%D9%83%D9%8A%D9%88%20%D8%B5%D9%88%D8%B5.jpg",
+     "groups": []
+    },
+    {
+     "ref": "101491",
+     "name": {
+      "en": "Westeros Sauce",
+      "ar": "صوص ويستروس"
+     },
+     "price": 20.0,
+     "discountPct": 0.0,
+     "prep": 0,
+     "calories": null,
+     "description": "",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769712471_%D8%B5%D9%88%D8%B5%20%D9%88%D9%8A%D8%B3%D8%AA%D8%B1%D9%88%D8%B3.png",
+     "groups": []
+    },
+    {
+     "ref": "90142",
+     "name": {
+      "en": "Dynamite Sauce 🌶️",
+      "ar": "صوص ديناميت 🌶️"
+     },
+     "price": 25.0,
+     "discountPct": 0.0,
+     "prep": 0,
+     "calories": null,
+     "description": "",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769712607_%D8%AF%D9%8A%D9%86%D8%A7%D9%85%D9%8A%D8%AA%20%D8%B5%D9%88%D8%B5.jpg",
+     "groups": []
+    },
+    {
+     "ref": "90143",
+     "name": {
+      "en": "Stark Sauce",
+      "ar": "صوص ستارك"
+     },
+     "price": 25.0,
+     "discountPct": 0.0,
+     "prep": 0,
+     "calories": null,
+     "description": "",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769712617_%D8%B3%D8%AA%D8%A7%D8%B1%D9%83%20%D8%B5%D9%88%D8%B5.jpg",
+     "groups": []
+    },
+    {
+     "ref": "90145",
+     "name": {
+      "en": "Cheddar Cheese Sauce",
+      "ar": "صوص جبنة شيدر"
+     },
+     "price": 25.0,
+     "discountPct": 0.0,
+     "prep": 0,
+     "calories": null,
+     "description": "",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769712629_%D8%AC%D8%A8%D9%86%D8%A9%20%D8%B4%D9%8A%D8%AF%D8%B1%20%D8%B5%D9%88%D8%B5.jpg",
+     "groups": []
+    }
+   ]
+  },
+  {
+   "ref": "15807",
+   "name": {
+    "en": "Desert & Hot Drinks",
+    "ar": "حلويات ومشروبات ساخنة"
+   },
+   "image": "https://api.bonbell.net/1137/cat/1769712960_Crunchy.Cake.jpg",
+   "visible": true,
+   "items": [
+    {
+     "ref": "157820",
+     "name": {
+      "en": "Turkish Coffee (Single)",
+      "ar": "قهوة تركي سنجل"
+     },
+     "price": 35.0,
+     "discountPct": 0.0,
+     "prep": 5,
+     "calories": null,
+     "description": "",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1770559829_Coffee.png",
+     "groups": []
+    },
+    {
+     "ref": "157585",
+     "name": {
+      "en": "Crunchy Cake (Chocolate)",
+      "ar": "كرانشي كيك (تشوكليت)"
+     },
+     "price": 125.0,
+     "discountPct": 0.0,
+     "prep": 10,
+     "calories": null,
+     "description": "Fudge cake with Belgian chocolate, with crunchy Feuilletine flakes on top, Served warm with Turkish coffee.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769712894_Crunchy.Cake.jpg",
+     "groups": [
+      {
+       "name": "اضافة",
+       "nameAr": "اضافة",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 2,
+       "options": [
+        {
+         "name": "Tea instead of Coffee",
+         "price": 0.0,
+         "minQty": 1,
+         "maxQty": 1
+        },
+        {
+         "name": "Add Icecream Vanilla",
+         "price": 20.0,
+         "minQty": 1,
+         "maxQty": 1
+        },
+        {
+         "name": "Add Icecream Chocolate",
+         "price": 20.0,
+         "minQty": 1,
+         "maxQty": 1
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "157586",
+     "name": {
+      "en": "Crunchy Cake (Lotus)",
+      "ar": "كرانشي كيك (لوتس)"
+     },
+     "price": 125.0,
+     "discountPct": 0.0,
+     "prep": 10,
+     "calories": null,
+     "description": "Fudge cake with Belgian Lotus, with Lotus crumbs on top, Served warm with Turkish coffee.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769712790_002%20Crunchy%20Cake%20(Lotus)%20%20LOW.jpg",
+     "groups": [
+      {
+       "name": "اضافة",
+       "nameAr": "اضافة",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 2,
+       "options": [
+        {
+         "name": "Tea instead of Coffee",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Add Icecream Vanilla",
+         "price": 20.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Add Icecream Chocolate",
+         "price": 20.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "157587",
+     "name": {
+      "en": "Crunchy Cake (Almond)",
+      "ar": "كرانشي كيك (الموند)"
+     },
+     "price": 125.0,
+     "discountPct": 0.0,
+     "prep": 10,
+     "calories": null,
+     "description": "Fudge cake with Belgian blonde chocolate, with roasted almond flakes on top, Served warm with Turkish coffee.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769712798_003%20Crunchy%20Cake%20(Almond)%20LOW.jpg",
+     "groups": [
+      {
+       "name": "اضافة",
+       "nameAr": "اضافة",
+       "required": false,
+       "multi": true,
+       "min": 1,
+       "max": 2,
+       "options": [
+        {
+         "name": "Tea instead of Coffee",
+         "price": 0.0,
+         "minQty": 1,
+         "maxQty": 1
+        },
+        {
+         "name": "Add Icecream Vanilla",
+         "price": 20.0,
+         "minQty": 1,
+         "maxQty": 1
+        },
+        {
+         "name": "Add Icecream Chocolate",
+         "price": 20.0,
+         "minQty": 1,
+         "maxQty": 1
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "ref": "14830",
+   "name": {
+    "en": "Milk Shakes",
+    "ar": "ميلك شيك"
+   },
+   "image": "https://api.bonbell.net/1137/cat/1760269791_%D9%83%D8%B1%D8%A7%D9%85%D9%8A%D9%84-%D8%A8%D9%88%D8%A8-%D9%83%D9%88%D8%B1%D9%86-%D9%85%D9%8A%D9%84%D9%83-%D8%B4%D9%8A%D9%83.jpg",
+   "visible": true,
+   "items": [
+    {
+     "ref": "145617",
+     "name": {
+      "en": "Caramel Popcorn Milkshake",
+      "ar": "كراميل بوب كورن ميلك شيك"
+     },
+     "price": 145.0,
+     "discountPct": 0.0,
+     "prep": 0,
+     "calories": null,
+     "description": "",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769712983_%D9%83%D8%B1%D8%A7%D9%85%D9%8A%D9%84-%D8%A8%D9%88%D8%A8-%D9%83%D9%88%D8%B1%D9%86-%D9%85%D9%8A%D9%84%D9%83-%D8%B4%D9%8A%D9%83.jpg",
+     "groups": []
+    },
+    {
+     "ref": "145620",
+     "name": {
+      "en": "Cheese Cake Milkshake",
+      "ar": "تشيز كيك ميلك شيك"
+     },
+     "price": 135.0,
+     "discountPct": 0.0,
+     "prep": 0,
+     "calories": null,
+     "description": "",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769712993_%D8%AA%D8%B4%D9%8A%D8%B2%D9%83%D9%8A%D9%83%20%D9%85%D9%8A%D9%84%D9%83%20%D8%B4%D9%8A%D9%83.jpg",
+     "groups": []
+    },
+    {
+     "ref": "145619",
+     "name": {
+      "en": "Sour Candy Milkshake",
+      "ar": "ساور كاندي ميلك شيك"
+     },
+     "price": 160.0,
+     "discountPct": 0.0,
+     "prep": 0,
+     "calories": null,
+     "description": "",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769712999_%D8%B3%D8%A7%D9%88%D8%B1%20%D9%83%D8%A7%D9%86%D8%AF%D9%8A%20%D9%85%D9%8A%D9%84%D9%83%20%D8%B4%D9%8A%D9%83.jpg",
+     "groups": []
+    },
+    {
+     "ref": "145618",
+     "name": {
+      "en": "Peanutella Milkshake",
+      "ar": "بيناتيلا ميلك شيك"
+     },
+     "price": 145.0,
+     "discountPct": 0.0,
+     "prep": 0,
+     "calories": null,
+     "description": "",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769713009_%D8%A8%D9%8A%D9%86%D8%A7%D8%AA%D9%8A%D9%84%D8%A7%20%D9%85%D9%8A%D9%84%D9%83%20%D8%B4%D9%8A%D9%83.jpg",
+     "groups": []
+    },
+    {
+     "ref": "145621",
+     "name": {
+      "en": "Pistachio Milkshake",
+      "ar": "بستاشيو ميلك شيك"
+     },
+     "price": 160.0,
+     "discountPct": 0.0,
+     "prep": 0,
+     "calories": null,
+     "description": "",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769713017_%D8%A8%D8%B3%D8%AA%D8%A7%D8%B4%D9%8A%D9%88%20%D9%85%D9%8A%D9%84%D9%83%20%D8%B4%D9%8A%D9%83.jpg",
+     "groups": []
+    },
+    {
+     "ref": "145622",
+     "name": {
+      "en": "Choco Hazelnut Milkshake",
+      "ar": "شوكو هازلنت ميلك شيك"
+     },
+     "price": 135.0,
+     "discountPct": 0.0,
+     "prep": 0,
+     "calories": null,
+     "description": "",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769713030_%D9%87%D8%A7%D8%B2%D9%84%D9%86%D8%AA%20%D9%85%D9%8A%D9%84%D9%83%20%D8%B4%D9%8A%D9%83.jpg",
+     "groups": []
+    }
+   ]
+  },
+  {
+   "ref": "15082",
+   "name": {
+    "en": "Mocktails",
+    "ar": "موكتيل"
+   },
+   "image": "https://api.bonbell.net/1137/cat/1761664457_%D9%81%D9%8A%D8%B2%D9%8A-%D9%85%D8%A7%D9%86%D8%AC%D9%88.jpg",
+   "visible": true,
+   "items": [
+    {
+     "ref": "148638",
+     "name": {
+      "en": "Fizzy Mango Mocktail",
+      "ar": "فيزي مانجو موكتيل"
+     },
+     "price": 85.0,
+     "discountPct": 0.0,
+     "prep": 0,
+     "calories": null,
+     "description": "Mango puree & fresh Orange juice with sparkling water.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769713131_%D9%81%D9%8A%D8%B2%D9%8A-%D9%85%D8%A7%D9%86%D8%AC%D9%88.jpg",
+     "groups": []
+    },
+    {
+     "ref": "148639",
+     "name": {
+      "en": "Summer Chill Mocktail",
+      "ar": "سمر تشيل موكتيل"
+     },
+     "price": 90.0,
+     "discountPct": 0.0,
+     "prep": 0,
+     "calories": null,
+     "description": "Peach puree & pure Red Apple juice with sparkling water",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769713138_%D8%B3%D9%85%D8%B1%20%D8%AA%D8%B4%D9%8A%D9%84.jpg",
+     "groups": []
+    },
+    {
+     "ref": "148640",
+     "name": {
+      "en": "Pink Honey Lemonade Mocktail",
+      "ar": "بينك هوني ليمونيد موكتيل"
+     },
+     "price": 95.0,
+     "discountPct": 0.0,
+     "prep": 0,
+     "calories": null,
+     "description": "Honey, fresh Lemon juice & Grenadine syrup with sparking water",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769713145_%D8%A8%D9%8A%D9%86%D9%83%20%D9%87%D9%88%D9%86%D9%8A%20%D9%84%D9%8A%D9%85%D9%88%D9%86%D9%8A%D8%AF.png",
+     "groups": []
+    }
+   ]
+  },
+  {
+   "ref": "14831",
+   "name": {
+    "en": "Italian Soda",
+    "ar": "ايطاليان صودا"
+   },
+   "image": "https://api.bonbell.net/1137/cat/1761664465_%D9%85%D9%88%D9%87%D9%8A%D8%AA%D9%88.jpg",
+   "visible": true,
+   "items": [
+    {
+     "ref": "145623",
+     "name": {
+      "en": "Mojito Soda",
+      "ar": "موهيتو صودا"
+     },
+     "price": 60.0,
+     "discountPct": 0.0,
+     "prep": 0,
+     "calories": null,
+     "description": "Lemon & Mint syrups with sparking water.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769713165_%D9%85%D9%88%D9%87%D9%8A%D8%AA%D9%88.jpg",
+     "groups": []
+    },
+    {
+     "ref": "145624",
+     "name": {
+      "en": "Tropical Soda",
+      "ar": "تروبيكال صودا"
+     },
+     "price": 65.0,
+     "discountPct": 0.0,
+     "prep": 0,
+     "calories": null,
+     "description": "Passion Fruit puree & Pomegranate syrup with sparkling water.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769713200_%D8%AA%D8%B1%D9%88%D8%A8%D9%8A%D9%83%D8%A7%D9%84.jpg",
+     "groups": []
+    },
+    {
+     "ref": "145627",
+     "name": {
+      "en": "Energy Soda",
+      "ar": "انيرجي صودا"
+     },
+     "price": 60.0,
+     "discountPct": 0.0,
+     "prep": 0,
+     "calories": null,
+     "description": "Black Berry & Mint syrup with Energy drink.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769713213_%D8%A7%D9%86%D9%8A%D8%B1%D8%AC%D9%8A.png",
+     "groups": []
+    }
+   ]
+  },
+  {
+   "ref": "9420",
+   "name": {
+    "en": "Soft Drinks & Juice",
+    "ar": "مشروبات غازية وعصير"
+   },
+   "image": "https://api.bonbell.net/1137/cat/17920092661722955119.png",
+   "visible": true,
+   "items": [
+    {
+     "ref": "159315",
+     "name": {
+      "en": "Uber Energy Drink",
+      "ar": "اوبر مشروب طاقة"
+     },
+     "price": 50.0,
+     "discountPct": 0.0,
+     "prep": 0,
+     "calories": null,
+     "description": "Turkish Energy Drink",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1778431470_Uber.png",
+     "groups": []
+    },
+    {
+     "ref": "145614",
+     "name": {
+      "en": "Fresh Mango Juice",
+      "ar": "عصير مانجو فرش"
+     },
+     "price": 40.0,
+     "discountPct": 0.0,
+     "prep": 0,
+     "calories": null,
+     "description": "300 ملل",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": false,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769713320_mango-juice.png",
+     "groups": []
+    },
+    {
+     "ref": "145615",
+     "name": {
+      "en": "Fresh Orange Juice",
+      "ar": "عصير برتقال فرش"
+     },
+     "price": 55.0,
+     "discountPct": 0.0,
+     "prep": 0,
+     "calories": null,
+     "description": "300 ملل",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769713342_%D8%B9%D8%B5%D9%8A%D8%B1%20%D8%A8%D8%B1%D8%AA%D9%82%D8%A7%D9%84.png",
+     "groups": []
+    },
+    {
+     "ref": "145616",
+     "name": {
+      "en": "Fresh Strawberry Juice",
+      "ar": "عصير فراولة فرش"
+     },
+     "price": 35.0,
+     "discountPct": 0.0,
+     "prep": 0,
+     "calories": null,
+     "description": "300ملل",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": false,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1745013507_strawberry-smoothie.jpg",
+     "groups": []
+    },
+    {
+     "ref": "90146",
+     "name": {
+      "en": "V Cola",
+      "ar": "V COLA"
+     },
+     "price": 30.0,
+     "discountPct": 0.0,
+     "prep": 0,
+     "calories": null,
+     "description": "",
+     "channels": [
+      "Delivery",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1778431479_egy_6224011241366__2_6384638531988664745394%20-%20Copy.png",
+     "groups": [
+      {
+       "name": "Type",
+       "nameAr": "النوع",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "V7 Cola",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "V7 Cola Diet",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "V7 Lemon",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "V7 Pink Lemonade",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "103463",
+     "name": {
+      "en": "V Cola Diet",
+      "ar": "V COLA DIET"
+     },
+     "price": 30.0,
+     "discountPct": 0.0,
+     "prep": 0,
+     "calories": null,
+     "description": "Zero Sugar",
+     "channels": [
+      "Delivery",
+      "Take away"
+     ],
+     "visible": false,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/12787986071734357470.JPG",
+     "groups": []
+    },
+    {
+     "ref": "155665",
+     "name": {
+      "en": "Palestine Drink",
+      "ar": "فلسطين درينك"
+     },
+     "price": 20.0,
+     "discountPct": 0.0,
+     "prep": 0,
+     "calories": null,
+     "description": "",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": false,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1763399047_Palestine%20Drink.PNG",
+     "groups": []
+    },
+    {
+     "ref": "132880",
+     "name": {
+      "en": "TWIST Energy Drink",
+      "ar": "توست مشروب طاقة"
+     },
+     "price": 20.0,
+     "discountPct": 0.0,
+     "prep": 0,
+     "calories": null,
+     "description": "",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/15316540241734357520.jpg",
+     "groups": []
+    },
+    {
+     "ref": "102071",
+     "name": {
+      "en": "Big Cola",
+      "ar": "بيج كولا"
+     },
+     "price": 15.0,
+     "discountPct": 0.0,
+     "prep": 0,
+     "calories": null,
+     "description": "",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1778431491_Egipto-big-cola.jpg",
+     "groups": []
+    },
+    {
+     "ref": "90147",
+     "name": {
+      "en": "Pure Juice",
+      "ar": "عصير بيور"
+     },
+     "price": 25.0,
+     "discountPct": 0.0,
+     "prep": 0,
+     "calories": null,
+     "description": "",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1778431499_71zup5K0nWL._AC_SL1500_.jpg",
+     "groups": [
+      {
+       "name": "النوع",
+       "nameAr": "النوع",
+       "required": false,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Apple Juice",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Mango Juice",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Grape Juice",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "90148",
+     "name": {
+      "en": "Small Mineral Water",
+      "ar": "مياه معدنية صغير"
+     },
+     "price": 10.0,
+     "discountPct": 0.0,
+     "prep": 0,
+     "calories": null,
+     "description": "",
+     "channels": [
+      "Delivery",
+      "Take away"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/19171577581726246660.jpg",
+     "groups": []
+    }
+   ]
+  },
+  {
+   "ref": "13585",
+   "name": {
+    "en": "Offers 2025",
+    "ar": "عروض 2025"
+   },
+   "image": "https://api.bonbell.net/1137/cat/5261886571735299116.png",
+   "visible": false,
+   "items": [
+    {
+     "ref": "133705",
+     "name": {
+      "en": "Singles Offers",
+      "ar": "عرض السناجل"
+     },
+     "price": 270.0,
+     "discountPct": 25.926,
+     "prep": 30,
+     "calories": null,
+     "description": "بمناسبة السنة الجديدة 2025 اطلب برجر من اختيارك بيف او تشكن مع فرايز وسلطة وصوص وكولا",
+     "channels": [
+      "Delivery",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": false,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769713410_%D8%B9%D8%B1%D8%B6%20%D8%A7%D9%84%D8%B3%D9%86%D8%A7%D8%AC%D9%84%202025%20-%20low.png",
+     "groups": [
+      {
+       "name": "Choose Burger",
+       "nameAr": "اختر برجر",
+       "required": true,
+       "multi": false,
+       "min": 1,
+       "max": 1,
+       "options": [
+        {
+         "name": "Classic Beef Burger",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Smokey Beef Burger",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "White Mushroom Beef Bruger",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Stark Beef Burger",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Mondial Beef Burger",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Brownie Beef Burger",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Classic Chicken Burger",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Smokey Chicken Burger",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "White Mushroom Chicken Bruger",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Stark Chicken Burger",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Mondial Chicken Burger",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "Choose Sauce",
+       "nameAr": "اختر صوص",
+       "required": true,
+       "multi": false,
+       "min": 1,
+       "max": 1,
+       "options": [
+        {
+         "name": "Ranch Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Knock Out Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Dynamite Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Stark Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "BBQ Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Cheddar Cheese Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "133706",
+     "name": {
+      "en": "Couples Offers",
+      "ar": "عرض الكبلز"
+     },
+     "price": 525.0,
+     "discountPct": 27.619,
+     "prep": 30,
+     "calories": null,
+     "description": "بمناسبة السنة الجديدة 2025 اطلب 2 برجر من اختيارك بيف او تشكن مع تشيز فرايز و2 سلطة و2 صوص و2 كولا",
+     "channels": [
+      "Delivery",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": false,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1769713416_%D8%B9%D8%B1%D8%B6%20%D8%A7%D9%84%D9%83%D8%A8%D9%84%D8%B2%202025%20-%20low.png",
+     "groups": [
+      {
+       "name": "Choose 2 Burgers",
+       "nameAr": "اختر 2 برجر",
+       "required": true,
+       "multi": true,
+       "min": 2,
+       "max": 2,
+       "options": [
+        {
+         "name": "Classic Beef Burger",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Smokey Beef Burger",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "White Mushroom Beef Bruger",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Stark Beef Burger",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Mondial Beef Burger",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Brownie Beef Burger",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Classic Chicken Burger",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Smokey Chicken Burger",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "White Mushroom Chicken Bruger",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Stark Chicken Burger",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Mondial Chicken Burger",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        }
+       ]
+      },
+      {
+       "name": "Choose 2 Sauces",
+       "nameAr": "اختر 2 صوص",
+       "required": true,
+       "multi": true,
+       "min": 2,
+       "max": 2,
+       "options": [
+        {
+         "name": "Ranch Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Knock Out Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Dynamite Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Stark Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "BBQ Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Cheddar Cheese Sauce",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "ref": "15810",
+   "name": {
+    "en": "Ramadan 2026",
+    "ar": "رمضان 2026"
+   },
+   "image": "https://api.bonbell.net/1137/cat/1769703465_Capture.PNG",
+   "visible": false,
+   "items": [
+    {
+     "ref": "157695",
+     "name": {
+      "en": "Ramadan Rolls",
+      "ar": "رمضان رولز"
+     },
+     "price": 135.0,
+     "discountPct": 0.0,
+     "prep": 15,
+     "calories": null,
+     "description": "6 mini chicken wraps stuffed with creamy filling of your choice “Cajun, Pizza or Alfrado”",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1772198891_Ramadan%20Rolls%2003.jpg",
+     "groups": [
+      {
+       "name": "Type",
+       "nameAr": "النوع",
+       "required": true,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Chicken Cajun",
+         "price": 0.0,
+         "minQty": 1,
+         "maxQty": 1
+        },
+        {
+         "name": "Chicken Pizza",
+         "price": 0.0,
+         "minQty": 1,
+         "maxQty": 1
+        },
+        {
+         "name": "Chicken Alfredo",
+         "price": 0.0,
+         "minQty": 1,
+         "maxQty": 1
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "157696",
+     "name": {
+      "en": "Cream Corn Soup",
+      "ar": "شوربة ذرة بالكريمة"
+     },
+     "price": 45.0,
+     "discountPct": 0.0,
+     "prep": 10,
+     "calories": null,
+     "description": "",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1772278677_Cream%20Corn%20Soup.jpg",
+     "groups": []
+    },
+    {
+     "ref": "157697",
+     "name": {
+      "en": "Orzo Pasta Soup",
+      "ar": "شوربة لسان عصفور"
+     },
+     "price": 40.0,
+     "discountPct": 0.0,
+     "prep": 10,
+     "calories": null,
+     "description": "",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1772278715_Orzo%20Pasta%20Soup.jpg",
+     "groups": []
+    },
+    {
+     "ref": "157698",
+     "name": {
+      "en": "Fizzy Roselle",
+      "ar": "فيزي كركديه"
+     },
+     "price": 65.0,
+     "discountPct": 0.0,
+     "prep": 10,
+     "calories": null,
+     "description": "",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1772279098_Roselle%20Soda.jpg",
+     "groups": []
+    },
+    {
+     "ref": "157699",
+     "name": {
+      "en": "Passion Sobia",
+      "ar": "باشن سوبيا"
+     },
+     "price": 55.0,
+     "discountPct": 0.0,
+     "prep": 10,
+     "calories": null,
+     "description": "",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1772279104_Passion%20Sobia.jpg",
+     "groups": []
+    },
+    {
+     "ref": "157700",
+     "name": {
+      "en": "Blue Sobia",
+      "ar": "بلو سوبيا"
+     },
+     "price": 50.0,
+     "discountPct": 0.0,
+     "prep": 10,
+     "calories": null,
+     "description": "",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1772279109_Blue%20Sobia.jpg",
+     "groups": []
+    },
+    {
+     "ref": "157701",
+     "name": {
+      "en": "Honey Cheese Fingers",
+      "ar": "تشيز فنجر بالعسل"
+     },
+     "price": 125.0,
+     "discountPct": 0.0,
+     "prep": 15,
+     "calories": null,
+     "description": "",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": true,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1772279115_Honey%20Cheese%20Fingers.jpg",
+     "groups": []
+    }
+   ]
+  },
+  {
+   "ref": "15962",
+   "name": {
+    "en": "World Cup 2026",
+    "ar": "كأس العالم 2026"
+   },
+   "image": "https://api.bonbell.net/1137/cat/1781196269_tournaments_fifa-world-cup-2026--white_3000x3000.football-logos.cc.png",
+   "visible": false,
+   "items": [
+    {
+     "ref": "159521",
+     "name": {
+      "en": "Golden Ball Bundle",
+      "ar": "عرض الكرة الذهبية"
+     },
+     "price": 505.0,
+     "discountPct": 36.63366336633663,
+     "prep": 15,
+     "calories": null,
+     "description": "Full Meal for 1 Person: 1 Mondial Chicken Burger + 1 Cheese Fries + 1 Mocktail + 1 Crunchy Cake",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": false,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1781206705_Golden%20Ball.PNG",
+     "groups": [
+      {
+       "name": "اختر نوع الموكتيل",
+       "nameAr": "اختر نوع الموكتيل",
+       "required": true,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Fizzy Mango Mocktail",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Summer Chill Mocktail",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Pink Honey Lemonade Mocktail",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      },
+      {
+       "name": "Choose Crunchy Cake Type",
+       "nameAr": "اختر نوع كرانشي كيك",
+       "required": true,
+       "multi": false,
+       "min": 0,
+       "max": 0,
+       "options": [
+        {
+         "name": "Crunchy Cake (Chocolate)",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Crunchy Cake (Lotus)",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        },
+        {
+         "name": "Crunchy Cake (Almond)",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 1
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "159522",
+     "name": {
+      "en": "Strikers Bundle",
+      "ar": "عرض رأس الحربة"
+     },
+     "price": 780.0,
+     "discountPct": 25.64102564102564,
+     "prep": 20,
+     "calories": null,
+     "description": "Full Meal For 2 Persons: 4 Small Mondial Chicken Burgers + 2 Small Fries + 2 Milkshakes",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": false,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1781206742_Striker.PNG",
+     "groups": [
+      {
+       "name": "اختر 2 ميلك شيك",
+       "nameAr": "اختر 2 ميلك شيك",
+       "required": true,
+       "multi": true,
+       "min": 2,
+       "max": 2,
+       "options": [
+        {
+         "name": "Pistachio Milkshake",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Caramel Popcorn Milkshake",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        },
+        {
+         "name": "Cheese Cake Milkshake",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 2
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ref": "159523",
+     "name": {
+      "en": "Football Team Bundle",
+      "ar": "عرض المنتخب"
+     },
+     "price": 1280.0,
+     "discountPct": 33.59375,
+     "prep": 20,
+     "calories": null,
+     "description": "Full Meal for 4 Persons: 2 Mondial Chicken Burgers + 2 Commando Sandwiches + 1 Alfredo Fries + 4 Sodas + 2 Mayo Corn Salad.",
+     "channels": [
+      "Delivery",
+      "Dine in",
+      "Take away",
+      "Car Pickup"
+     ],
+     "visible": false,
+     "recommended": false,
+     "image": "https://api.bonbell.net/1137/1781206781_Football%20Team.PNG",
+     "groups": [
+      {
+       "name": "اختر 4 صودا",
+       "nameAr": "اختر 4 صودا",
+       "required": true,
+       "multi": true,
+       "min": 4,
+       "max": 4,
+       "options": [
+        {
+         "name": "Mojito Soda",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 4
+        },
+        {
+         "name": "Tropical Soda",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 4
+        },
+        {
+         "name": "Energy Soda",
+         "price": 0.0,
+         "minQty": 0,
+         "maxQty": 4
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "sideOptions": [
+  {
+   "name": "Double Beef (300gm)",
+   "price": 85.0
+  },
+  {
+   "name": "Triple Beef (450gm)",
+   "price": 170.0
+  },
+  {
+   "name": "Combo (Fries + Big Cola)",
+   "price": 65.0
+  },
+  {
+   "name": "Combo (Fries + Coleslaw)",
+   "price": 80.0
+  },
+  {
+   "name": "Combo (Fries + V Cola)",
+   "price": 80.0
+  },
+  {
+   "name": "Add 2 Mozzarella Sticks",
+   "price": 40.0
+  },
+  {
+   "name": "Add 2 Onion Rings",
+   "price": 30.0
+  },
+  {
+   "name": "Add Cheddar Sauce",
+   "price": 20.0
+  },
+  {
+   "name": "Add American Cheese Slice",
+   "price": 20.0
+  },
+  {
+   "name": "Add Salami Slice",
+   "price": 15.0
+  },
+  {
+   "name": "Add Jalapeno",
+   "price": 15.0
+  },
+  {
+   "name": "Spicy",
+   "price": 0.0
+  },
+  {
+   "name": "Without Cheese",
+   "price": 0.0
+  },
+  {
+   "name": "Without Onion",
+   "price": 0.0
+  },
+  {
+   "name": "Without Tomato",
+   "price": 0.0
+  },
+  {
+   "name": "Without Lettuce",
+   "price": 0.0
+  },
+  {
+   "name": "Without Mayo/Sauce",
+   "price": 0.0
+  },
+  {
+   "name": "Without Pickles",
+   "price": 0.0
+  },
+  {
+   "name": "Double Chicken (300gm)",
+   "price": 75.0
+  },
+  {
+   "name": "Triple Chicken (450gm)",
+   "price": 150.0
+  },
+  {
+   "name": "Extra Grilled Chicken",
+   "price": 65.0
+  },
+  {
+   "name": "Single Crispy",
+   "price": 0.0
+  },
+  {
+   "name": "Double Crispy (2 Pieces)",
+   "price": 80.0
+  },
+  {
+   "name": "Triple Crispy (3 Pieces)",
+   "price": 160.0
+  },
+  {
+   "name": "Extra Cheese",
+   "price": 20.0
+  },
+  {
+   "name": "Extra Jalapeno",
+   "price": 15.0
+  },
+  {
+   "name": "Without Mushroom",
+   "price": 0.0
+  },
+  {
+   "name": "Beef Burger",
+   "price": 0.0
+  },
+  {
+   "name": "Chicken Burger",
+   "price": 0.0
+  },
+  {
+   "name": "Chicken Nuggets",
+   "price": 0.0
+  },
+  {
+   "name": "Boy toy",
+   "price": 0.0
+  },
+  {
+   "name": "Girl toy",
+   "price": 0.0
+  },
+  {
+   "name": "Apple Juice",
+   "price": 0.0
+  },
+  {
+   "name": "Mango Juice",
+   "price": 0.0
+  },
+  {
+   "name": "Grape Juice",
+   "price": 0.0
+  },
+  {
+   "name": "Classic Chicken Burger",
+   "price": 0.0
+  },
+  {
+   "name": "Smokey Chicken Burger",
+   "price": 0.0
+  },
+  {
+   "name": "Stark Chicken Burger",
+   "price": 0.0
+  },
+  {
+   "name": "Ranch Sauce",
+   "price": 0.0
+  },
+  {
+   "name": "Knock Out Sauce",
+   "price": 0.0
+  },
+  {
+   "name": "Dynamite Sauce",
+   "price": 0.0
+  },
+  {
+   "name": "Stark Sauce",
+   "price": 0.0
+  },
+  {
+   "name": "BBQ Sauce",
+   "price": 0.0
+  },
+  {
+   "name": "Cheddar Cheese Sauce",
+   "price": 0.0
+  },
+  {
+   "name": "Westeros Sauce",
+   "price": 0.0
+  },
+  {
+   "name": "Classic Beef Burger",
+   "price": 0.0
+  },
+  {
+   "name": "Smokey Beef Burger",
+   "price": 0.0
+  },
+  {
+   "name": "White Mushroom Beef Bruger",
+   "price": 0.0
+  },
+  {
+   "name": "Stark Beef Burger",
+   "price": 0.0
+  },
+  {
+   "name": "Mondial Beef Burger",
+   "price": 0.0
+  },
+  {
+   "name": "Brownie Beef Burger",
+   "price": 0.0
+  },
+  {
+   "name": "White Mushroom Chicken Bruger",
+   "price": 0.0
+  },
+  {
+   "name": "Mondial Chicken Burger",
+   "price": 0.0
+  },
+  {
+   "name": "Beef Snack Burger",
+   "price": 0.0
+  },
+  {
+   "name": "Chicken Snack Burger",
+   "price": 0.0
+  },
+  {
+   "name": "Combo (Fitness Salad+Fresh Orange Juice)",
+   "price": 120.0
+  },
+  {
+   "name": "Combo (Fitness Salad+V7 Diet Cola)",
+   "price": 110.0
+  },
+  {
+   "name": "Crispy Kids Burger",
+   "price": 0.0
+  },
+  {
+   "name": "Tea instead of Coffee",
+   "price": 0.0
+  },
+  {
+   "name": "Add Icecream Vanilla",
+   "price": 20.0
+  },
+  {
+   "name": "Add Icecream Chocolate",
+   "price": 20.0
+  },
+  {
+   "name": "V7 Cola",
+   "price": 0.0
+  },
+  {
+   "name": "V7 Cola Diet",
+   "price": 0.0
+  },
+  {
+   "name": "V7 Lemon",
+   "price": 0.0
+  },
+  {
+   "name": "V7 Pink Lemonade",
+   "price": 0.0
+  },
+  {
+   "name": "Chicken Cajun",
+   "price": 0.0
+  },
+  {
+   "name": "Chicken Pizza",
+   "price": 0.0
+  },
+  {
+   "name": "Chicken Alfredo",
+   "price": 0.0
+  },
+  {
+   "name": "Fizzy Mango Mocktail",
+   "price": 0.0
+  },
+  {
+   "name": "Summer Chill Mocktail",
+   "price": 0.0
+  },
+  {
+   "name": "Pink Honey Lemonade Mocktail",
+   "price": 0.0
+  },
+  {
+   "name": "Crunchy Cake (Chocolate)",
+   "price": 0.0
+  },
+  {
+   "name": "Crunchy Cake (Lotus)",
+   "price": 0.0
+  },
+  {
+   "name": "Crunchy Cake (Almond)",
+   "price": 0.0
+  },
+  {
+   "name": "Pistachio Milkshake",
+   "price": 0.0
+  },
+  {
+   "name": "Caramel Popcorn Milkshake",
+   "price": 0.0
+  },
+  {
+   "name": "Cheese Cake Milkshake",
+   "price": 0.0
+  },
+  {
+   "name": "Mojito Soda",
+   "price": 0.0
+  },
+  {
+   "name": "Tropical Soda",
+   "price": 0.0
+  },
+  {
+   "name": "Energy Soda",
+   "price": 0.0
+  }
+ ]
+}

@@ -90,6 +90,7 @@ const LISTED: Area[] = [
   { id: "hr.exit", screen: "cc-hr", label: "نهاية الخدمة", acts: ["view", "add", "edit", "delete", "export"] },
   { id: "hr.payslips", screen: "cc-hr", label: "قسائم الرواتب", acts: ["view", "add", "delete"], note: "الإضافة: نشر قسائم كشف رواتب للموظفين على صفحتهم." },
   { id: "hr.settings", screen: "cc-hr", label: "إعدادات الموارد البشرية", acts: ["view", "edit"] },
+  { id: "menu", screen: "cc-menu", label: "المنيو", acts: ["view", "add", "edit", "delete"], note: "الفئات والأصناف ومجموعات الخيارات وأسعارها، والاستيراد من Bonbell." },
 
   { id: "pos", screen: "cc-pos", label: "الكاشير", acts: ["view"], note: "البيع والدفع والوردية. الخصومات والإلغاء بعد الإرسال بموافقة مدير." },
   { id: "orders", screen: "cc-orders", label: "الطلبات", acts: ["view"] },

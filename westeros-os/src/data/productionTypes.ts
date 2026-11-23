@@ -226,6 +226,8 @@ export interface MfgSettings extends Row {
 
 export interface MfgUnitDef { name: string; base: "g" | "ml" | "pc"; factor: number }
 export interface MfgLists {
+  /** المنيو: الخيارات الجانبية (زي Side Options في Bonbell), the names a group's options are picked from; price in pounds */
+  sideOptions?: { id: string; name: string; nameAr?: string; price: number }[];
   /** وحدة التخزين لمواد الخام */
   storageUnits: string[];
   /** وحدة التصنيع لمواد الخام */

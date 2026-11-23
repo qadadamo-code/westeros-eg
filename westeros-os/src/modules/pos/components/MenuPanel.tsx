@@ -138,7 +138,7 @@ function ItemTile({ item, cat, count, onPick, lang }: { item: MenuItem; cat?: Me
           count > 0 && "border-transparent ring-2",
         )}
         style={{ ...(count > 0 ? { ["--tw-ring-color" as string]: color } : {}), backgroundImage: `linear-gradient(160deg, color-mix(in srgb, ${color} 13%, transparent), transparent 62%)` }}
-        aria-label={`${loc(item.name)} ${formatMoney(item.price, { lang })}${off ? ` — ${L("خلصان", "sold out")}` : ""}`}
+        aria-label={`${loc(item.name)} ${formatMoney(Math.max(0, item.price - (item.discount ?? 0)), { lang })}${off ? ` — ${L("خلصان", "sold out")}` : ""}`}
       >
         <span className="relative flex items-start justify-between gap-2">
           {photo ? (
@@ -158,7 +158,7 @@ function ItemTile({ item, cat, count, onPick, lang }: { item: MenuItem; cat?: Me
         <span className="relative mt-2 line-clamp-2 text-[15px] font-semibold leading-snug">{loc(item.name)}</span>
         <span className="relative mt-auto flex items-end justify-between gap-2 pt-2">
           <span className="num text-[14.5px] font-semibold text-ink-2" dir="ltr">
-            {formatMoney(item.price, { lang, compact: true, bare: true })}
+            {formatMoney(Math.max(0, item.price - (item.discount ?? 0)), { lang, compact: true, bare: true })}
           </span>
           {item.modifierGroupIds.length ? <span className="rounded-full bg-surface-3 px-2 text-[11px] font-semibold text-muted">{L("اختيارات", "options")}</span> : null}
         </span>

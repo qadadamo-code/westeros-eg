@@ -231,6 +231,10 @@ export interface MenuCategory extends TenantRow {
   icon: string;
   stationId: string | null;
   active: boolean;
+  /* المنيو (0043_menu_options.sql) */
+  imageUrl?: string | null;
+  /** id in Bonbell, for the import */
+  externalRef?: string | null;
 }
 
 export type MenuTag = "spicy" | "veg" | "new" | "popular" | "chef" | "kids" | "gluten_free";
@@ -266,6 +270,12 @@ export interface MenuItem extends TenantRow {
   comboOf?: ComboComponent[];
   /** hidden from these channels (e.g. not on aggregators) */
   hiddenOn?: SalesChannel[];
+  /* المنيو (0043_menu_options.sql) */
+  /** taken off the price at the till */
+  discount?: Units;
+  recommended?: boolean;
+  /** id in Bonbell, for the import */
+  externalRef?: string | null;
 }
 
 export interface ModifierGroup extends TenantRow {
@@ -275,6 +285,11 @@ export interface ModifierGroup extends TenantRow {
   /** 1 = pick one (radio) */
   max: number;
   sort: number;
+  /* المنيو (0043_menu_options.sql) */
+  required?: boolean;
+  /** false = خيار واحد, true = أكتر من خيار */
+  multi?: boolean;
+  externalRef?: string | null;
 }
 
 export interface Modifier extends TenantRow {
@@ -284,6 +299,10 @@ export interface Modifier extends TenantRow {
   isDefault: boolean;
   available: boolean;
   sort: number;
+  /* المنيو (0043_menu_options.sql): how many times the option may be picked (max 0 = no limit) */
+  minQty?: number;
+  maxQty?: number;
+  discount?: Units;
 }
 
 /* ───────────── Orders ───────────── */

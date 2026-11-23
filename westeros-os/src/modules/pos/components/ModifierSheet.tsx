@@ -59,16 +59,29 @@ export function ModifierSheet({ item, groups, mods, guests, seat: seat0, course:
   }, [item?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const chosen = useMemo(() => Object.values(picked).flat().map((id) => mods.find((m) => m.id === id)).filter((m): m is Modifier => !!m), [picked, mods]);
-  const missing = itemGroups.filter((g) => (picked[g.id]?.length ?? 0) < g.min);
+  const missing = itemGroups.filter((g) => (picked[g.id]?.length ?? 0) < g.min || mods.some((m) => m.groupId === g.id && (m.minQty ?? 0) > 0 && (picked[g.id] ?? []).filter((x) => x === m.id).length < (m.minQty ?? 0)));
   const unit = (item?.price ?? 0) + chosen.reduce((a, m) => a + m.price, 0);
 
+  // how many times an option may be picked (المنيو، زي Bonbell): 1 = on/off, more = a counter, 0 = no limit
+  const limitOf = (m: Modifier) => m.maxQty ?? 1;
+  const countOf = (g: ModifierGroup, m: Modifier) => (picked[g.id] ?? []).filter((x) => x === m.id).length;
   const toggle = (g: ModifierGroup, m: Modifier) =>
     setPicked((p) => {
       const cur = p[g.id] ?? [];
-      if (g.max === 1) return { ...p, [g.id]: cur[0] === m.id && g.min === 0 ? [] : [m.id] };
-      if (cur.includes(m.id)) return { ...p, [g.id]: cur.filter((x) => x !== m.id) };
-      if (cur.length >= g.max) return p;
+      const lim = limitOf(m);
+      if (g.max === 1 && lim === 1) return { ...p, [g.id]: cur[0] === m.id && g.min === 0 ? [] : [m.id] };
+      const n = cur.filter((x) => x === m.id).length;
+      if (lim === 1 && n) return { ...p, [g.id]: cur.filter((x) => x !== m.id) };
+      if (lim !== 0 && n >= lim) return p;
+      if (cur.length >= g.max) return g.max === 1 ? { ...p, [g.id]: [m.id] } : p;
       return { ...p, [g.id]: [...cur, m.id] };
+    });
+  const less = (g: ModifierGroup, m: Modifier) =>
+    setPicked((p) => {
+      const cur = [...(p[g.id] ?? [])];
+      const i = cur.lastIndexOf(m.id);
+      if (i >= 0) cur.splice(i, 1);
+      return { ...p, [g.id]: cur };
     });
 
   const submit = () => {
@@ -113,25 +126,29 @@ export function ModifierSheet({ item, groups, mods, guests, seat: seat0, course:
               </legend>
               <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3" role={g.max === 1 ? "radiogroup" : "group"} aria-label={loc(g.name)}>
                 {opts.map((m) => {
-                  const on = picked[g.id]?.includes(m.id) ?? false;
-                  const full = !on && g.max > 1 && n >= g.max;
+                  const c = countOf(g, m);
+                  const on = c > 0;
+                  const lim = limitOf(m);
+                  const counter = lim !== 1;
+                  const full = (!on || counter) && g.max > 1 && n >= g.max;
                   return (
+                    <div key={m.id} className="relative">
                     <motion.button
-                      key={m.id}
                       type="button"
-                      role={g.max === 1 ? "radio" : "checkbox"}
+                      role={g.max === 1 && !counter ? "radio" : "checkbox"}
                       aria-checked={on}
-                      disabled={!m.available || full}
+                      disabled={!m.available || full || (counter && lim !== 0 && c >= lim)}
                       whileTap={reduced ? undefined : { scale: 0.96 }}
                       transition={spring.snappy}
                       onClick={() => toggle(g, m)}
                       className={cn(
-                        "flex min-h-14 items-center gap-2.5 rounded-xl border px-3 py-2 text-start transition-colors disabled:opacity-40",
+                        "flex min-h-14 w-full items-center gap-2.5 rounded-xl border px-3 py-2 text-start transition-colors disabled:opacity-40",
                         on ? "border-primary bg-primary-soft text-ink" : "border-line bg-surface hover:border-line-strong",
+                        counter && on && "disabled:opacity-100",
                       )}
                     >
-                      <span className={cn("grid size-5 shrink-0 place-items-center border-2 transition-colors", g.max === 1 ? "rounded-full" : "rounded-md", on ? "border-primary bg-primary text-primary-ink" : "border-line-strong")}>
-                        {on ? <Check className="size-3.5" strokeWidth={3} /> : null}
+                      <span className={cn("num grid size-5 shrink-0 place-items-center border-2 text-[11px] font-bold transition-colors", g.max === 1 && !counter ? "rounded-full" : "rounded-md", on ? "border-primary bg-primary text-primary-ink" : "border-line-strong")}>
+                        {on ? (counter ? c : <Check className="size-3.5" strokeWidth={3} />) : null}
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block text-[14.5px] font-semibold leading-tight">{loc(m.name)}</span>
@@ -142,6 +159,10 @@ export function ModifierSheet({ item, groups, mods, guests, seat: seat0, course:
                         ) : null}
                       </span>
                     </motion.button>
+                    {counter && on ? (
+                      <button type="button" onClick={() => less(g, m)} aria-label={L("شيل واحد", "Remove one")} className="absolute end-1.5 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-lg border border-line bg-surface text-[18px] font-bold hover:bg-surface-2">−</button>
+                    ) : null}
+                    </div>
                   );
                 })}
               </div>

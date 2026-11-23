@@ -202,8 +202,9 @@ export default function Register() {
   const pick = (item: MenuItem, { forceSheet }: { forceSheet: boolean }) => {
     if (!item.available) return toast({ title: L("الصنف ده خلصان النهارده", "This item is 86'd today"), tone: "warn" });
     if (!onSchedule(item)) return toast({ title: L("الصنف ده مش متاح دلوقتي", "Not served at this hour"), description: scheduleLabel(item.schedule, lang), tone: "warn" });
-    const required = item.modifierGroupIds.some((g) => (menu.groups.find((x) => x.id === g)?.min ?? 0) > 0);
-    if (forceSheet || required) setModItem(item);
+    // an item with option groups (size, combo, extras, notes) opens them, so the cashier sees each option and its price
+    const hasGroups = item.modifierGroupIds.some((g) => menu.groups.some((x) => x.id === g) && menu.mods.some((m) => m.groupId === g && m.available));
+    if (forceSheet || hasGroups) setModItem(item);
     else void add(item, null);
   };
 
