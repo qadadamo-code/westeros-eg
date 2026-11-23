@@ -9,7 +9,6 @@ import { Badge, Button, Card, Dialog, EmptyState, Input, Segmented, Select, Swit
 import { fmtDay } from "../lib";
 import { ExportButton } from "../ui";
 import { EntryView } from "./Journal";
-import { SalesChannels } from "./SalesChannels";
 import { useActor, useFinPerms } from "./perms";
 import { cancelDoc, CHANNELS, PAY_KEYS, postSalesDay, postSettlement, SALES_DAY, salesOf, salesProblem, salesTotals, SETTLEMENT, settlementOf, settlementProblem, settlementTotal, waitingAccounts, type SalesDeliveryFee, type SalesInput } from "./sales";
 import { DRIVER, feeSplit, methodsOf, onInvoice, shareOf } from "./delivery";
@@ -19,7 +18,7 @@ import { AccountSelect, BranchSelect, Confirm, esc, fmt, fromText, PeriodPicker,
 import { useFinance, type Fin } from "./useFinance";
 
 const err = (e: unknown) => String((e as Error)?.message ?? e);
-type Tab = "days" | "settlements" | "channels";
+type Tab = "days" | "settlements";
 
 export default function Sales() {
   const fin = useFinance();
@@ -45,7 +44,7 @@ export default function Sales() {
   const cells = (d: FinDoc) => { const x = salesOf(d); return [d.code, fmtDay(d.date ?? ""), fin.branchName(d.branchId), d.name, x.orders || 0, x.net, x.vat, x.paid, x.diff, d.status === "posted" ? "مرحل" : "ملغي"] as const; };
   return (
     <div className="grid gap-4">
-      <Toolbar lead={<Segmented size="sm" className="max-sm:grid max-sm:w-full max-sm:grid-cols-3 max-sm:[&>button]:h-10" label="المبيعات" value={tab} onChange={setTab} options={[{ value: "days", label: "ملخصات المبيعات" }, { value: "settlements", label: "التسويات" }, { value: "channels", label: "قنوات البيع" }]} />} actions={<>{can ? <><Button icon={<Plus />} onClick={() => setAdd(true)}>مبيعات يوم</Button><Button variant="secondary" icon={<ArrowLeftRight />} onClick={() => setSettle({})}>تسوية</Button></> : null}</>}>
+      <Toolbar lead={<Segmented size="sm" className="max-sm:grid max-sm:w-full max-sm:grid-cols-2 max-sm:[&>button]:h-10" label="المبيعات" value={tab} onChange={setTab} options={[{ value: "days", label: "ملخصات المبيعات" }, { value: "settlements", label: "التسويات" }]} />} actions={<>{can ? <><Button icon={<Plus />} onClick={() => setAdd(true)}>مبيعات يوم</Button><Button variant="secondary" icon={<ArrowLeftRight />} onClick={() => setSettle({})}>تسوية</Button></> : null}</>}>
         <PeriodPicker value={period} onChange={setPeriod} startMonth={fin.settings.yearStartMonth} />
         <BranchSelect fin={fin} value={branch} onChange={setBranch} />
       </Toolbar>
@@ -63,7 +62,7 @@ export default function Sales() {
         </Card>
       ) : null}
 
-      {tab === "channels" ? <SalesChannels can={can || perms.has("settings")} /> : tab === "days" ? (
+      {tab === "days" ? (
         days.length ? (
           <>
             <div className="flex justify-end gap-2">

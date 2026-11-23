@@ -18,6 +18,7 @@ import { useFinSections, type FinPage as Page, type FinSection as Group } from "
 import { BuyingSummary, GeneralSummary, SellingSummary, StaffSummary } from "./Summaries";
 import Reports, { ReportRedirect } from "./Reports";
 import Sales from "./Sales";
+import { SalesChannels } from "./SalesChannels";
 import Settings from "./Settings";
 import Tax from "./Tax";
 import Treasury from "./Treasury";
@@ -92,6 +93,7 @@ export default function FinancePage() {
         <Route path="vouchers" element={gate("finance.treasury", <Treasury key="v" start="vouchers" />)} />
         <Route path="expenses" element={gate("finance.treasury", <Treasury key="e" start="vouchers" kind="expense" />)} />
         <Route path="sales" element={gate("finance.sales", <Sales />)} />
+        <Route path="channels" element={gate("finance.sales", <SalesChannels can={perms.has("vouchers") || perms.has("settings")} />)} />
         <Route path="purchases" element={gate("finance.purchases", <Purchases />)} />
         <Route path="customers" element={gate("finance.sales", <Customers />)} />
         <Route path="pos-audit" element={gate("finance.sales", <PosAudit />)} />
