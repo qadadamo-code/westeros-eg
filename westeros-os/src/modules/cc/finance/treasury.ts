@@ -36,6 +36,8 @@ export interface VoucherInput {
    * Then `amount` and `vat` are typed in the money account's currency.
    */
   fx?: VoucherFx;
+  /** عملة المبلغ: the amount was typed in another currency and turned into `amount` at this rate */
+  paidIn?: { currency: string; amount: Units; rate: number };
 }
 export interface VoucherFx {
   base: string;
@@ -243,4 +245,5 @@ export function autoMatch(statement: StatementLine[], rows: Pick<BankRow, "key" 
 
 export const CASH_COUNT = "cash-count";
 export const DENOMINATIONS = [200, 100, 50, 20, 10, 5, 1, 0.5, 0.25];
-export const countedTotal = (pieces: Record<string, number>): Units => Math.round(DENOMINATIONS.reduce((s, d) => s + d * (pieces[String(d)] || 0), 0) * UNITS_PER_MAJOR);
+/** what was counted: each denomination (any the owner set in ثوابت النظام) times its count */
+export const countedTotal = (pieces: Record<string, number>): Units => Object.entries(pieces).reduce((s, [d, n]) => s + Math.round(Number(d) * UNITS_PER_MAJOR) * (n > 0 ? Math.floor(n) : 0), 0);

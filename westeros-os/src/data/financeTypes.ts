@@ -149,6 +149,12 @@ export interface FinSettingsData {
   currency: string;
   /** the other currencies accounts may be kept in, each with its last exchange rate (1 unit = rate in the system's currency) */
   currencies: { code: string; rate: number }[];
+  /** فئات العملة الأساسية (العملات الورقية والمعدنية المتداولة): 0.5، 1، 5 … ؛ used to count cash */
+  denominations?: number[];
+  /** update the other currencies' rates once a day from a free public source; undefined = on */
+  ratesAuto?: boolean;
+  /** when the rates were last updated automatically (ISO) */
+  ratesAt?: string | null;
   /** خدمة التوصيل: the delivery methods and how their fees are collected and shared (ثوابت النظام > خدمة التوصيل) */
   delivery?: { methods: DeliveryMethod[] };
 }

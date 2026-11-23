@@ -103,7 +103,7 @@ export async function saveEmployee(db: Db, row: FinDoc | null, f: { name: string
 }
 
 /** سلفة موظف: a payment voucher on the employee's own account. */
-export async function giveAdvance(db: Db, v: { employeeId: string; date: string; moneyId: string; amount: Units; memo: string; branchId: string | null }, actor: Actor): Promise<FinEntry> {
+export async function giveAdvance(db: Db, v: { employeeId: string; date: string; moneyId: string; amount: Units; memo: string; branchId: string | null; paidIn?: { currency: string; amount: Units; rate: number } }, actor: Actor): Promise<FinEntry> {
   if (!v.moneyId) throw new JournalError("اختر الخزينة أو البنك");
   if (!(v.amount > 0)) throw new JournalError("اكتب المبلغ");
   const emp = await db.get("finDocs", v.employeeId);
@@ -114,7 +114,7 @@ export async function giveAdvance(db: Db, v: { employeeId: string; date: string;
   const voucherNo = nextVoucherNo(j.entries, "payment", year);
   return submitEntry(db, null, {
     date: v.date, memo: v.memo.trim() || `سلفة للموظف ${emp.name}`, branchId: v.branchId, kind: "payment", sourceType: "voucher", sourceId: `payment:${year}:${voucherNo}`,
-    lines: [{ account: acc.id, debit: v.amount, credit: 0 }, { account: v.moneyId, debit: 0, credit: v.amount }], meta: { voucherNo, party: emp.name, employeeId: emp.id, advance: true },
+    lines: [{ account: acc.id, debit: v.amount, credit: 0 }, { account: v.moneyId, debit: 0, credit: v.amount }], meta: { voucherNo, party: emp.name, employeeId: emp.id, advance: true, ...(v.paidIn ? { paidIn: v.paidIn } : {}) },
   }, actor);
 }
 

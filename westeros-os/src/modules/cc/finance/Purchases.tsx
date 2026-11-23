@@ -17,6 +17,8 @@ import { AGE_BUCKETS, daysLate, supplierBook, paySplit, PURCHASE, PURCHASE_RETUR
 import { paySupplier, postPurchase, postReturn, saveSupplier } from "./purchaseOps";
 import { METHODS, MONEY_LABEL, moneyAccounts } from "./treasury";
 import { AccountSelect, BranchSelect, esc, fmt, fromText, printDoc, PrintButton, printTable, toText, today, Toolbar } from "./ui";
+import { baseOf } from "./currency";
+import { useAmountCurrency } from "./AmountCurrency";
 import { useFinance, type Fin } from "./useFinance";
 
 const err = (e: unknown) => String((e as Error)?.message ?? e);
@@ -356,17 +358,18 @@ function PayDialog({ fin, supplier, onClose, onSaved }: { fin: Fin; supplier: Su
   const money = useMemo(() => moneyAccounts(fin.ix.ordered()), [fin.ix]);
   const [d, setD] = useState({ date: today(), moneyId: money[0]?.id ?? "", amount: "", withhold: supplier.data.withholdBp ? String(supplier.data.withholdBp / 100) : "", discount: "", memo: "", method: METHODS[0], ref: "", branchId: fin.branchId ?? "" });
   const [busy, setBusy] = useState(false);
-  const input = { supplierId: supplier.doc.id, date: d.date, moneyId: d.moneyId, amount: fromText(d.amount), withholdBp: Math.round((Number(d.withhold) || 0) * 100), discount: fromText(d.discount), memo: d.memo, method: d.method, ref: d.ref, branchId: d.branchId || null };
+  const ac = useAmountCurrency(fin, baseOf(fin.settings));
+  const input = { supplierId: supplier.doc.id, date: d.date, moneyId: d.moneyId, amount: ac.convert(fromText(d.amount)), paidIn: ac.paidIn(fromText(d.amount)), withholdBp: Math.round((Number(d.withhold) || 0) * 100), discount: fromText(d.discount), memo: d.memo, method: d.method, ref: d.ref, branchId: d.branchId || null };
   const s = paySplit(input);
   const balance = supplier.open.balance;
-  const problem = !d.moneyId ? "اختر الخزينة أو البنك" : !(input.amount > 0 || input.discount > 0) ? "اكتب المبلغ" : "";
+  const problem = !d.moneyId ? "اختر الخزينة أو البنك" : ac.problem && fromText(d.amount) > 0 ? ac.problem : !(input.amount > 0 || input.discount > 0) ? "اكتب المبلغ" : "";
   const save = async () => {
     setBusy(true);
     try { const e = await paySupplier(db, input, actor); toast({ tone: "success", title: e.status === "pending" ? "السند في انتظار الاعتماد" : `تم ترحيل سند الصرف رقم ${e.meta.voucherNo}` }); onSaved(e); }
     catch (e) { toast({ tone: "error", title: "تعذر الحفظ", description: err(e), duration: 9000 }); } finally { setBusy(false); }
   };
   /** the cash that clears the whole balance once the tax withheld is counted */
-  const full = () => setD({ ...d, amount: toText(Math.round(((balance - input.discount) * (10_000 - input.withholdBp)) / 10_000)) });
+  const full = () => !ac.on && setD({ ...d, amount: toText(Math.round(((balance - input.discount) * (10_000 - input.withholdBp)) / 10_000)) });
   return (
     <Dialog open onClose={onClose} title={`سداد للمورد: ${supplier.doc.name}`}
       footer={<div className="flex flex-wrap items-center justify-end gap-2">{problem ? <span className="me-auto text-[13px] font-semibold text-danger">{problem}</span> : <span className="me-auto text-[13px] text-muted">{s.settled > Math.max(balance, 0) ? `يسدد من الرصيد ${fmt(Math.max(balance, 0))}، و${fmt(s.settled - Math.max(balance, 0))} دفعة مقدمة للمورد` : `يسدد من الرصيد ${fmt(s.settled)}، والباقي بعده ${fmt(balance - s.settled)}`}</span>}<Button variant="ghost" onClick={onClose}>إلغاء</Button><Button loading={busy} disabled={!!problem} onClick={save}>حفظ وترحيل</Button></div>}>
@@ -374,7 +377,9 @@ function PayDialog({ fin, supplier, onClose, onSaved }: { fin: Fin; supplier: Su
         <div className="rounded-xl border border-line p-3 sm:col-span-2"><div className="text-[12.5px] text-muted">الرصيد المستحق للمورد</div><div className="num text-[20px] font-bold" dir="ltr">{fmt(balance)}</div>{supplier.overdue ? <div className="text-[13px] text-danger">منه متأخر {fmt(supplier.overdue)}</div> : null}</div>
         <Input label="التاريخ" type="date" dir="ltr" value={d.date} onChange={(e) => setD({ ...d, date: e.target.value })} />
         <Select label="من خزينة أو بنك" value={d.moneyId} onChange={(e) => setD({ ...d, moneyId: e.target.value })} options={[{ value: "", label: "اختر" }, ...money.map((a) => ({ value: a.id, label: `${a.name.ar} (${MONEY_LABEL[a.kind]})` }))]} />
-        <Input label="المبلغ المدفوع (ج.م)" dir="ltr" inputMode="decimal" autoFocus value={d.amount} onChange={(e) => setD({ ...d, amount: e.target.value })} hint={balance > 0 ? <button type="button" className="text-primary underline-offset-2 hover:underline" onClick={full}>سدد الرصيد كله</button> : undefined} />
+        <Input label={`المبلغ المدفوع (${ac.sym(ac.cur)})`} dir="ltr" inputMode="decimal" autoFocus value={d.amount} onChange={(e) => setD({ ...d, amount: e.target.value })} hint={balance > 0 && !ac.on ? <button type="button" className="text-primary underline-offset-2 hover:underline" onClick={full}>سدد الرصيد كله</button> : undefined} />
+        {ac.select}
+        {ac.box(fromText(d.amount))}
         <Input label="خصم من المنبع %" dir="ltr" inputMode="decimal" placeholder="بدون" value={d.withhold} onChange={(e) => setD({ ...d, withhold: e.target.value })} hint={s.withheld ? `يخصم ${fmt(s.withheld)} ويتسجل مستحق للضرائب` : undefined} />
         <Input label="خصم مكتسب من المورد (ج.م)" dir="ltr" inputMode="decimal" placeholder="0" value={d.discount} onChange={(e) => setD({ ...d, discount: e.target.value })} />
         <Select label="طريقة الدفع" value={d.method} onChange={(e) => setD({ ...d, method: e.target.value })} options={METHODS.map((m) => ({ value: m, label: m }))} />

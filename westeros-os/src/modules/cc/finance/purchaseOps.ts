@@ -115,6 +115,6 @@ export async function paySupplier(db: Db, v: PayInput, actor: Actor): Promise<Fi
   return submitEntry(db, null, {
     date: v.date, memo: v.memo.trim() || `سداد للمورد ${supplier.name}`, branchId: v.branchId, kind: "payment", sourceType: "voucher", sourceId: `payment:${year}:${voucherNo}`,
     lines: payLines(v, { supplierAccountId: acc.id, withholdId: s.withheld ? codeOf(j, "tax.withholding") : undefined, discountId: s.discount ? codeOf(j, "discount.received") : undefined }),
-    meta: { voucherNo, party: supplier.name, method: v.method ?? "", ref: v.ref?.trim() ?? "", supplierId: supplier.id, withheld: s.withheld, discount: s.discount },
+    meta: { voucherNo, party: supplier.name, method: v.method ?? "", ref: v.ref?.trim() ?? "", supplierId: supplier.id, withheld: s.withheld, discount: s.discount, ...(v.paidIn ? { paidIn: v.paidIn } : {}) },
   }, actor);
 }

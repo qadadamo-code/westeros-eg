@@ -21,6 +21,7 @@ export const CURRENCY_LIST: { code: string; name: string; symbol: string }[] = [
   { code: "JOD", name: "دينار أردني", symbol: "د.أ" },
   { code: "TRY", name: "ليرة تركية", symbol: "₺" },
   { code: "CNY", name: "يوان صيني", symbol: "¥" },
+  { code: "ILS", name: "شيكل", symbol: "₪" },
 ];
 export const currencyName = (code: string) => CURRENCY_LIST.find((c) => c.code === code)?.name ?? code;
 /** ج.م، $، ر.س … */
@@ -75,4 +76,50 @@ export function foreignBalance(lines: Pick<FinLine, "debit" | "credit" | "fx">[]
     if (l.fx && l.fx.currency === code) return sum + sign * l.fx.amount;
     return sum + (rate ? Math.round((l.debit - l.credit) / rate) : 0);
   }, 0);
+}
+
+/** فئات العملة الأساسية لما ما تتحددش: the notes and coins named by the owner */
+export const DEFAULT_DENOMS = [0.5, 1, 5, 10, 20, 50, 100, 200, 500];
+export const denomsOf = (s: Partial<Pick<FinSettingsData, "denominations">>) => [...(s.denominations?.length ? s.denominations : DEFAULT_DENOMS)].sort((a, b) => a - b);
+/** a typed denomination: a positive number with at most 2 decimals; 0 otherwise */
+export const parseDenom = (t: string) => { const n = parseRate(t); return n && Math.round(n * 100) === n * 100 ? n : 0; };
+
+type Auto = Pick<FinSettingsData, "ratesAuto" | "ratesAt" | "currencies">;
+/** the rates are due once a calendar day (Cairo), only when on and there is another currency */
+export function ratesDue(s: Partial<Auto>, now = new Date()): boolean {
+  if (s.ratesAuto === false || !s.currencies?.length) return false;
+  if (!s.ratesAt) return true;
+  const day = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: "Africa/Cairo" });
+  return day(new Date(s.ratesAt)) !== day(now);
+}
+/**
+ * Free daily rates, no key and no account (an open, community-kept currency feed served from two public CDNs).
+ * The feed says how much 1 base is in each currency; the system keeps 1 unit in the base, so each rate is turned over.
+ */
+const RATE_URLS = (b: string) => [
+  `https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/${b}.min.json`,
+  `https://latest.currency-api.pages.dev/v1/currencies/${b}.min.json`,
+];
+export function ratesFromFeed(feed: unknown, base: string, codes: string[]): Record<string, number> {
+  const table = (feed as Record<string, Record<string, number>> | null)?.[base.toLowerCase()];
+  const out: Record<string, number> = {};
+  if (!table || typeof table !== "object") return out;
+  for (const c of codes) {
+    const x = Number(table[c.toLowerCase()]);
+    if (Number.isFinite(x) && x > 0) out[c] = Math.round((1 / x) * 1e6) / 1e6;
+  }
+  return out;
+}
+export async function fetchRates(base: string, codes: string[], get: typeof fetch = fetch): Promise<Record<string, number>> {
+  let last: unknown = null;
+  for (const url of RATE_URLS(base.toLowerCase())) {
+    try {
+      const r = await get(url, { cache: "no-store" });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const out = ratesFromFeed(await r.json(), base, codes);
+      if (Object.keys(out).length) return out;
+      throw new Error("no rates");
+    } catch (e) { last = e; }
+  }
+  throw last instanceof Error ? last : new Error("تعذر جلب الأسعار");
 }

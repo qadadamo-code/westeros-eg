@@ -1,11 +1,12 @@
 /** ثوابت النظام > الحسابات: the system's currency, and the other currencies accounts may be kept in with their exchange rate. */
 import { useState } from "react";
-import { Coins, Plus, Trash2 } from "lucide-react";
+import { Banknote, Coins, Plus, RefreshCw, Trash2, X } from "lucide-react";
 import { useDb } from "@/data/hooks";
-import { Button, Card, CardHeader, IconButton, Input, Select, useToast } from "@/ui";
-import { baseOf, CURRENCY_LIST, currencyName, currencySymbol, parseRate, rateText } from "../finance/currency";
+import { Button, Card, CardHeader, IconButton, Input, Select, Switch, useToast } from "@/ui";
+import { baseOf, CURRENCY_LIST, currencyName, currencySymbol, denomsOf, parseDenom, parseRate, rateText } from "../finance/currency";
 import { saveSettings } from "../finance/ops";
 import { useFinance } from "../finance/useFinance";
+import { updateRates, useAutoRates } from "../finance/useRates";
 
 export default function FinanceConstants({ readOnly }: { readOnly: boolean }) {
   const fin = useFinance();
@@ -18,6 +19,25 @@ export default function FinanceConstants({ readOnly }: { readOnly: boolean }) {
   // once anything is booked the books are kept in that currency
   const booked = fin.entries.some((e) => e.status === "posted");
   const [add, setAdd] = useState("");
+  const [denom, setDenom] = useState("");
+  const [busy, setBusy] = useState(false);
+  useAutoRates(db, s, !fin.loading && !readOnly);
+  const auto = s.ratesAuto !== false;
+  const denoms = denomsOf(s);
+  const at = s.ratesAt ? new Date(s.ratesAt).toLocaleString("ar-EG", { dateStyle: "medium", timeStyle: "short", timeZone: "Africa/Cairo" }) : null;
+  const refresh = async () => {
+    setBusy(true);
+    try { const n = await updateRates(db, s); toast({ tone: "success", title: n ? `اتحدث سعر ${n} عملة بسعر اليوم` : "ما فيش عملات تتحدث" }); }
+    catch { toast({ tone: "error", title: "تعذر جلب أسعار اليوم", description: "اتأكد من النت وجرب تاني، أو اكتب السعر بإيدك" }); }
+    finally { setBusy(false); }
+  };
+  const addDenom = async () => {
+    const d = parseDenom(denom);
+    if (!d) { toast({ tone: "error", title: "اكتب فئة صحيحة، زي 5 أو 0.5" }); return; }
+    if (denoms.includes(d)) { setDenom(""); return; }
+    await save({ denominations: [...denoms, d].sort((a, b) => a - b) }, `تمت إضافة فئة ${d}`);
+    setDenom("");
+  };
   const save = async (patch: Parameters<typeof saveSettings>[1], title = "تم الحفظ") => {
     try { await saveSettings(db, patch); toast({ tone: "success", title }); } catch (e) { toast({ tone: "error", title: "تعذر الحفظ", description: String((e as Error)?.message ?? e) }); }
   };
@@ -51,9 +71,36 @@ export default function FinanceConstants({ readOnly }: { readOnly: boolean }) {
           })}
           {list.length ? null : <li className="rounded-xl border border-dashed border-line px-3 py-4 text-center text-[14px] text-muted">كل الحسابات بالعملة الأساسية. أضف عملة لو عندك خزينة أو بنك بعملة تانية.</li>}
         </ul>
+        {list.length ? (
+          <div className="mx-5 mb-3 grid gap-2 rounded-xl bg-surface-2 p-3">
+            <Switch checked={auto} disabled={readOnly} onChange={(v) => save({ ratesAuto: v }, v ? "الأسعار هتتحدث كل يوم تلقائي" : "الأسعار هتفضل زي ما تكتبها")}
+              label="تحديث سعر الصرف تلقائي كل يوم" description="بياخد سعر اليوم مجاناً من مصدر أسعار عام، أول ما حد يفتح الحسابات أو الثوابت في اليوم" />
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-[12.5px] text-muted">{at ? `آخر تحديث تلقائي: ${at}` : "لسه ما اتحدثتش تلقائي"}</span>
+              <Button size="sm" variant="outline" icon={<RefreshCw className={busy ? "animate-spin" : undefined} />} disabled={readOnly || busy} onClick={refresh}>سعر اليوم دلوقتي</Button>
+            </div>
+          </div>
+        ) : null}
         <div className="flex items-end gap-2 px-5 pb-5">
           <div className="min-w-0 flex-1"><Select label="إضافة عملة" className="w-full" value={add} disabled={readOnly} onChange={(e) => setAdd(e.target.value)} options={[{ value: "", label: "اختر العملة" }, ...addable.map((c) => ({ value: c.code, label: `${c.name} (${c.code})` }))]} /></div>
           <Button variant="outline" icon={<Plus />} disabled={readOnly || !add} onClick={async () => { await save({ currencies: [...list, { code: add, rate: 0 }] }, `تمت إضافة ${currencyName(add)}، اكتب سعرها`); setAdd(""); }}>إضافة</Button>
+        </div>
+      </Card>
+
+      <Card>
+        <CardHeader icon={<Banknote />} title={`فئات ${currencyName(base)}`} subtitle="الفلوس الورقية والمعدنية اللي بتتعامل بيها، وبتستخدم في عدّ النقدية في الخزينة" />
+        <div className="flex flex-wrap gap-2 px-5 pb-3">
+          {denoms.map((d) => (
+            <span key={d} className="inline-flex h-9 items-center gap-1 rounded-full border border-line bg-surface ps-3 pe-1 text-[14px] font-semibold">
+              <span className="num" dir="ltr">{d}</span>
+              <button type="button" aria-label={`حذف فئة ${d}`} disabled={readOnly || denoms.length <= 1} onClick={() => save({ denominations: denoms.filter((x) => x !== d) }, `تم حذف فئة ${d}`)}
+                className="grid size-7 place-items-center rounded-full text-muted hover:bg-surface-2 hover:text-ink disabled:opacity-40 [&_svg]:size-3.5"><X /></button>
+            </span>
+          ))}
+        </div>
+        <div className="flex items-end gap-2 px-5 pb-5">
+          <div className="min-w-0 flex-1"><Input label="إضافة فئة" dir="ltr" inputMode="decimal" placeholder="1000" value={denom} disabled={readOnly} onChange={(e) => setDenom(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void addDenom(); }} /></div>
+          <Button variant="outline" icon={<Plus />} disabled={readOnly || !denom} onClick={addDenom}>إضافة</Button>
         </div>
       </Card>
     </div>

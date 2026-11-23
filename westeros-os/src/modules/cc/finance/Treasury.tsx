@@ -15,11 +15,12 @@ import { sheetNumber } from "../xlsx";
 import { amountOf, entryRef, STATUS_LABEL } from "./journal";
 import { EntryView, ToolsDialog } from "./Journal";
 import { useActor, useFinPerms } from "./perms";
-import { autoMatch, BANK_RECON, bankRecon, CASH_COUNT, countedTotal, DENOMINATIONS, METHODS, MONEY_LABEL, moneyAccounts, PREPAID, prepaidSchedule, tafqeet, VOUCHER_LABEL, voucherLines, voucherProblem, needsFx, crossCurrency, type BankReconData, type PrepaidData, type StatementLine, type VoucherInput, type VoucherType } from "./treasury";
+import { autoMatch, BANK_RECON, bankRecon, CASH_COUNT, countedTotal, METHODS, MONEY_LABEL, moneyAccounts, PREPAID, prepaidSchedule, tafqeet, VOUCHER_LABEL, voucherLines, voucherProblem, needsFx, crossCurrency, type BankReconData, type PrepaidData, type StatementLine, type VoucherInput, type VoucherType } from "./treasury";
 import { addMoneyAccount, ensureBranchTills, postCashCount, runPrepaid, saveBankRecon, savePrepaid, saveVoucher } from "./treasuryOps";
 import { AccountSelect, Amount, BranchSelect, Confirm, esc, fmt, fromText, periodLabel, periodOf, PeriodPicker, printDoc, PrintButton, printTable, sheetDay, toText, today, type Period, Toolbar } from "./ui";
 import { useFinance, type Fin } from "./useFinance";
-import { baseOf, currencyName, currencyOf, currencySymbol, foreignBalance, isForeign, parseRate, rateOf, rateText } from "./currency";
+import { useAmountCurrency } from "./AmountCurrency";
+import { baseOf, denomsOf, currencyName, currencyOf, currencySymbol, foreignBalance, isForeign, parseRate, rateOf, rateText } from "./currency";
 
 const err = (e: unknown) => String((e as Error)?.message ?? e);
 type Tab = "accounts" | "vouchers" | "prepaid" | "bank";
@@ -159,7 +160,7 @@ function VoucherDialog({ fin, type, moneyId, onClose, onSaved }: { fin: Fin; typ
   const file = useRef<HTMLInputElement>(null);
   const set = (p: Partial<typeof d>) => setD({ ...d, ...p });
   const input: VoucherInput = {
-    type, date: d.date, moneyId: type === "expense" && d.onCredit ? "" : d.moneyId, otherId: d.otherId, amount: fromText(d.amount), vat: type === "expense" ? fromText(d.vat) : 0, creditId: type === "expense" && d.onCredit ? d.creditId : undefined,
+    type, date: d.date, moneyId: type === "expense" && d.onCredit ? "" : d.moneyId, otherId: d.otherId, amount: 0, vat: 0, creditId: type === "expense" && d.onCredit ? d.creditId : undefined,
     party: d.party, memo: d.memo, branchId: d.branchId || null, centreId: d.centreId || null, method: d.method, ref: d.ref, attachments: files,
   };
   // العملات: the money account (and the receiving one of a transfer) may be kept in another currency
@@ -179,12 +180,18 @@ function VoucherDialog({ fin, type, moneyId, onClose, onSaved }: { fin: Fin; typ
   if (fxOn && seen !== fxKey) { setSeen(fxKey); setD((x) => ({ ...x, rate: rateText(lastRate), fromBase: rateText(rateOf(mc, fin.settings)) })); }
   const typed = parseRate(d.rate);
   const rate = inverse ? (typed ? 1 / typed : 0) : typed;
+  // عملة المبلغ: typed in any currency, turned into the money account's at its rate in the system's currency
+  const mcRate = mc === base ? 1 : cross ? (oc === base ? typed : parseRate(d.fromBase)) : typed;
+  const ac = useAmountCurrency(fin, mc);
+  input.amount = ac.convert(fromText(d.amount), mcRate);
+  input.vat = type === "expense" ? ac.convert(fromText(d.vat), mcRate) : 0;
+  input.paidIn = ac.paidIn(fromText(d.amount));
   if (fxOn) input.fx = { ...fxBase, rate, ...(neither ? { fromBase: parseRate(d.fromBase) } : {}) };
   const lines = fxOn ? voucherLines(input, "vat") : [];
   const value = lines.reduce((sum, l) => sum + l.debit, 0);
   const received = cross ? Math.round(input.amount * rate) : 0;
   const sym = (c: string) => (c === base ? currencySymbol(c) : c);
-  const problem = voucherProblem(input);
+  const problem = (fromText(d.amount) > 0 && ac.problem) || voucherProblem(input);
   const limit = fin.settings.approvalLimit;
   const waits = limit != null && input.amount + (input.vat ?? 0) > limit && !actor.canApprove;
   const centres = fin.centres.filter((c) => c.active);
@@ -200,12 +207,13 @@ function VoucherDialog({ fin, type, moneyId, onClose, onSaved }: { fin: Fin; typ
   return (
     <Dialog open onClose={onClose} size="lg" title={VOUCHER_LABEL[type]}
       footer={<div className="flex flex-wrap items-center justify-end gap-2">
-        {problem ? <span className="me-auto text-[13px] font-semibold text-danger">{problem}</span> : waits ? <span className="me-auto text-[13px] text-muted">المبلغ فوق حد الاعتماد، السند يذهب للمدير</span> : <span className="me-auto text-[13px] text-muted">{fxOn ? <>القيمة بالعملة الأساسية: <b className="num" dir="ltr">{fmt(value)}</b> {sym(base)}</> : tafqeet(input.amount + (input.vat ?? 0))}</span>}
+        {problem ? <span className="me-auto text-[13px] font-semibold text-danger">{problem}</span> : waits ? <span className="me-auto text-[13px] text-muted">المبلغ فوق حد الاعتماد، السند يذهب للمدير</span> : <span className="me-auto text-[13px] text-muted">{fxOn || ac.on ? <>القيمة بالعملة الأساسية: <b className="num" dir="ltr">{fmt(fxOn ? value : input.amount + (input.vat ?? 0))}</b> {sym(base)}</> : tafqeet(input.amount + (input.vat ?? 0))}</span>}
         <Button variant="ghost" onClick={onClose}>إلغاء</Button><Button loading={busy} disabled={!!problem} onClick={save}>{waits ? "إرسال للاعتماد" : "حفظ وترحيل"}</Button>
       </div>}>
       <div className="grid gap-3 sm:grid-cols-2">
         <Input label="التاريخ" type="date" dir="ltr" value={d.date} onChange={(e) => set({ date: e.target.value })} />
-        <Input label={`${type === "expense" ? "المبلغ بدون ضريبة" : type === "transfer" && cross ? "المبلغ المحول" : "المبلغ"} (${sym(mc)})`} dir="ltr" inputMode="decimal" autoFocus value={d.amount} onChange={(e) => set({ amount: e.target.value })} />
+        <Input label={`${type === "expense" ? "المبلغ بدون ضريبة" : type === "transfer" && cross ? "المبلغ المحول" : "المبلغ"} (${sym(ac.cur)})`} dir="ltr" inputMode="decimal" autoFocus value={d.amount} onChange={(e) => set({ amount: e.target.value })} />
+        {ac.select}
         {type === "expense" ? <div className="sm:col-span-2"><Switch checked={d.onCredit} onChange={(v) => set({ onCredit: v })} label="مصروف آجل (لم يدفع بعد)" description="يتسجل على حساب مورد أو مصروفات مستحقة بدل الخزينة" /></div> : null}
         {type === "expense" && d.onCredit
           ? <AccountSelect fin={fin} label="على حساب" value={d.creditId} onChange={(v) => set({ creditId: v })} filter={(a) => a.type === "liability"} />
@@ -214,6 +222,7 @@ function VoucherDialog({ fin, type, moneyId, onClose, onSaved }: { fin: Fin; typ
           ? <Select label="إلى خزينة أو بنك" value={d.otherId} onChange={(e) => set({ otherId: e.target.value })} options={moneyOptions(d.moneyId)} />
           : <AccountSelect fin={fin} manualOnly label={type === "receipt" ? "من حساب (الدائن)" : type === "payment" ? "إلى حساب (المدين)" : "حساب المصروف"} value={d.otherId} onChange={(v) => set({ otherId: v })}
               filter={type === "expense" ? (a) => a.type === "expense" || a.type === "cogs" : (a) => !["cash", "bank", "wallet"].includes(a.kind)} />}
+        {ac.box(fromText(d.amount), mcRate)}
         {fxOn ? (
           <div className="grid gap-3 rounded-xl border border-brass/40 bg-brass-soft/40 p-3 sm:col-span-2 sm:grid-cols-2">
             <Input label={inverse ? `سعر الصرف: 1 ${oc} يساوي كام ${sym(base)}` : cross ? `سعر الصرف: 1 ${mc} يساوي كام ${oc === base ? sym(base) : oc}` : `سعر الصرف: 1 ${mc} يساوي كام ${sym(base)}`} dir="ltr" inputMode="decimal" value={d.rate} onChange={(e) => set({ rate: e.target.value })} hint={lastRate ? `آخر سعر: ${rateText(lastRate)}` : "أول مرة بهذه العملة"} />
@@ -222,7 +231,7 @@ function VoucherDialog({ fin, type, moneyId, onClose, onSaved }: { fin: Fin; typ
             <p className="text-[12.5px] text-muted sm:col-span-2">{cross ? `التحويل من ${currencyName(mc)} إلى ${currencyName(oc!)}. القيد يتسجل بالعملة الأساسية، وكل حساب يحتفظ بالمبلغ بعملته.` : `الحساب بعملة ${currencyName(mc)}. اكتب المبلغ بعملته، والقيد يتسجل بالعملة الأساسية بالسعر ده.`}</p>
           </div>
         ) : null}
-        {type === "expense" ? <Input label={`ضريبة قيمة مضافة (${sym(mc)})`} dir="ltr" inputMode="decimal" value={d.vat} onChange={(e) => set({ vat: e.target.value })} hint={<button type="button" className="text-primary underline-offset-2 hover:underline" onClick={() => set({ vat: toText(Math.round(fromText(d.amount) * 0.14)) })}>احسب 14%</button>} /> : null}
+        {type === "expense" ? <Input label={`ضريبة قيمة مضافة (${sym(ac.cur)})`} dir="ltr" inputMode="decimal" value={d.vat} onChange={(e) => set({ vat: e.target.value })} hint={<button type="button" className="text-primary underline-offset-2 hover:underline" onClick={() => set({ vat: toText(Math.round(fromText(d.amount) * 0.14)) })}>احسب 14%</button>} /> : null}
         {type !== "transfer" ? <Input label={type === "receipt" ? "استلمنا من" : "المستفيد"} value={d.party} onChange={(e) => set({ party: e.target.value })} /> : null}
         <Select label="طريقة الدفع" value={d.method} onChange={(e) => set({ method: e.target.value })} options={METHODS.map((m) => ({ value: m, label: m }))} />
         <Input label="رقم مرجعي (شيك، تحويل، فاتورة)" dir="ltr" value={d.ref} onChange={(e) => set({ ref: e.target.value })} />
@@ -320,9 +329,9 @@ function CashCountDialog({ fin, account, book, onClose }: { fin: Fin; account: F
     <Dialog open onClose={onClose} size="md" title={`جرد ${account.name.ar}`} footer={<div className="flex justify-end gap-2"><Button variant="ghost" onClick={onClose}>إلغاء</Button><Button loading={busy} onClick={save}>حفظ الجرد</Button></div>}>
       <div className="grid gap-3">
         <div className="grid grid-cols-3 gap-2">
-          {DENOMINATIONS.map((x) => <Input key={x} label={`فئة ${x}`} dir="ltr" inputMode="numeric" placeholder="العدد" value={pieces[String(x)] ? String(pieces[String(x)]) : ""} onChange={(e) => setPieces({ ...pieces, [String(x)]: Math.max(0, Math.round(Number(e.target.value) || 0)) })} />)}
+          {[...denomsOf(fin.settings)].reverse().map((x) => <Input key={x} label={`فئة ${x}`} dir="ltr" inputMode="numeric" placeholder="العدد" value={pieces[String(x)] ? String(pieces[String(x)]) : ""} onChange={(e) => setPieces({ ...pieces, [String(x)]: Math.max(0, Math.round(Number(e.target.value) || 0)) })} />)}
         </div>
-        <Input label="أو اكتب الإجمالي المعدود مباشرة (ج.م)" dir="ltr" inputMode="decimal" value={direct} onChange={(e) => setDirect(e.target.value)} />
+        <Input label={`أو اكتب الإجمالي المعدود مباشرة (${currencySymbol(baseOf(fin.settings))})`} dir="ltr" inputMode="decimal" value={direct} onChange={(e) => setDirect(e.target.value)} />
         <div className="grid gap-1 rounded-xl bg-surface-2 px-3 py-2.5 text-[14.5px]">
           <span className="flex justify-between">رصيد الدفتر <b><Amount value={book} zero="0.00" /></b></span>
           <span className="flex justify-between">المعدود <b><Amount value={counted} zero="0.00" /></b></span>

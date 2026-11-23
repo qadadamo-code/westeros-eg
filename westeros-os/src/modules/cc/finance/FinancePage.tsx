@@ -20,6 +20,9 @@ import Sales from "./Sales";
 import Settings from "./Settings";
 import Tax from "./Tax";
 import Treasury from "./Treasury";
+import { useAutoRates } from "./useRates";
+import { useFinance } from "./useFinance";
+import { useDb } from "@/data/hooks";
 
 interface Page { to: string; label: string; icon: JSX.Element; end?: boolean; area: string }
 interface Group { id: string; label: string; short?: string; icon: JSX.Element; pages: Page[] }
@@ -64,6 +67,8 @@ export default function FinancePage() {
   const budget = perms.has("budget") || perms.has("profit");
   const { pathname } = useLocation();
   const may = useMay();
+  const fin = useFinance();
+  useAutoRates(useDb(), fin.settings, !fin.loading);
   const all: Group[] = [
     { id: "home", label: "المؤشرات", icon: <Gauge />, pages: [{ to: "/finance", end: true, label: "المؤشرات", icon: <Gauge />, area: "finance.dashboard" }] },
     { id: "books", label: "الدفاتر", icon: <BookOpen />, pages: [

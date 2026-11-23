@@ -63,3 +63,36 @@ describe("العملات", () => {
     expect(voucherLines(v({}))).toEqual([{ account: "usd", debit: major(5000), credit: 0 }, { account: "till", debit: 0, credit: major(5000) }]);
   });
 });
+
+describe("daily rates and denominations", () => {
+  it("turns the feed (1 base = x) into 1 unit = rate in the base", async () => {
+    const { ratesFromFeed } = await import("./currency");
+    expect(ratesFromFeed({ date: "2026-11-23", egp: { usd: 0.02, ils: 0.075, eur: 0 } }, "EGP", ["USD", "ILS", "EUR"])).toEqual({ USD: 50, ILS: 13.333333 });
+    expect(ratesFromFeed(null, "EGP", ["USD"])).toEqual({});
+  });
+  it("falls back to the second source and refuses when both fail", async () => {
+    const { fetchRates } = await import("./currency");
+    let n = 0;
+    const get = (async () => { n++; if (n === 1) return { ok: false, status: 503 }; return { ok: true, json: async () => ({ egp: { usd: 0.02 } }) }; }) as unknown as typeof fetch;
+    expect(await fetchRates("EGP", ["USD"], get)).toEqual({ USD: 50 });
+    const bad = (async () => { throw new Error("offline"); }) as unknown as typeof fetch;
+    await expect(fetchRates("EGP", ["USD"], bad)).rejects.toThrow("offline");
+  });
+  it("is due once a Cairo day, only when on and there is another currency", async () => {
+    const { ratesDue } = await import("./currency");
+    const now = new Date("2026-11-23T10:00:00Z");
+    expect(ratesDue({ currencies: [] }, now)).toBe(false);
+    expect(ratesDue({ currencies: [{ code: "USD", rate: 50 }] }, now)).toBe(true);
+    expect(ratesDue({ currencies: [{ code: "USD", rate: 50 }], ratesAuto: false }, now)).toBe(false);
+    expect(ratesDue({ currencies: [{ code: "USD", rate: 50 }], ratesAt: "2026-11-23T06:00:00Z" }, now)).toBe(false);
+    expect(ratesDue({ currencies: [{ code: "USD", rate: 50 }], ratesAt: "2026-11-22T21:30:00Z" }, now)).toBe(true); // 23:30 Cairo on the 22nd
+  });
+  it("counts cash with any denominations", async () => {
+    const { denomsOf, parseDenom } = await import("./currency");
+    const { countedTotal } = await import("./treasury");
+    expect(denomsOf({})).toEqual([0.5, 1, 5, 10, 20, 50, 100, 200, 500]);
+    expect(denomsOf({ denominations: [100, 0.25] })).toEqual([0.25, 100]);
+    expect(parseDenom("0.5")).toBe(0.5); expect(parseDenom("0.125")).toBe(0); expect(parseDenom("x")).toBe(0);
+    expect(countedTotal({ "500": 2, "0.5": 3 })).toBe(1001.5 * 100000);
+  });
+});

@@ -13,6 +13,8 @@ import { advanceBalances, cancelPayroll, EMPLOYEE, employeeOf, giveAdvance, gros
 import { useActor, useFinPerms } from "./perms";
 import { MONEY_LABEL, moneyAccounts } from "./treasury";
 import { BranchSelect, Confirm, fmt, fromText, PrintButton, printTable, toText, today, Toolbar } from "./ui";
+import { baseOf } from "./currency";
+import { useAmountCurrency } from "./AmountCurrency";
 import { useFinance, type Fin } from "./useFinance";
 
 const err = (e: unknown) => String((e as Error)?.message ?? e);
@@ -131,11 +133,12 @@ function AdvanceDialog({ fin, emp, balance, onClose, onSaved }: { fin: Fin; emp:
   const money = useMemo(() => moneyAccounts(fin.ix.ordered()), [fin.ix]);
   const [d, setD] = useState({ date: today(), moneyId: money[0]?.id ?? "", amount: "", memo: "" });
   const [busy, setBusy] = useState(false);
-  const amount = fromText(d.amount);
-  const problem = !d.moneyId ? "اختر الخزينة أو البنك" : !(amount > 0) ? "اكتب المبلغ" : "";
+  const ac = useAmountCurrency(fin, baseOf(fin.settings));
+  const amount = ac.convert(fromText(d.amount));
+  const problem = !d.moneyId ? "اختر الخزينة أو البنك" : ac.problem && fromText(d.amount) > 0 ? ac.problem : !(amount > 0) ? "اكتب المبلغ" : "";
   const save = async () => {
     setBusy(true);
-    try { const e = await giveAdvance(db, { employeeId: emp.id, date: d.date, moneyId: d.moneyId, amount, memo: d.memo, branchId: emp.branchId }, actor); toast({ tone: "success", title: e.status === "pending" ? "السند في انتظار الاعتماد" : `تم ترحيل سند الصرف رقم ${e.meta.voucherNo}` }); onSaved(e); }
+    try { const e = await giveAdvance(db, { employeeId: emp.id, date: d.date, moneyId: d.moneyId, amount, memo: d.memo, branchId: emp.branchId, paidIn: ac.paidIn(fromText(d.amount)) }, actor); toast({ tone: "success", title: e.status === "pending" ? "السند في انتظار الاعتماد" : `تم ترحيل سند الصرف رقم ${e.meta.voucherNo}` }); onSaved(e); }
     catch (e) { toast({ tone: "error", title: "تعذر الحفظ", description: err(e), duration: 9000 }); } finally { setBusy(false); }
   };
   return (
@@ -144,7 +147,9 @@ function AdvanceDialog({ fin, emp, balance, onClose, onSaved }: { fin: Fin; emp:
         <div className="rounded-xl border border-line p-3 sm:col-span-2"><div className="text-[12.5px] text-muted">رصيد السلفة الحالي</div><div className="num text-[20px] font-bold" dir="ltr">{fmt(balance)}</div></div>
         <Input label="التاريخ" type="date" dir="ltr" value={d.date} onChange={(e) => setD({ ...d, date: e.target.value })} />
         <Select label="من خزينة أو بنك" value={d.moneyId} onChange={(e) => setD({ ...d, moneyId: e.target.value })} options={[{ value: "", label: "اختر" }, ...money.map((a) => ({ value: a.id, label: `${a.name.ar} (${MONEY_LABEL[a.kind]})` }))]} />
-        <Input label="مبلغ السلفة (ج.م)" dir="ltr" inputMode="decimal" autoFocus value={d.amount} onChange={(e) => setD({ ...d, amount: e.target.value })} />
+        <Input label={`مبلغ السلفة (${ac.sym(ac.cur)})`} dir="ltr" inputMode="decimal" autoFocus value={d.amount} onChange={(e) => setD({ ...d, amount: e.target.value })} />
+        {ac.select}
+        {ac.box(fromText(d.amount))}
         <Input label="البيان" value={d.memo} onChange={(e) => setD({ ...d, memo: e.target.value })} />
       </div>
     </Dialog>

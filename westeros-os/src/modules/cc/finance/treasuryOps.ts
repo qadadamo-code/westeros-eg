@@ -27,7 +27,7 @@ export async function saveVoucher(db: Db, v: VoucherInput, actor: Actor): Promis
   const fxMeta = v.fx && lines.some((l) => l.fx) ? { fx: { from: v.fx.money, to: v.fx.other ?? null, rate: v.fx.rate, amount: v.amount, received: lines.find((l) => l.account === v.otherId)?.fx?.amount ?? null } } : {};
   const saved = await submitEntry(db, null, {
     date: v.date, memo, lines, branchId: v.branchId, kind: v.type, attachments: v.attachments ?? [], sourceType: "voucher", sourceId: `${v.type}:${year}:${voucherNo}`,
-    meta: { voucherNo, party: v.party.trim(), method: v.method ?? "", ref: v.ref?.trim() ?? "", ...fxMeta },
+    meta: { voucherNo, party: v.party.trim(), method: v.method ?? "", ref: v.ref?.trim() ?? "", ...fxMeta, ...(v.paidIn ? { paidIn: v.paidIn } : {}) },
   }, actor);
   const known = j.settings.currencies ?? [];
   if ([...rates].some(([code, rate]) => known.find((c) => c.code === code)?.rate !== rate)) await saveSettings(db, { currencies: [...rates].map(([code, rate]) => ({ code, rate })) });

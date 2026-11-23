@@ -114,7 +114,7 @@ export function returnLines(a: { net: Units; vat: Units; cost: Units; accruedId:
   ];
 }
 
-export interface PayInput { supplierId: string; date: string; moneyId: string; /** what leaves the till or bank */ amount: Units; withholdBp?: number; /** خصم مكتسب */ discount?: Units; memo: string; method?: string; ref?: string; branchId: string | null }
+export interface PayInput { supplierId: string; date: string; moneyId: string; /** what leaves the till or bank */ amount: Units; withholdBp?: number; /** خصم مكتسب */ discount?: Units; memo: string; method?: string; ref?: string; branchId: string | null; /** عملة المبلغ */ paidIn?: { currency: string; amount: Units; rate: number } }
 /** what the payment settles of the supplier's balance: cash + tax withheld + discount earned */
 export function paySplit(v: Pick<PayInput, "amount" | "withholdBp" | "discount">) {
   const bp = v.withholdBp ?? 0;
