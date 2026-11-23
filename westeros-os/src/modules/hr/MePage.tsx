@@ -62,7 +62,7 @@ function Home() {
   );
 }
 
-function ClockCard() {
+export function ClockCard() {
   const { L, lang } = useT();
   const db = useDb();
   const hr = useHr();
@@ -150,7 +150,7 @@ function ClockCard() {
   );
 }
 
-function MyWeek() {
+export function MyWeek() {
   const { L, lang } = useT();
   const hr = useHr();
   const f = useDateFmt();
@@ -198,7 +198,7 @@ function MyWeek() {
   );
 }
 
-function MyAttendance() {
+export function MyAttendance() {
   const { L } = useT();
   const hr = useHr();
   const me = hr.session.staff!;

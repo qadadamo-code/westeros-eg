@@ -25,6 +25,7 @@ import type {
 } from "./inventoryTypes";
 import type { Camera, PeopleCount, RadioClip, SupportTicket, OpsSettings, OpsAck } from "@/modules/ops/types";
 import type { FinAccount, FinCentre, FinDoc, FinEntry, FinSettings } from "./financeTypes";
+import type { HrDoc } from "./hrDocTypes";
 import type { ChecklistRun, ChecklistTemplate, MfgBatch, MfgProduct, MfgSettings } from "./productionTypes";
 import type { AccountingSettings, BankStatementLine, CashAccount, CashTransfer, CostCentre, Expense, GlAccount, JournalDraft, RecurringExpense } from "./accountingTypes";
 
@@ -1123,6 +1124,8 @@ export interface Collections {
   finCentres: FinCentre;
   finSettings: FinSettings;
   finDocs: FinDoc;
+  /* الموارد البشرية: Cost Control HR (0043_hr_docs.sql) */
+  hrDocs: HrDoc;
 }
 export type CollectionName = keyof Collections;
 export type RowOf<C extends CollectionName> = Collections[C];
@@ -1236,5 +1239,6 @@ export const TABLE_NAMES: { [C in CollectionName]: string } = {
   finCentres: "fin_cost_centres",
   finSettings: "fin_settings",
   finDocs: "fin_docs",
+  hrDocs: "hr_docs",
 };
 export const COLLECTIONS = Object.keys(TABLE_NAMES) as CollectionName[];

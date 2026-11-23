@@ -31,7 +31,14 @@ export const PURCHASE_PERMS = [
     help: "يوصله إشعار ورسالة عند فتح السيستم بأي طلب شراء جديد. يحدد حالة الطلب (قيد التنفيذ أو مؤجل) ولما الخامات تتشترى يدخلها المخزن.",
   },
 ] as const;
-export type SupplyPerm = (typeof SUPPLY_PERMS)[number]["id"] | (typeof PURCHASE_PERMS)[number]["id"];
+/** الموارد البشرية */
+export const HR_PERMS = [
+  { id: "hr.approve", label: "الموارد البشرية: اعتماد الطلبات", help: "يعتمد أو يرفض خطوة \"الموارد البشرية\" في الطلبات، والخطوات اللي مالهاش مدير مباشر أو رئيس قسم. ويوصله إشعار بالطلبات المستنية." },
+  { id: "hr.salary", label: "رؤية الرواتب في الموارد البشرية", help: "يشوف الراتب في ملف الموظف والعقود وحسابات نهاية الخدمة وقيمة الخصومات. من غيرها الأرقام دي بتظهر مخفية." },
+  { id: "hr.branches", label: "كل فروع الموظفين", help: "يشوف موظفي كل الفروع. من غيرها يشوف موظفي فرعه (مكان عمله) بس." },
+  { id: "hr.jobs", label: "تغيير وظيفة الموظف وصلاحياته", help: "يغير وظيفة الموظف، والوظيفة بتغير دوره وصلاحياته لو الإعداد ده شغال في إعدادات الموارد البشرية." },
+] as const;
+export type SupplyPerm = (typeof SUPPLY_PERMS)[number]["id"] | (typeof PURCHASE_PERMS)[number]["id"] | (typeof HR_PERMS)[number]["id"];
 
 /** what each screen lets its users do: the line under the screen's tick */
 export const SCREEN_HELP: Record<string, string> = {
@@ -41,6 +48,7 @@ export const SCREEN_HELP: Record<string, string> = {
   "cc-mfg": "يفتح التصنيع: تصنيع صنف، الوصفات، سجل التشغيلات، المنتجات المصنعة، أصناف البيع، وملخصه.",
   "cc-users": "يفتح المستخدمين والأدوار: يضيف ويعدل الموظفين وصلاحياتهم.",
   "cc-finance": "يفتح الحسابات. اللي يقدر يعمله جوه بيتحدد من صلاحيات الحسابات تحت.",
+  "cc-hr": "يفتح الموارد البشرية: الموظفين، الهيكل والوظائف، التوظيف، العقود، الورديات والحضور، الطلبات، التقييم، التدريب، الإنذارات، نهاية الخدمة.",
   "cc-delivery": "يفتح خدمة التوصيل: طرق التوصيل ونسبة تحصيل الرسوم، ومندوبو التوصيل وحساباتهم.",
 };
 
@@ -68,6 +76,7 @@ export function permGroups(financeOn: boolean): PermGroup[] {
   return [
     { id: "supply", title: "المخازن والفروع: طلبات التوريد", items: SUPPLY_PERMS.map((p) => ({ id: p.id, label: p.label, help: p.help })) },
     { id: "purchase", title: "المخازن والفروع: طلبات الشراء", items: PURCHASE_PERMS.map((p) => ({ id: p.id, label: p.label, help: p.help })) },
+    { id: "hr", title: "الموارد البشرية", note: "تشتغل لما شاشة الموارد البشرية تكون متعلم عليها.", items: HR_PERMS.map((p) => ({ id: p.id, label: p.label, help: p.help })) },
     { id: "money", title: "الأسعار والتكاليف", items: [{ id: "prices", label: "رؤية الأسعار والتكاليف", help: "يشوف أسعار الشراء وتكلفة الوصفات والتشغيلات. من غيرها الأرقام دي بتظهر مخفية." }] },
     ...(financeOn ? [{ id: "finance", title: "الحسابات", note: "تشتغل لما شاشة الحسابات تكون متعلم عليها.", items: FIN_PERMS.map((p) => ({ id: `fin:${p.id}`, label: p.label, help: FIN_HELP[p.id] ?? "" })) }] : []),
     { id: "admin", title: "الإدارة", items: [{ id: "restore", label: "الاسترجاع من السجل", help: "يرجع عن إضافة أو تعديل أو حذف من السجل والاسترجاع. تحتاج شاشة المستخدمين." }] },
@@ -75,8 +84,8 @@ export function permGroups(financeOn: boolean): PermGroup[] {
 }
 
 const LEVEL_PERMS: Record<MfgUserType["role"], SupplyPerm[]> = {
-  admin: ["supply.branch", "supply.handle", "purchase.handle"],
-  manager: ["supply.branch", "supply.handle", "purchase.handle"],
+  admin: ["supply.branch", "supply.handle", "purchase.handle", "hr.approve", "hr.salary", "hr.branches", "hr.jobs"],
+  manager: ["supply.branch", "supply.handle", "purchase.handle", "hr.approve"],
   chef: [],
   kitchen: [],
   cashier: [],
@@ -104,7 +113,7 @@ export function rolePatch(ids: Set<string>): Pick<MfgUserType, "access" | "acces
     access: areas().flatMap((a) => a.acts.map((x) => accessKey(a.id, x))).filter((k) => ids.has(`acc:${k}`)),
     accessVer: 2,
     screens: screensFromAccess([...ids].filter((k) => k.startsWith("acc:")).map((k) => k.slice(4))),
-    perms: [...SUPPLY_PERMS, ...PURCHASE_PERMS].map((p) => p.id).filter((p) => ids.has(p)),
+    perms: [...SUPPLY_PERMS, ...PURCHASE_PERMS, ...HR_PERMS].map((p) => p.id).filter((p) => ids.has(p)),
     seePrices: ids.has("prices"),
     finance: FIN_PERMS.map((p) => p.id).filter((p) => ids.has(`fin:${p}`)),
     restore: ids.has("restore"),

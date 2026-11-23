@@ -134,6 +134,7 @@ export const SCREENS: { id: string; label: string }[] = [
   { id: "cc-constants", label: "ثوابت النظام" },
   { id: "cc-mfg", label: "التصنيع" },
   { id: "cc-users", label: "المستخدمين" },
+  { id: "cc-hr", label: "الموارد البشرية" },
   ...(FINANCE_ON ? [{ id: "cc-finance", label: "الحسابات" }, { id: "cc-delivery", label: "خدمة التوصيل" }] : []),
   { id: "cc-pos", label: "الكاشير" },
   { id: "cc-orders", label: "الطلبات" },
@@ -171,7 +172,7 @@ export function roleForScreens(screens: string[], current: MfgUserType["role"]):
   if (till) return current === "admin" || current === "cashier" ? "manager" : LEVELS.indexOf(current) >= LEVELS.indexOf("manager") ? current : "manager";
   if (current === "cashier") current = "kitchen";
   // الحسابات is read and written by the manager level and above
-  if (screens.includes("cc-finance") || screens.includes("cc-delivery")) return current === "admin" ? "manager" : LEVELS.indexOf(current) >= LEVELS.indexOf("manager") ? current : "manager";
+  if (screens.includes("cc-finance") || screens.includes("cc-delivery") || screens.includes("cc-hr")) return current === "admin" ? "manager" : LEVELS.indexOf(current) >= LEVELS.indexOf("manager") ? current : "manager";
   const min: MfgUserType["role"] = screens.some((x) => x === "cc-stores" || x === "cc-catalog" || x === "cc-constants") ? "chef" : "kitchen";
   const cur = current === "admin" ? "manager" : current;
   return LEVELS.indexOf(cur) >= LEVELS.indexOf(min) ? cur : min;
