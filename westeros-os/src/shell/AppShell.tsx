@@ -14,6 +14,7 @@ import { useTheme } from "@/theme/theme";
 import { BottomNav } from "./BottomNav";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { ShortcutsDialog } from "./ShortcutsDialog";
+import { NumCalc } from "./NumCalc";
 import { Sidebar } from "./Sidebar";
 import { TopBar, useShellTitle } from "./TopBar";
 import { OpsShellExtras } from "@/modules/ops/shell";
@@ -129,6 +130,7 @@ export function AppShell() {
       {/* walkie-talkie runtime + floating PTT button + alert toasts (src/modules/ops) */}
       <OpsShellExtras />
       <ShortcutsDialog open={help} onClose={() => setHelp(false)} />
+      <NumCalc />
       {/* طلبات التوريد: the message on opening for the employees they wait for */}
       {COST_CONTROL_ONLY ? <SupplyAlerts /> : null}
     </div>
