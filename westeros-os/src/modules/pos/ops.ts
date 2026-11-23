@@ -2,6 +2,7 @@
  * POS ticket operations on the data layer. Every write goes through Db (scoped to the restaurant), so the floor, the
  * kitchen display and other tablets see each change live. Totals are always recomputed with @finance/tax.
  */
+import { channelFor, levelPrice } from "@/data/channels";
 import type { Db } from "@/data/hooks";
 import { nextOrderNumber, recomputeCheck, setTableStatus } from "@/data/ops";
 import type { Check, Discount, MenuCategory, MenuItem, Modifier, Order, OrderItem, OrderItemModifier, OrderMode, OrderSource } from "@/data/types";
@@ -21,6 +22,8 @@ export interface TicketDraft {
   delivery: Order["delivery"];
   pickupAt: string | null;
   source?: OrderSource;
+  /** قناة البيع اللي الطلب الجديد هيتسجل عليها */
+  channelId?: string | null;
 }
 
 export interface Ticket {
@@ -49,7 +52,7 @@ export async function openTicket(db: Db, d: TicketDraft): Promise<{ check: Check
     branchId, number: await nextOrderNumber(db, branchId), mode: d.mode, source: d.source ?? "pos", status: "open", tableIds: d.mode === "dine_in" ? d.tableIds : [],
     checkId: check.id, customerId: d.customerId, guests: d.guests, openedBy: db.actorId, waiterId: null, note: "", delivery: d.mode === "delivery" ? d.delivery : null,
     deliveryStatus: d.mode === "delivery" ? "pending" : null, driverId: null, deliveryFee: d.mode === "delivery" ? d.deliveryFee : 0, openedAt: now, closedAt: null,
-    pickupAt: d.pickup ? d.pickupAt : null,
+    pickupAt: d.pickup ? d.pickupAt : null, ...(d.channelId ? { channelId: d.channelId } : {}),
   });
   if (d.mode === "dine_in") for (const t of d.tableIds) await setTableStatus(db, t, "seated");
   await db.audit("check.open", "checks", check.id, { mode: d.mode, tables: d.tableIds });
@@ -84,7 +87,9 @@ export async function addLine(db: Db, t: { orderId: string; checkId: string; ite
   let row: OrderItem;
   // menu manager: price per channel (dine-in / takeaway / delivery / apps) and per branch
   const order = same ? null : await db.get("orders", t.orderId);
-  const unitPrice = order ? priceFor(x.item, channelOf(order.mode, order.source), order.branchId) : x.item.price;
+  // قنوات البيع: the order's channel picks the item's first, second or third price
+  const ch = order ? channelFor((await db.list("settings"))[0], order) : null;
+  const unitPrice = !order ? x.item.price : ch && ch.level !== 1 ? Math.max(0, levelPrice(x.item, ch.level) - (x.item.discount ?? 0)) : priceFor(x.item, channelOf(order.mode, order.source), order.branchId);
   if (same) row = await db.update("orderItems", same.id, { qty: same.qty + x.qty });
   else
     row = await db.insert("orderItems", {

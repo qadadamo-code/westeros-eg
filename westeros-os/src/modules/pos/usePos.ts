@@ -1,4 +1,5 @@
 /** Data every POS screen needs, live. */
+import { taxFor } from "@/data/channels";
 import { useMemo } from "react";
 import { useLive } from "@/data/hooks";
 import { useBranch, useSession } from "@/auth/session";
@@ -90,7 +91,7 @@ export function useReceiptSourceBuilder() {
       /** Pre-bill (or a paid check from before receipts existed, e.g. seed data). */
       fromCheck(check: Check, orders: Order[], items: OrderItem[], payments: Payment[], cashierId: string | null): ReceiptModel | null {
         const order = orders[0];
-        const { bill } = priceItems(items, { mode: order?.mode ?? "dine_in", tax: settings.tax, discount: check.discount, deliveryFee: order?.deliveryFee });
+        const { bill } = priceItems(items, { mode: order?.mode ?? "dine_in", tax: taxFor(settings, order), discount: check.discount, deliveryFee: order?.deliveryFee });
         if (!bill) return null;
         const paid = check.status === "paid";
         const caps = payments.filter((p) => p.status === "captured");

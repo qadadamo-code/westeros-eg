@@ -2,6 +2,7 @@
  * Shared domain operations on top of the Repo. Modules add their own (POS: payments, splits…),
  * but anything two modules need lives here so the rules stay in one place.
  */
+import { taxFor } from "./channels";
 import { nowIso, startOfDay } from "@/lib/time";
 import type { Db } from "./hooks";
 import { priceItems, type CheckTotals } from "./pricing";
@@ -33,7 +34,7 @@ export async function recomputeCheck(db: Db, checkId: string): Promise<CheckTota
   const orders = await db.list("orders", { where: { checkId } });
   const items = orders.length ? await db.list("orderItems", { where: { orderId: orders.map((o) => o.id) } }) : [];
   const vatExempt = new Set((await db.list("menuItems", { where: { vatExempt: true } })).map((m) => m.id));
-  const { totals } = priceItems(items, { mode: orders[0]?.mode ?? "dine_in", tax: settings.tax, discount: check.discount, deliveryFee: orders[0]?.deliveryFee, vatExemptItemIds: vatExempt });
+  const { totals } = priceItems(items, { mode: orders[0]?.mode ?? "dine_in", tax: taxFor(settings, orders[0]), discount: check.discount, deliveryFee: orders[0]?.deliveryFee, vatExemptItemIds: vatExempt });
   await db.update("checks", checkId, { subtotal: totals.subtotal, discountTotal: totals.discountTotal, service: totals.service, vat: totals.vat, total: totals.total });
   return totals;
 }

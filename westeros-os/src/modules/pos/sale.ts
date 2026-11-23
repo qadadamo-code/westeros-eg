@@ -7,6 +7,7 @@
  *    stored in `ledgerEntries` (Units).
  *  - Z/X reports are sufra-finance `zReport` over the shift's receipts and cash movements.
  */
+import { taxFor } from "@/data/channels";
 import { Ledger, type JournalEntry } from "@finance/ledger";
 import { ACCOUNTS } from "@finance/ledger";
 import { postCashMove, postDrawerCount, postReturn, postSale } from "@finance/posting";
@@ -190,7 +191,7 @@ export async function closeCheck(db: Db, checkId: string, opts: { shift: Shift |
   const [settings] = await db.list("settings");
   const order = t.orders[0];
   const vatExempt = new Set((await db.list("menuItems", { where: { vatExempt: true } })).map((m) => m.id));
-  const { bill } = priceItems(t.items, { mode: order?.mode ?? "dine_in", tax: settings.tax, discount: t.check.discount, deliveryFee: order?.deliveryFee, vatExemptItemIds: vatExempt });
+  const { bill } = priceItems(t.items, { mode: order?.mode ?? "dine_in", tax: taxFor(settings, order), discount: t.check.discount, deliveryFee: order?.deliveryFee, vatExemptItemIds: vatExempt });
   if (!bill) throw new Error("empty check");
   const pays = await db.list("payments", { where: { checkId, status: "captured" } });
   const due = remaining(fromAmount(bill.payable), pays);

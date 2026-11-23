@@ -128,10 +128,20 @@ export function useLive<C extends CollectionName>(c: C, q?: Query<RowOf<C>>, opt
     if (!enabled) return;
     if (state.key !== key) setState((s) => ({ ...s, key, loading: true }));
     fetchNow();
+    // a burst of writes (a bulk pass saving hundreds of rows) must not refetch the whole collection after each one:
+    // wait for a quiet moment, but never longer than 2 s, so the screen stays live without flooding the connection
     let timer: ReturnType<typeof setTimeout> | null = null;
+    let first = 0;
     const refetchSoon = () => {
       if (timer) clearTimeout(timer);
-      timer = setTimeout(fetchNow, 120);
+      const now = Date.now();
+      if (!first) first = now;
+      const wait = Math.max(0, Math.min(350, 2000 - (now - first)));
+      timer = setTimeout(() => {
+        first = 0;
+        timer = null;
+        fetchNow();
+      }, wait);
     };
     const cols = [c, ...(opts.also ?? [])];
     const off = repo.subscribe(cols, opts.unscoped ? null : restaurantId, (e: ChangeEvent) => {
@@ -148,8 +158,11 @@ export function useLive<C extends CollectionName>(c: C, q?: Query<RowOf<C>>, opt
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [repo, key, enabled]);
 
-  return { data: state.data, loading: state.loading, error: state.error, refresh: fetchNow };
+  // a query switched off (e.g. useRow with no id) answers nothing, never the rows of the query it ran before:
+  // the register showed the last check's total on an empty new ticket because of that
+  return { data: enabled ? state.data : EMPTY, loading: enabled && state.loading, error: state.error, refresh: fetchNow };
 }
+const EMPTY: never[] = [];
 
 /** One row by id, live. */
 export function useRow<C extends CollectionName>(c: C, id: string | null | undefined) {

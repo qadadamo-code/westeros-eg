@@ -119,24 +119,8 @@ export function LineSheet({ item, guests, startTab = "edit", onOptions, onClose,
                 <Stepper value={qty} onChange={setQty} min={1} label={L("الكمية", "Quantity")} />
               </div>
             ) : (
-              <p className="rounded-xl bg-info-soft px-3 py-2 text-[13.5px] text-info">{L("الصنف ده في المطبخ: الكمية والكورس اتقفلوا. للإلغاء استخدم «إلغاء».", "This line is in the kitchen: qty and course are locked. Use Void to cancel it.")}</p>
+              <p className="rounded-xl bg-info-soft px-3 py-2 text-[13.5px] text-info">{L("الصنف ده في المطبخ: الكمية اتقفلت. للإلغاء استخدم «إلغاء».", "This line is in the kitchen: qty is locked. Use Void to cancel it.")}</p>
             )}
-            <div>
-              <p className="mb-2 text-[13px] font-semibold text-ink-2">{L("الكرسي", "Seat")}</p>
-              <div className="flex flex-wrap gap-1.5">
-                {[null, ...Array.from({ length: Math.max(1, Math.min(guests, 12)) }, (_, i) => i + 1)].map((s) => (
-                  <button key={String(s)} type="button" onClick={() => setSeat(s)} aria-pressed={seat === s} className={cn("num h-10 min-w-10 rounded-xl border px-3 text-[14px] font-semibold", seat === s ? "border-primary bg-primary text-primary-ink" : "border-line bg-surface hover:bg-surface-2")}>
-                    {s ?? L("مشترك", "Shared")}
-                  </button>
-                ))}
-              </div>
-            </div>
-            {isNew ? (
-              <div>
-                <p className="mb-2 text-[13px] font-semibold text-ink-2">{L("الكورس", "Course")}</p>
-                <Segmented label={L("الكورس", "Course")} value={String(course)} onChange={(v) => setCourse(Number(v))} options={[1, 2, 3].map((c) => ({ value: String(c), label: String(c) }))} />
-              </div>
-            ) : null}
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} maxLength={140} aria-label={L("ملاحظات", "Notes")} placeholder={L("ملاحظات للمطبخ", "Kitchen notes")} className="w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-[15px] outline-none focus:border-primary focus:shadow-[var(--sf-glow)]" />
           </>
         ) : tab === "discount" ? (

@@ -262,6 +262,9 @@ export interface MenuItem extends TenantRow {
   /* menu manager (0012_inventory.sql) — optional so older rows stay valid */
   /** price per sales channel (missing = `price`) */
   channelPrices?: Partial<Record<SalesChannel, Units>>;
+  /** السعر التاني والتالت (قنوات البيع بتختار سعر 1 أو 2 أو 3); empty = the first price. 0046 */
+  price2?: Units | null;
+  price3?: Units | null;
   /** price per branch (missing = `price`); a channel price wins over a branch price */
   branchPrices?: Record<string, Units>;
   /** only sold inside these windows (breakfast 07:00–12:00); empty/missing = whenever open */
@@ -336,6 +339,8 @@ export interface Order extends TenantRow {
   number: number;
   mode: OrderMode;
   source: OrderSource;
+  /** the sales channel (الحسابات > المبيعات) the order was taken on: its price level, tax and service. 0046 */
+  channelId?: string | null;
   status: OrderStatus;
   tableIds: string[];
   checkId: string | null;
@@ -391,6 +396,8 @@ export interface OrderItem extends TenantRow {
   servedAt: string | null;
   voidReason: string | null;
   voidedBy: string | null;
+  /** "سفري": a line of a dine-in order packed to go (printed on the receipt and the kitchen ticket). 0046 */
+  toGo?: boolean;
   createdBy: string | null;
 }
 
@@ -632,6 +639,8 @@ export interface Settings extends TenantRow {
   hr?: import("@/modules/hr/lib/settings").HrSettings;
   /** inventory & purchasing. Optional: 0012_inventory.sql (defaults in src/modules/inventory/settings.ts) */
   inventory?: InventorySettings;
+  /** قنوات البيع (الحسابات > المبيعات). 0046; empty = the defaults in src/data/channels.ts */
+  salesChannels?: import("./channels").SalesChannelDef[];
 }
 
 export interface AuditEntry extends TenantRow {

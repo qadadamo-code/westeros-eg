@@ -49,7 +49,7 @@ export default function FloorPage() {
   const canArrange = session.can("floor.manage");
   const canDesign = session.can("floor.edit");
   const [zoneId, setZoneId] = useState<string | null>(null);
-  const [mode, setMode] = useState<CanvasMode>("live");
+  const [mode, setMode] = useState<CanvasMode>(() => (typeof location !== "undefined" && new URLSearchParams(location.search).has("design") ? "design" : "live"));
   const [selected, setSelected] = useState<string[]>([]);
   const [multi, setMulti] = useState(false);
   const [sheetId, setSheetId] = useState<string | null>(null);

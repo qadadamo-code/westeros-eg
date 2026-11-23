@@ -7,7 +7,7 @@ import type { Payment as FinPayment, PaymentMethod as FinMethod } from "@finance
 import { fromAmount, toAmount, type Units } from "@/lib/money";
 import type { OrderItem, PaymentMethod, ReceiptBill, ReceiptBillLine } from "@/data/types";
 
-export function freezeBill(bill: Bill, items: (Pick<OrderItem, "id" | "name" | "modifiers" | "notes"> & { itemId: string | null })[]): ReceiptBill {
+export function freezeBill(bill: Bill, items: (Pick<OrderItem, "id" | "name" | "modifiers" | "notes" | "toGo"> & { itemId: string | null })[]): ReceiptBill {
   const byId = new Map(items.map((i) => [i.id, i]));
   return {
     mode: bill.mode,
@@ -18,7 +18,8 @@ export function freezeBill(bill: Bill, items: (Pick<OrderItem, "id" | "name" | "
         itemId: it?.itemId ?? null,
         name: it?.name ?? { ar: l.id, en: l.id },
         modifiers: it?.modifiers.map((m) => m.name) ?? [],
-        notes: it?.notes ?? "",
+        // "سفري" on a dine-in bill prints with the line
+        notes: [it?.toGo ? "سفري" : "", it?.notes ?? ""].filter(Boolean).join(" · "),
         qty: l.qty,
         unitPrice: fromAmount(l.unitPrice),
         category: l.category,

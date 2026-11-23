@@ -28,6 +28,8 @@ export interface TicketActions {
   onLineDiscount?: (it: OrderItem) => void;
   /** swiped left or right: remove (or void, once the kitchen has it) */
   onSwipe?: (it: OrderItem) => void;
+  /** "سفري": marks a line of a dine-in order as packed to go (only offered on dine-in) */
+  onToGo?: (it: OrderItem) => void;
   onSend: () => void;
   onFire: (course: number) => void;
   onHold: () => void;
@@ -129,6 +131,7 @@ export function TicketPanel({ check, orders, items, header, busy, className, ...
                                     <Users className="size-3" /> {it.seat}
                                   </span>
                                 ) : null}
+                                {it.toGo ? <Badge tone="info" size="sm" icon={<ShoppingBag className="size-3" />}>{L("سفري", "To go")}</Badge> : null}
                                 {!isNew ? (
                                   <Badge tone={STATUS_TONE[it.status]} size="sm" dot pulse={it.status === "preparing"}>
                                     {STATUS_LABEL[it.status][lang]}
@@ -158,6 +161,11 @@ export function TicketPanel({ check, orders, items, header, busy, className, ...
                           {a.onLineDiscount && it.status !== "void" ? (
                             <button type="button" className={cn("grid size-8 shrink-0 place-items-center rounded-lg border hover:bg-surface-3", it.discount ? "border-brass/50 bg-brass-soft text-brass-text" : "border-line bg-surface text-muted")} onClick={() => a.onLineDiscount?.(it)} aria-label={L("خصم على الصنف", "Item discount")}>
                               <BadgePercent className="size-4" />
+                            </button>
+                          ) : null}
+                          {a.onToGo && orders[0]?.mode === "dine_in" && it.status !== "void" ? (
+                            <button type="button" className={cn("grid h-8 shrink-0 place-items-center rounded-lg border px-1.5 text-[11.5px] font-bold hover:bg-surface-3", it.toGo ? "border-info/50 bg-info-soft text-info" : "border-line bg-surface text-muted")} onClick={() => a.onToGo?.(it)} aria-pressed={!!it.toGo} aria-label={L("سفري", "To go")} title={L("سفري: الصنف ده هيتلف للزبون", "To go: pack this line")}>
+                              {L("سفري", "To go")}
                             </button>
                           ) : null}
                         </motion.div>

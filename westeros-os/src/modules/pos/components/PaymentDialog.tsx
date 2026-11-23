@@ -100,6 +100,8 @@ export function PaymentDialog({ open, onClose, check, payments, shares, tipsEnab
             <AnimatedMoney value={due} className="text-[40px] font-semibold leading-tight tracking-tight" />
           </div>
 
+          {due > 0 && !shares ? <SplitTender due={due} busy={busy} onTender={onTender} /> : null}
+
           {shares ? (
             <ol className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {shares.amounts.map((s, i) => {
@@ -242,5 +244,59 @@ export function PaymentDialog({ open, onClose, check, payments, shares, tipsEnab
         </div>
       </div>
     </Dialog>
+  );
+}
+
+/**
+ * توزيع الدفع (Mohammed 2026-11-23): the guest pays the bill with more than one method at once, e.g. 790 = 500 cash + 290 card.
+ * Each part is taken as its own payment, so the receipt lists every method and its amount.
+ */
+const SPLIT_METHODS: PaymentMethod[] = ["cash", "card", "wallet", "instapay"];
+function SplitTender({ due, busy, onTender }: { due: Units; busy: boolean; onTender: (t: TenderInput) => Promise<void> }) {
+  const { L, lang } = useT();
+  const [open, setOpen] = useState(false);
+  const [v, setV] = useState<Record<string, string>>({});
+  const parts = SPLIT_METHODS.map((m) => ({ m, amount: toPiastre(major(Number(v[m] || 0))) })).filter((p) => p.amount > 0);
+  const sum = parts.reduce((a, p) => a + p.amount, 0);
+  const left = due - sum;
+  const exact = Math.abs(left) < major(0.01);
+  const fill = (m: PaymentMethod) => setV((x) => ({ ...x, [m]: String(Math.max(0, (due - SPLIT_METHODS.filter((k) => k !== m).reduce((a, k) => a + toPiastre(major(Number(x[k] || 0))), 0))) / major(1)) }));
+  const go = async () => {
+    // a fraction of a piastre left over goes on the last part
+    if (parts.length) parts[parts.length - 1].amount += left;
+    for (const p of parts) await onTender({ method: p.m, amount: p.amount, tip: 0, tendered: p.m === "cash" ? p.amount : null, reference: null, splitLabel: null });
+    setV({});
+    setOpen(false);
+  };
+  if (!open)
+    return (
+      <Button variant="soft" block onClick={() => setOpen(true)}>
+        {L("توزيع الدفع (كاش + فيزا + محفظة…)", "Split the payment across methods")}
+      </Button>
+    );
+  return (
+    <div className="grid gap-2 rounded-2xl border border-primary/40 bg-surface p-3">
+      <p className="text-[13.5px] font-semibold">{L("توزيع الدفع", "Split payment")}</p>
+      {SPLIT_METHODS.map((m) => {
+        const Icon = ICON[m];
+        return (
+          <div key={m} className="flex items-center gap-2">
+            <Icon className="size-5 shrink-0 text-muted" />
+            <span className="w-24 shrink-0 text-[14px] font-semibold">{METHOD_LABEL[m][lang]}</span>
+            <input value={v[m] ?? ""} onChange={(e) => setV((x) => ({ ...x, [m]: e.target.value.replace(/[^\d.]/g, "") }))} inputMode="decimal" dir="ltr" aria-label={METHOD_LABEL[m][lang]} placeholder="0" className="num h-10 min-w-0 flex-1 rounded-xl border border-line bg-surface px-3 outline-none focus:border-primary" />
+            <button type="button" onClick={() => fill(m)} className="h-10 shrink-0 rounded-xl border border-line px-2.5 text-[12.5px] font-semibold text-muted hover:bg-surface-2">{L("الباقي", "Rest")}</button>
+          </div>
+        );
+      })}
+      <p className={cn("text-[13px] font-semibold", exact ? "text-ok" : left < 0 ? "text-danger" : "text-muted")}>
+        {exact ? L("المبلغ متوزع بالظبط", "Fully split") : left > 0 ? `${L("فاضل", "Left")} ${formatMoney(left, { lang })}` : `${L("زيادة", "Over by")} ${formatMoney(-left, { lang })}`}
+      </p>
+      <div className="flex gap-2">
+        <Button variant="ghost" onClick={() => setOpen(false)}>{L("إلغاء", "Cancel")}</Button>
+        <Button variant="brass" className="flex-1" disabled={busy || !exact || parts.length < 1} loading={busy} onClick={() => void go()}>
+          {L("خد الدفع الموزع", "Take split payment")} {formatMoney(sum, { lang })}
+        </Button>
+      </div>
+    </div>
   );
 }

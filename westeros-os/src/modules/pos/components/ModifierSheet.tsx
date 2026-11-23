@@ -1,4 +1,4 @@
-/** Modifiers, notes, seat, course and qty for one item before it goes on the ticket. */
+/** Modifiers, notes and qty for one item before it goes on the ticket. */
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
 import { Check, CircleAlert } from "lucide-react";
@@ -17,17 +17,11 @@ export interface ModifierChoice {
   course: number;
 }
 
-const QUICK_NOTES = [
-  { ar: "من غير بصل", en: "No onion" },
-  { ar: "من غير طماطم", en: "No tomato" },
-  { ar: "سوي كويس", en: "Well done" },
-  { ar: "صوص على جنب", en: "Sauce on the side" },
-  { ar: "حساسية مكسرات", en: "Nut allergy" },
-  { ar: "مستعجل", en: "Rush" },
-];
 
-export function ModifierSheet({ item, groups, mods, guests, seat: seat0, course: course0, edit, onClose, onAdd }: {
+export function ModifierSheet({ item, groups, mods, guests: _guests, seat: seat0, course: course0, edit, quickNotes, onClose, onAdd }: {
   item: MenuItem | null;
+  /** quick-note buttons: the notes cashiers type most (Mohammed 2026-11-23), not a fixed list */
+  quickNotes?: string[];
   /** a line already on the ticket: the sheet opens with its options, qty and notes, and saves over it */
   edit?: OrderItem | null;
   groups: ModifierGroup[];
@@ -44,8 +38,10 @@ export function ModifierSheet({ item, groups, mods, guests, seat: seat0, course:
   const [picked, setPicked] = useState<Record<string, string[]>>({});
   const [qty, setQty] = useState(1);
   const [notes, setNotes] = useState("");
+  // seat and course are not asked any more (Mohammed 2026-11-23); an edited line keeps its own
   const [seat, setSeat] = useState<number | null>(seat0);
   const [course, setCourse] = useState(course0);
+  const quick = quickNotes ?? [];
   const [tried, setTried] = useState(false);
 
   useEffect(() => {
@@ -175,37 +171,14 @@ export function ModifierSheet({ item, groups, mods, guests, seat: seat0, course:
           );
         })}
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <p className="mb-2 text-[13px] font-semibold text-ink-2">{L("الكرسي", "Seat")}</p>
-            <div className="flex flex-wrap gap-1.5">
-              {[null, ...Array.from({ length: Math.max(1, Math.min(guests, 12)) }, (_, i) => i + 1)].map((s) => (
-                <button key={String(s)} type="button" onClick={() => setSeat(s)} aria-pressed={seat === s} className={cn("num h-10 min-w-10 rounded-xl border px-3 text-[14px] font-semibold", seat === s ? "border-primary bg-primary text-primary-ink" : "border-line bg-surface hover:bg-surface-2")}>
-                  {s ?? L("مشترك", "Shared")}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <p className="mb-2 text-[13px] font-semibold text-ink-2">{L("الكورس", "Course")}</p>
-            <div className="flex flex-wrap gap-1.5">
-              {[1, 2, 3].map((c) => (
-                <button key={c} type="button" onClick={() => setCourse(c)} aria-pressed={course === c} className={cn("h-10 rounded-xl border px-3 text-[14px] font-semibold", course === c ? "border-primary bg-primary text-primary-ink" : "border-line bg-surface hover:bg-surface-2")}>
-                  {c === 1 ? L("١ · مقبلات", "1 · Starters") : c === 2 ? L("٢ · رئيسي", "2 · Mains") : L("٣ · حلو", "3 · Dessert")}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
         <div>
           <label htmlFor="mod-notes" className="mb-2 block text-[13px] font-semibold text-ink-2">
             {L("ملاحظات للمطبخ", "Kitchen notes")}
           </label>
           <div className="mb-2 flex flex-wrap gap-1.5">
-            {QUICK_NOTES.map((n) => (
-              <button key={n.en} type="button" onClick={() => setNotes((v) => (v.includes(n[lang]) ? v : v ? `${v}، ${n[lang]}` : n[lang]))} className="h-9 rounded-full border border-line bg-surface-2 px-3 text-[13px] font-medium hover:bg-surface-3">
-                {n[lang]}
+            {quick.map((n) => (
+              <button key={n} type="button" onClick={() => setNotes((v) => (v.includes(n) ? v : v ? `${v}، ${n}` : n))} className="h-9 rounded-full border border-line bg-surface-2 px-3 text-[13px] font-medium hover:bg-surface-3">
+                {n}
               </button>
             ))}
           </div>

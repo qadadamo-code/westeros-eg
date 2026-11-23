@@ -218,6 +218,7 @@ function ItemRow({ item: i, lang, onClick }: { item: OrderItem; lang: "ar" | "en
               ))}
             </span>
           ) : null}
+          {i.toGo ? <span className="mt-1 inline-flex w-fit rounded-md bg-info px-1.5 py-0.5 text-[13.5px] font-bold text-white">سفري</span> : null}
           {i.notes ? (
             <span className={cn("mt-1 flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[14px] font-semibold", allergy ? "bg-danger text-white" : "bg-warn-soft text-warn")}>
               {allergy ? <TriangleAlert className="size-4 shrink-0" aria-label={k("k.allergy")} /> : null}

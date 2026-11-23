@@ -1,4 +1,5 @@
 /** Writes the codes planCodes says are missing (category blocks, empty item codes). Existing codes are never touched here. */
+import { inChunks } from "@/lib/batch";
 import { useEffect, useMemo, useRef } from "react";
 import { useDb } from "@/data/hooks";
 import type { MenuCategory, MenuItem } from "@/data/types";
@@ -17,8 +18,8 @@ export function useAutoCodes(manage: boolean, cats: MenuCategory[], items: MenuI
     done.current = key;
     void (async () => {
       try {
-        for (const c of codes.cats) await db.update("menuCategories", c.id, { code: c.code });
-        for (const f of codes.fill) await db.update("menuItems", f.id, { sku: f.sku });
+        await inChunks(codes.cats, (c) => db.update("menuCategories", c.id, { code: c.code }));
+        await inChunks(codes.fill, (f) => db.update("menuItems", f.id, { sku: f.sku }));
       } catch (e) {
         toast({ tone: "error", title: "تعذر حفظ الأكواد", description: String((e as Error)?.message ?? e) });
       }

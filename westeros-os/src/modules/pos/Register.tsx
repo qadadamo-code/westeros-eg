@@ -2,6 +2,7 @@
  * The register: menu on one side, the current check on the other (bottom sheet on phones).
  * Keyboard: S search · N new · K send · H hold · P pay · D discount · X split · T transfer · O open checks.
  */
+import { channelFor, channelsOf, taxFor, type SalesChannelDef } from "@/data/channels";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { onSchedule, scheduleLabel } from "@/modules/menu/rules";
 import { Link, useSearchParams } from "react-router-dom";
@@ -72,7 +73,8 @@ export default function Register() {
   const check = useRow("checks", activeId).data;
   const ordersLive = useLive("orders", { where: { checkId: activeId ?? "-" }, orderBy: [{ field: "openedAt" }] }, { enabled: !!activeId }).data;
   const orders = activeId ? ordersLive.filter((o) => o.checkId === activeId) : [];
-  const itemsLive = useLive("orderItems", { where: { orderId: orders.map((o) => o.id) }, orderBy: [{ field: "createdAt" }] }, { enabled: orders.length > 0 }).data;
+  const itemsQ = useLive("orderItems", { where: { orderId: orders.map((o) => o.id) }, orderBy: [{ field: "createdAt" }] }, { enabled: orders.length > 0 });
+  const itemsLive = itemsQ.data;
   const items = orders.length ? itemsLive.filter((i) => orders.some((o) => o.id === i.orderId)) : [];
   const paymentsLive = useLive("payments", { where: { checkId: activeId ?? "-" }, orderBy: [{ field: "createdAt" }] }, { enabled: !!activeId }).data;
   const payments = activeId ? paymentsLive.filter((p) => p.checkId === activeId) : [];
@@ -100,12 +102,13 @@ export default function Register() {
 
   /* ── dialogs ── */
   const [modItem, setModItem] = useState<MenuItem | null>(null);
-  const { fame } = useFame();
+  const { fame, notes: quickNotes } = useFame();
   const [lineItem, setLineItem] = useState<OrderItem | null>(null);
   const [lineTab, setLineTab] = useState<"edit" | "discount" | "void">("edit");
   // a line reopened in the options sheet to change its size, extras or notes
   const [editLine, setEditLine] = useState<OrderItem | null>(null);
   const [dlg, setDlg] = useState<null | "table" | "customer" | "discount" | "split" | "pay" | "checks" | "transfer" | "merge" | "moveTable" | "itemsToTable" | "guests" | "shift" | "ticket" | "promo">(null);
+  const [chOpen, setChOpen] = useState(false);
   const [shares, setShares] = useState<{ amounts: Units[]; labels: string[] } | null>(null);
   const [receipt, setReceipt] = useState<{ model: ReceiptModel; etaError: string | null; title?: string } | null>(null);
   const pendingItem = useRef<{ item: MenuItem; choice: ModifierChoice | null } | null>(null);
@@ -152,6 +155,14 @@ export default function Register() {
     }
   }, [activeId, check, db, setActiveId]);
 
+  // a check whose lines are all gone but still shows a total (the old 440 on an empty ticket) works its total out again
+  const healed = useRef<string | null>(null);
+  useEffect(() => {
+    if (!check || !live || itemsQ.loading || items.length || !check.total || healed.current === check.id) return;
+    healed.current = check.id;
+    void recomputeCheck(db, check.id);
+  }, [check, live, itemsQ.loading, items.length, db]);
+
   const fail = (e: unknown) => toast({ title: L("حصلت مشكلة", "Something went wrong"), description: String((e as Error)?.message ?? e), tone: "error" });
   const run = async <T,>(fn: () => Promise<T>) => {
     setBusy(true);
@@ -174,6 +185,28 @@ export default function Register() {
     if (k === "dine_in") setDlg("table");
     else if (k === "delivery") setDlg("customer");
   };
+
+  /** "طلب جديد": the cashier picks the sales channel first; the previous order's table, customer and lines are cleared. */
+  const visibleChannels = channelsOf(settings).filter((c) => c.visible);
+  const startChannel = (c: SalesChannelDef) => {
+    setChOpen(false);
+    setActiveId(null);
+    setShares(null);
+    setDraft({ ...NEW_DRAFT(c.kind), channelId: c.id });
+    if (c.kind === "dine_in") setDlg("table");
+    else if (c.kind === "delivery") setDlg("customer");
+  };
+  const openByChannel = useMemo(() => {
+    const n = new Map<string, number>();
+    for (const c of openChecks) {
+      const o = openOrders.find((x) => x.checkId === c.id);
+      const ch = o ? channelFor(settings, o) : null;
+      if (ch) n.set(ch.id, (n.get(ch.id) ?? 0) + 1);
+    }
+    return channelsOf(settings).filter((c) => n.get(c.id)).map((c) => ({ c, n: n.get(c.id)! }));
+  }, [openChecks, openOrders, settings]);
+  const askChannel = () => (visibleChannels.length === 1 ? startChannel(visibleChannels[0]) : visibleChannels.length ? setChOpen(true) : newTicket(kind, true));
+  const channel = check ? channelFor(settings, order) : channelsOf(settings).find((c) => c.id === draft.channelId) ?? channelFor(settings, { mode: draft.mode, channelId: null });
 
   /** Ensures a check exists (dine-in needs a table first). */
   const ensure = async (): Promise<{ checkId: string; orderId: string } | null> => {
@@ -224,7 +257,7 @@ export default function Register() {
     if (anySent) return toast({ title: L("الطلب في المطبخ — مينفعش تغيّر النوع", "Already in the kitchen — type can't change"), tone: "warn" });
     const mode: OrderMode = k === "pickup" ? "takeaway" : k;
     await run(async () => {
-      for (const o of orders) await db.update("orders", o.id, { mode, pickupAt: k === "pickup" ? (o.pickupAt ?? new Date(Date.now() + 20 * 60_000).toISOString()) : null, tableIds: mode === "dine_in" ? check.tableIds : [], deliveryStatus: mode === "delivery" ? "pending" : null });
+      for (const o of orders) await db.update("orders", o.id, { mode, pickupAt: k === "pickup" ? (o.pickupAt ?? new Date(Date.now() + 20 * 60_000).toISOString()) : null, tableIds: mode === "dine_in" ? check.tableIds : [], deliveryStatus: mode === "delivery" ? "pending" : null, channelId: channelsOf(settings).find((c) => c.kind === mode)?.id ?? null });
       if (mode !== "dine_in") await db.update("checks", check.id, { tableIds: [] });
       await recomputeCheck(db, check.id);
     });
@@ -259,7 +292,7 @@ export default function Register() {
       return;
     }
     setActiveId(null);
-    const d = { ...NEW_DRAFT("dine_in"), tableIds: [tableId], guests: draft.guests || 2 };
+    const d = { ...NEW_DRAFT("dine_in"), tableIds: [tableId], guests: draft.guests || 2, channelId: draft.mode === "dine_in" ? draft.channelId : null };
     setDraft(d);
     const p = pendingItem.current;
     pendingItem.current = null;
@@ -313,7 +346,7 @@ export default function Register() {
   };
 
   const policy = { discountApprovalPct: settings?.discountApprovalPct ?? 10 };
-  const preview = (d: Discount | null) => (settings && order ? priceItems(items, { mode: order.mode, tax: settings.tax, discount: d, deliveryFee: order.deliveryFee }).totals.total : 0);
+  const preview = (d: Discount | null) => (settings && order ? priceItems(items, { mode: order.mode, tax: taxFor(settings, order), discount: d, deliveryFee: order.deliveryFee }).totals.total : 0);
   const applyDiscount = async (d: Discount | null, reason: string) => {
     if (!check) return;
     if (d) {
@@ -358,7 +391,7 @@ export default function Register() {
     }
   };
 
-  const price = (list: OrderItem[]) => (settings && order ? priceItems(list, { mode: order.mode, tax: settings.tax, discount: check?.discount ?? null, deliveryFee: order.deliveryFee }).totals.total : 0);
+  const price = (list: OrderItem[]) => (settings && order ? priceItems(list, { mode: order.mode, tax: taxFor(settings, order), discount: check?.discount ?? null, deliveryFee: order.deliveryFee }).totals.total : 0);
 
   /* ── payment ── */
   const requireShift = (then: () => void) => {
@@ -368,7 +401,12 @@ export default function Register() {
   };
   const pay = () => {
     if (!check || !items.some((i) => i.status !== "void")) return;
-    requireShift(() => setDlg("pay"));
+    requireShift(() => {
+      setDlg("pay");
+      // paid before it went to the kitchen: the kitchen ticket goes now (Mohammed 2026-11-23)
+      if (items.some((i) => i.status === "new"))
+        void ticket().then((t) => t && run(() => sendToKitchen(db, t)).then((n) => n && toast({ title: L(`اتبعت ${n} صنف للمطبخ`, `Sent ${n} line${n > 1 ? "s" : ""} to the kitchen`), tone: "success" })));
+    });
   };
   const finish = async () => {
     if (!check) return;
@@ -417,7 +455,7 @@ export default function Register() {
   useHotkeys(
     {
       s: k(() => searchRef.current?.focus()),
-      n: k(() => newTicket(kind, true)),
+      n: k(() => askChannel()),
       k: k(() => void send()),
       h: k(() => void hold()),
       p: k(pay),
@@ -444,7 +482,7 @@ export default function Register() {
   );
   useCommands(
     [
-      { id: "pos.new", group: "actions", title: { ar: "طلب جديد", en: "New order" }, icon: <Plus />, shortcut: "n", perform: () => newTicket(kind, true) },
+      { id: "pos.new", group: "actions", title: { ar: "طلب جديد", en: "New order" }, icon: <Plus />, shortcut: "n", perform: () => askChannel() },
       { id: "pos.checks", group: "actions", title: { ar: "الشيكات المفتوحة", en: "Open checks" }, icon: <ClipboardList />, shortcut: "o", perform: () => setDlg("checks") },
     ],
     [kind],
@@ -515,6 +553,7 @@ export default function Register() {
         if (it.status === "new") void run(() => setLineQty(db, check.id, it, 0));
         else (setLineTab("void"), setLineItem(it));
       }}
+      onToGo={(it) => check && void run(() => db.update("orderItems", it.id, { toGo: !it.toGo }))}
       onQty={(it, q) => check && void run(() => setLineQty(db, check.id, it, q))}
       onSend={() => void send()}
       onFire={(c) => void fire(c)}
@@ -537,9 +576,16 @@ export default function Register() {
     <div className="-mx-4 -mt-5 -mb-28 flex h-[calc(100dvh-8rem-env(safe-area-inset-bottom))] min-h-0 flex-col md:-mx-6 md:-mt-6 md:-mb-10 md:h-[calc(100dvh-4rem)] xl:-mx-8">
       {/* toolbar */}
       <div className="flex shrink-0 items-center gap-2 border-b border-line bg-surface/70 px-3 py-2 backdrop-blur md:px-4">
-        <Button size="sm" variant="soft" icon={<Plus className="size-4" />} onClick={() => newTicket(kind, true)}>
+        <Button size="sm" variant="soft" icon={<Plus className="size-4" />} onClick={askChannel}>
           {L("طلب جديد", "New")}
         </Button>
+        {channel ? <span className="rounded-full border border-brass/50 bg-brass-soft px-2.5 py-1 text-[12.5px] font-semibold text-brass-text">{channel.name}</span> : null}
+        {/* open orders per sales channel, each on its own (Mohammed 2026-11-23) */}
+        {openByChannel.map(({ c, n }) => (
+          <button key={c.id} type="button" onClick={() => setDlg("checks")} className="hidden items-center gap-1.5 rounded-full border border-line bg-surface px-2.5 py-1 text-[12.5px] font-semibold text-ink-2 hover:bg-surface-2 sm:flex">
+            {c.name} <span className="num rounded-full bg-primary-soft px-1.5 text-primary">{n}</span>
+          </button>
+        ))}
         <Button size="sm" variant="secondary" icon={<ClipboardList className="size-4" />} onClick={() => setDlg("checks")}>
           {L("المفتوح", "Open")} <span className="num rounded-full bg-primary-soft px-1.5 text-[12px] text-primary">{rows.length}</span>
         </Button>
@@ -604,6 +650,7 @@ export default function Register() {
         item={modItem}
         groups={menu.groups}
         mods={menu.mods}
+        quickNotes={quickNotes}
         guests={guests}
         seat={null}
         course={1}
@@ -627,6 +674,16 @@ export default function Register() {
           setModItem(mi);
         }}
         onClose={() => setLineItem(null)} onSave={onLineSave} onVoid={onLineVoid} onDiscount={onLineDiscount} />
+      <Dialog open={chOpen} onClose={() => setChOpen(false)} size="sm" title={L("طلب جديد: اختار قناة البيع", "New order: pick the channel")}>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {visibleChannels.map((c) => (
+            <button key={c.id} type="button" onClick={() => startChannel(c)} className="flex h-16 flex-col items-start justify-center rounded-2xl border border-line bg-surface px-4 text-start hover:border-primary hover:bg-primary-soft">
+              <span className="text-[16px] font-semibold">{c.name}</span>
+              <span className="text-[12px] text-muted">{L(`سعر ${c.level}`, `Price ${c.level}`)}{c.tax ? L(" · ضريبة", " · tax") : ""}{c.service ? L(" · سيرفيس", " · service") : ""}</span>
+            </button>
+          ))}
+        </div>
+      </Dialog>
       <TablePicker
         open={dlg === "table" || dlg === "moveTable" || dlg === "itemsToTable"}
         onClose={() => {

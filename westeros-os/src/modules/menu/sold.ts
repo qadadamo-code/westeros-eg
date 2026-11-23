@@ -62,3 +62,14 @@ export function fameOf(lines: Pick<OrderItem, "itemId" | "qty" | "modifiers" | "
   }
   return out;
 }
+
+/** the kitchen notes cashiers type most (a note written twice or more), most used first: the quick-note buttons */
+export function topNotes(lines: Pick<OrderItem, "notes">[], max = 10): string[] {
+  const n = new Map<string, number>();
+  for (const l of lines)
+    for (const part of (l.notes ?? "").split(/[،,\n]+/)) {
+      const t = part.trim().replace(/\s+/g, " ");
+      if (t && t.length <= 40) n.set(t, (n.get(t) ?? 0) + 1);
+    }
+  return [...n].filter(([, c]) => c >= 2).sort((a, b) => b[1] - a[1]).slice(0, max).map(([t]) => t);
+}

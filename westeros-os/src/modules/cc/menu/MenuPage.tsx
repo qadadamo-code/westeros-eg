@@ -3,8 +3,9 @@
  * ظاهر، مميز، القنوات)، وتفاصيل الصنف بمجموعات الخيارات بتاعته (الاسم، مطلوب أو اختياري، خيار واحد أو أكتر، أقل وأكتر عدد،
  * وكل خيار بسعره). الكاشير بيعرض المجموعات دي ويزود سعر كل خيار على الصنف.
  */
+import { inChunks } from "@/lib/batch";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BookOpen, Download, Eye, EyeOff, Flame, Pencil, Plus, Search, Star, Trash2, TrendingUp } from "lucide-react";
+import { BookOpen, Eye, EyeOff, Flame, Pencil, Plus, Search, Star, Trash2, TrendingUp } from "lucide-react";
 import { useSession } from "@/auth/session";
 import { useDb, useLive } from "@/data/hooks";
 import type { MenuCategory, MenuItem, Modifier, ModifierGroup } from "@/data/types";
@@ -15,7 +16,6 @@ import { Badge, Button, Card, Dialog, EmptyState, IconButton, Input, Segmented, 
 import { ImageField } from "../ui";
 import { AreaGate, useArea } from "../useAccess";
 import { Confirm } from "../finance/ui";
-import { BonbellImport } from "./BonbellImport";
 import { GroupDialog } from "./GroupDialog";
 import { ItemDialog, CHANNELS } from "./ItemDialog";
 import { SideOptions } from "./SideOptions";
@@ -23,6 +23,7 @@ import { groupsOf } from "./bonbell";
 import { linkPlan } from "./sideOptions";
 import { blockRange } from "./codes";
 import { useAutoCodes } from "./useAutoCodes";
+import { PriceTable } from "./PriceTable";
 import { listsOf } from "../lib";
 import { useFame, FAME_LABEL } from "@/modules/menu/useFame";
 import type { Fame } from "@/modules/menu/sold";
@@ -35,7 +36,7 @@ export default function MenuPage() {
   return <AreaGate id="menu"><Body /></AreaGate>;
 }
 
-type View = "menu" | "recommended" | "discount" | "off" | "side";
+type View = "menu" | "prices" | "recommended" | "discount" | "off" | "side";
 
 function Body() {
   const area = useArea();
@@ -53,7 +54,6 @@ function Body() {
   const [cat, setCat] = useState<MenuCategory | "new" | null>(null);
   const [item, setItem] = useState<MenuItem | "new" | null>(null);
   const [detail, setDetail] = useState<string | null>(null);
-  const [importing, setImporting] = useState(false);
   const settings = useLive("mfgSettings").data[0];
   const { fame, sold } = useFame();
   // every option on the menu is tied to the side options list (the one place its name and price change), once per visit
@@ -66,7 +66,7 @@ function Body() {
     void (async () => {
       try {
         if (plan.libraryChanged) await db.update("mfgSettings", settings.id, { lists: { ...lists, sideOptions: plan.library } });
-        for (const l of plan.links) await db.update("modifiers", l.id, { sideOptionId: l.sideOptionId, menuItemId: l.menuItemId });
+        await inChunks(plan.links, (l) => db.update("modifiers", l.id, { sideOptionId: l.sideOptionId, menuItemId: l.menuItemId }));
       } catch (e) {
         toast({ tone: "error", title: "تعذر ربط الخيارات بالخيارات الجانبية", description: err(e) });
       }
@@ -79,7 +79,7 @@ function Body() {
   const applyFix = async () => {
     setFixing(true);
     try {
-      for (const f of codes.fix) await db.update("menuItems", f.id, { sku: f.sku });
+      await inChunks(codes.fix, (f) => db.update("menuItems", f.id, { sku: f.sku }));
       toast({ tone: "success", title: `اتغيرت أكواد ${codes.fix.length} صنف` });
     } catch (e) {
       toast({ tone: "error", title: "تعذر حفظ الأكواد", description: err(e) });
@@ -116,7 +116,7 @@ function Body() {
   return (
     <div className="grid gap-5">
       <PageHeader icon={<BookOpen />} title="المنيو" subtitle="الأصناف والإضافات والملاحظات وأسعارها زي ما الكاشير بيشوفها"
-        actions={manage ? <Button variant="soft" icon={<Download />} onClick={() => setImporting(true)}>استيراد من Bonbell</Button> : null} />
+/>
       {!manage ? <p className="rounded-xl border border-line px-3 py-2 text-[13.5px] text-muted">للمشاهدة بس: الدور بتاعك مالوش صلاحية تعديل المنيو.</p> : null}
       {manage && codes.fix.length ? (
         <Card className="grid gap-2 border-brass/50 p-3">
@@ -136,12 +136,13 @@ function Body() {
       ) : null}
       <Segmented label="عرض" value={view} onChange={setView} options={[
         { value: "menu", label: "المنيو" },
+        { value: "prices", label: "جدول الأسعار" },
         { value: "recommended", label: "المميزة" },
         { value: "discount", label: "عليها خصم" },
         { value: "off", label: "مش متاحة" },
         { value: "side", label: "الخيارات الجانبية" },
       ]} />
-      {view === "side" ? <SideOptions readOnly={!manage} mods={mods} items={items} /> : (
+      {view === "prices" ? <PriceTable items={items} cats={cats} readOnly={!manage} /> : view === "side" ? <SideOptions readOnly={!manage} mods={mods} items={items} /> : (
         <div className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
           {view === "menu" ? (
             <Card className="grid content-start gap-2 p-3">
@@ -224,7 +225,6 @@ function Body() {
       {cat ? <CategoryDialog key={cat === "new" ? "new" : cat.id} cat={cat === "new" ? null : cat} sort={cats.length + 1} count={cat === "new" ? 0 : items.filter((i) => i.categoryId === cat.id).length} onClose={() => setCat(null)} /> : null}
       {item ? <ItemDialog key={item === "new" ? "new" : item.id} item={item === "new" ? null : item} cats={cats} items={items} defaultCat={current?.id ?? ""} sort={items.length + 1} onClose={() => setItem(null)} onSaved={(id) => setDetail(id)} /> : null}
       {open ? <ItemDetail item={open} cats={cats} groups={groups} mods={mods} manage={manage} canDelete={area.delete} onEdit={() => setItem(open)} onClose={() => setDetail(null)} /> : null}
-      {importing ? <BonbellImport onClose={() => setImporting(false)} /> : null}
     </div>
   );
 }

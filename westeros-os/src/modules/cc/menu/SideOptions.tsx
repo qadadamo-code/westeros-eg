@@ -2,6 +2,7 @@
  * الخيارات الجانبية (Side Options في Bonbell): المكان الوحيد اللي بيتعدل فيه اسم الخيار بالعربي والإنجليزي وسعره وإتاحته،
  * وأي تعديل بيتطبق على الخيار ده في كل الأصناف. والخيار ممكن يكون صنف من المنيو (زي برجر جوه بوكس) عشان يتحسب في مبيعاته.
  */
+import { inChunks } from "@/lib/batch";
 import { useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { useDb, useLive } from "@/data/hooks";
@@ -26,7 +27,7 @@ export function SideOptions({ readOnly, mods, items }: { readOnly: boolean; mods
       // the option changes on every item that uses it
       if (changed) {
         const f = modFieldsOf(changed);
-        for (const m of mods) if (m.sideOptionId === changed.id && !inStep(m, changed)) await db.update("modifiers", m.id, f);
+        await inChunks(mods.filter((m) => m.sideOptionId === changed.id && !inStep(m, changed)), (m) => db.update("modifiers", m.id, f));
       }
     } catch (e) {
       toast({ tone: "error", title: "تعذر الحفظ", description: String((e as Error)?.message ?? e) });
