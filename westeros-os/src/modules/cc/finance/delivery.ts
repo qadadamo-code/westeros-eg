@@ -222,7 +222,7 @@ export async function driverAccount(db: Db, doc: FinDoc): Promise<FinAccount> {
 /** رسوم توصيل مستحقة لشركة أو لموظفين: one account per method under رسوم توصيل مستحقة للغير. */
 export async function methodPayableAccount(db: Db, m: DeliveryMethod): Promise<FinAccount> {
   await ensureDeliveryAccounts(db);
-  const who = m.beneficiary === "company" ? m.company || m.name : `${m.name} (موظفين)`;
+  const who = m.beneficiary === "company" ? m.company || m.name : m.beneficiary === "driver" ? `${m.name} (مندوبين)` : `${m.name} (موظفين)`;
   return partyAccount(db, { key: PAYABLE_KEY, linkType: METHOD_LINK, linkId: m.id, name: `رسوم توصيل مستحقة: ${who}` });
 }
 

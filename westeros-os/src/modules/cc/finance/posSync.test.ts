@@ -6,6 +6,7 @@ import { DEMO_BRANCH_ID, DEMO_RESTAURANT_ID, staffId } from "@/data/seed";
 import { major } from "@/lib/money";
 import { addLine, loadTicket, openTicket } from "@/modules/pos/ops";
 import { closeCheck, closeShift, openShift, refundSale, takePayment } from "@/modules/pos/sale";
+import { newMethod, saveMethod } from "./delivery";
 import { loadDefaultChart, saveSettings } from "./ops";
 import { shiftSales, syncShifts } from "./posSync";
 import { SALES_DAY, salesOf } from "./sales";
@@ -15,10 +16,11 @@ afterAll(() => repo.close());
 const db = makeDb(repo, DEMO_RESTAURANT_ID, DEMO_BRANCH_ID, staffId("cashier1"));
 const boss = { id: null, name: "م", canApprove: true };
 
-async function sell(mode: "dine_in" | "takeaway", lines: [number, number][]) {
+async function sell(mode: "dine_in" | "takeaway" | "delivery", lines: [number, number][], providerId: string | null = null, fee = 0) {
   const cats = await db.list("menuCategories");
   const items = (await db.list("menuItems")).filter((i) => i.price > 0);
-  const { check, order } = await openTicket(db, { mode, pickup: false, tableIds: [], guests: 2, customerId: null, deliveryFee: 0, delivery: null, pickupAt: null });
+  const delivery = mode === "delivery" ? { address: "ش 1", area: "مدينة نصر", notes: "", lat: null, lng: null, providerId, zoneId: null } : null;
+  const { check, order } = await openTicket(db, { mode, pickup: false, tableIds: [], guests: 2, customerId: null, deliveryFee: fee, delivery, pickupAt: null });
   for (const [ix, qty] of lines) {
     const t = (await loadTicket(db, check.id))!;
     await addLine(db, { orderId: order.id, checkId: check.id, items: t.items, tableId: null }, { item: items[ix], modifiers: [], qty, notes: "", seat: null, course: 1 }, cats);
@@ -60,6 +62,32 @@ describe("till shifts in الحسابات", () => {
     // the drawer was 5 short
     const diff = accounts.find((x) => x.code === "6601")!;
     expect(entry.lines.find((l) => l.account === diff.id)?.debit).toBe(major(5));
+  });
+
+  it("splits the delivery fee by the provider chosen at the till", async () => {
+    await saveMethod(db, { ...newMethod("own"), name: "طيارين المطعم", beneficiary: "driver", sharePct: 40 });
+    await saveMethod(db, { ...newMethod("ext"), name: "مرسول", type: "external", company: "مرسول", beneficiary: "company", sharePct: 100 });
+    const shift = await openShift(db, "SYNC2", major(0));
+    let cash = 0;
+    for (const [prov, fee] of [["own", major(20)], ["ext", major(30)], [null, major(10)]] as const) {
+      const c = await sell("delivery", [[0, 1]], prov, fee);
+      await takePayment(db, c, { method: "cash", amount: c.total, tip: 0, tendered: c.total });
+      await closeCheck(db, c.id, { shift, device: "SYNC2" });
+      cash += c.total;
+    }
+    await closeShift(db, shift, cash);
+    const r = await syncShifts(db, boss);
+    expect(r.problems).toEqual([]);
+    const doc = (await db.list("finDocs", { where: { kind: SALES_DAY } })).find((d) => salesOf(d).shiftId === shift.id)!;
+    const s = salesOf(doc);
+    expect(s.delivery).toHaveLength(2);
+    const entry = (await db.list("finEntries")).find((e) => e.id === s.entryId)!;
+    const accounts = await db.list("finAccounts");
+    const credit = (pred: (n: string) => boolean) => entry.lines.filter((l) => pred(accounts.find((a) => a.id === l.account)?.name.ar ?? "")).reduce((t, l) => t + l.credit, 0);
+    expect(credit((n) => n.includes("مرسول"))).toBe(major(30));
+    // no driver known at the till: his 40% waits on the method's payable account
+    expect(credit((n) => n.includes("طيارين المطعم"))).toBe(major(8));
+    expect(entry.lines.reduce((t, l) => t + l.debit, 0)).toBe(entry.lines.reduce((t, l) => t + l.credit, 0));
   });
 
   it("works the summary out of the receipts", () => {

@@ -11,7 +11,8 @@ import type { PaymentMethod, Receipt, Shift } from "@/data/types";
 import type { Units } from "@/lib/money";
 import { cairoDay, JournalError } from "./journal";
 import { journalContext, type Actor } from "./journalOps";
-import { linkedAccount, postSalesDay, SALES_DAY, salesOf, type SalesInput } from "./sales";
+import { DRIVER, methodsOf, onInvoice } from "./delivery";
+import { linkedAccount, postSalesDay, SALES_DAY, salesOf, type SalesDeliveryFee, type SalesInput } from "./sales";
 
 /** shifts closed before the till joined الحسابات stay out (the backup system booked those in its own ledger) */
 export const POS_FROM = "2026-11-23";
@@ -33,8 +34,10 @@ export function tillAccount(j: Ctx, branchId: string | null): FinAccount {
 }
 
 /** The summary of one shift, from its receipts (sales and returns) and its drawer count. */
-export function shiftSales(shift: Pick<Shift, "id" | "device" | "zNumber" | "difference">, receipts: Receipt[], accountOf: (m: PaymentMethod) => string): SalesInput {
+export function shiftSales(shift: Pick<Shift, "id" | "device" | "zNumber" | "difference">, receipts: Receipt[], accountOf: (m: PaymentMethod) => string, deliveryOf: (r: Receipt) => { methodId: string; driverId: string | null } | null = () => null): SalesInput {
   const channels: Record<string, Units> = {};
+  // رسوم التوصيل لكل مقدم خدمة (ومندوب): each is split between its beneficiary and the revenue (خدمة التوصيل)
+  const delivery = new Map<string, SalesDeliveryFee>();
   const pay = new Map<string, Units>();
   let fees = 0, discounts = 0, returns = 0, tips = 0, vat = 0, orders = 0;
   const add = (m: PaymentMethod, v: Units) => { const id = accountOf(m); pay.set(id, (pay.get(id) ?? 0) + v); };
@@ -46,7 +49,9 @@ export function shiftSales(shift: Pick<Shift, "id" | "device" | "zNumber" | "dif
       const key = CHANNEL_OF[b.mode] ?? "sales.takeaway";
       channels[key] = (channels[key] ?? 0) + b.net + b.discount;
       discounts += b.discount;
-      fees += b.deliveryFee;
+      const who = b.deliveryFee ? deliveryOf(r) : null;
+      if (who) { const k = `${who.methodId}|${who.driverId ?? ""}`; const l = delivery.get(k) ?? { methodId: who.methodId, driverId: who.driverId, amount: 0 }; l.amount += b.deliveryFee; delivery.set(k, l); }
+      else fees += b.deliveryFee;
       vat += b.vat + b.deliveryVat;
       tips += b.service + tip;
       for (const p of r.payments) add(p.method, p.amount + (p.tip || 0));
@@ -61,6 +66,7 @@ export function shiftSales(shift: Pick<Shift, "id" | "device" | "zNumber" | "dif
   // the drawer count: over (+) or short (−) against what the till expected sits with the cash
   if (shift.difference) add("cash", shift.difference);
   return {
+    delivery: [...delivery.values()],
     shift: `الكاشير ${shift.device} · وردية Z${shift.zNumber ?? ""}`.trim(), channels, fees, discounts, returns, tips: Math.max(0, tips), vatBp: 0, inclusive: false,
     payments: [...pay].map(([accountId, amount]) => ({ accountId, amount })), orders, note: "ترحيل تلقائي من الكاشير", vatAmount: Math.max(0, vat), shiftId: shift.id,
   };
@@ -84,13 +90,27 @@ async function run(db: Db, actor: Actor): Promise<PosSyncResult> {
   const from = start > POS_FROM ? start : POS_FROM;
   const done = new Set((await db.list("finDocs", { where: { kind: SALES_DAY } })).filter((d) => d.status === "posted").map((d) => salesOf(d).shiftId).filter(Boolean));
   const shifts = (await db.list("shifts", { where: { status: "closed" } })).filter((s) => s.closedAt && cairoDay(s.openedAt) >= from && !done.has(s.id)).sort((a, b) => (a.closedAt ?? "").localeCompare(b.closedAt ?? ""));
+  const methods = methodsOf((await db.list("finSettings"))[0]?.data ?? {});
+  const drivers = await db.list("finDocs", { where: { kind: DRIVER } });
+  const members = new Map((await db.list("memberships")).map((m) => [m.id, m.name]));
+  /** the provider chosen at the till for the order of a receipt, and its driver when he is one of خدمة التوصيل's drivers */
+  const orderOfCheck = async (checkId: string) => (await db.list("orders", { where: { checkId } })).find((o) => o.delivery?.providerId) ?? null;
   for (const s of shifts) {
     try {
       const receipts = await db.list("receipts", { where: { shiftId: s.id } });
       if (!receipts.some((r) => r.kind === "SC")) continue;
       const till = tillAccount(j, s.branchId).id;
       const accountOf = (m: PaymentMethod) => (METHOD_KEY[m] ? linkedAccount(j, METHOD_KEY[m]!) : till);
-      const input = shiftSales(s, receipts, accountOf);
+      const who = new Map<string, { methodId: string; driverId: string | null } | null>();
+      for (const r of receipts) if (r.kind === "SC" && r.bill.deliveryFee) {
+        const o = await orderOfCheck(r.checkId);
+        const m = methods.find((x) => x.id === o?.delivery?.providerId);
+        if (!o || !m || !onInvoice(m)) { who.set(r.id, null); continue; }
+        const name = o.driverId ? members.get(o.driverId) : null;
+        const drv = drivers.find((d) => d.id === o.driverId) ?? (name ? drivers.find((d) => d.name.trim() === name.trim()) : undefined);
+        who.set(r.id, { methodId: m.id, driverId: m.beneficiary === "driver" ? drv?.id ?? null : null });
+      }
+      const input = shiftSales(s, receipts, accountOf, (r) => who.get(r.id) ?? null);
       await postSalesDay(db, { ...input, date: cairoDay(s.openedAt), branchId: s.branchId }, actor);
       out.posted++;
     } catch (e) {

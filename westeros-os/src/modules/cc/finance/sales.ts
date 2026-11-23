@@ -68,7 +68,8 @@ export function salesProblem(v: { date: string; branchId: string | null } & Sale
     const m = methods.find((x) => x.id === l.methodId);
     if (!m) return "اختر طريقة التوصيل";
     if (!onInvoice(m)) return `رسوم ${m.name} خارج الفاتورة ولا تتسجل`;
-    if (m.beneficiary === "driver" && feeSplit(m, l.amount).party && !l.driverId) return `اختر المندوب لرسوم ${m.name}`;
+    // a till shift may not know the driver: his share waits on the method's payable account (postSalesDay)
+    if (m.beneficiary === "driver" && feeSplit(m, l.amount).party && !l.driverId && !v.shiftId) return `اختر المندوب لرسوم ${m.name}`;
   }
   if (v.vatBp < 0 || v.vatBp > 10_000) return "نسبة الضريبة غير صحيحة";
   const t = salesTotals(v);
@@ -137,6 +138,7 @@ export async function postSalesDay(db: Db, v: { date: string; branchId: string |
   for (const l of delivery) {
     const m = methods.find((x) => x.id === l.methodId)!;
     if (!shareOf(m)) { partyIds.push(""); continue; }
+    if (m.beneficiary === "driver" && !l.driverId && v.shiftId) { partyIds.push((await methodPayableAccount(db, m)).id); continue; }
     if (m.beneficiary === "driver") {
       const drv = l.driverId ? await db.get("finDocs", l.driverId) : null;
       if (!drv || drv.kind !== DRIVER) throw new JournalError("المندوب غير موجود");
