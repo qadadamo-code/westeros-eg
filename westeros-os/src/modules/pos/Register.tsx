@@ -23,6 +23,7 @@ import { MenuPanel } from "./components/MenuPanel";
 import { ModifierSheet, type ModifierChoice } from "./components/ModifierSheet";
 import { TicketPanel } from "./components/TicketPanel";
 import { LineSheet } from "./components/LineSheet";
+import { useFame } from "@/modules/menu/useFame";
 import { DiscountDialog } from "./components/DiscountDialog";
 import { SplitDialog } from "./components/SplitDialog";
 import { TablePicker } from "./components/TablePicker";
@@ -34,7 +35,7 @@ import { OpenChecksDialog, TransferDialog, useCheckRows } from "./components/Che
 import { OpenShiftDialog } from "./components/OpenShiftDialog";
 import { Stepper } from "./components/bits";
 import { discountPct, lineDiscountUnits } from "./math";
-import { addLine, discardTicket, loadTicket, mergeChecks, moveCheckToTable, moveItems, openTicket, sendToKitchen, setBillDiscount, setLineDiscount, setLineQty, setTicketMeta, splitIntoChecks, updateLine, voidLine, type TicketDraft } from "./ops";
+import { addLine, discardTicket, loadTicket, mergeChecks, moveCheckToTable, moveItems, openTicket, sendToKitchen, setBillDiscount, setLineDiscount, setLineQty, replaceLine, setTicketMeta, splitIntoChecks, updateLine, voidLine, type TicketDraft } from "./ops";
 import { closeCheck, takePayment, voidPayment } from "./sale";
 import { PromoDialog } from "@/modules/marketing/pos/PromoDialog";
 import { redeemGiftCard, refundGiftCard } from "@/modules/marketing/ops";
@@ -99,7 +100,11 @@ export default function Register() {
 
   /* ── dialogs ── */
   const [modItem, setModItem] = useState<MenuItem | null>(null);
+  const { fame } = useFame();
   const [lineItem, setLineItem] = useState<OrderItem | null>(null);
+  const [lineTab, setLineTab] = useState<"edit" | "discount" | "void">("edit");
+  // a line reopened in the options sheet to change its size, extras or notes
+  const [editLine, setEditLine] = useState<OrderItem | null>(null);
   const [dlg, setDlg] = useState<null | "table" | "customer" | "discount" | "split" | "pay" | "checks" | "transfer" | "merge" | "moveTable" | "itemsToTable" | "guests" | "shift" | "ticket" | "promo">(null);
   const [shares, setShares] = useState<{ amounts: Units[]; labels: string[] } | null>(null);
   const [receipt, setReceipt] = useState<{ model: ReceiptModel; etaError: string | null; title?: string } | null>(null);
@@ -195,7 +200,7 @@ export default function Register() {
     const mods = choice?.modifiers ?? menu.mods.filter((m) => item.modifierGroupIds.includes(m.groupId) && m.isDefault && m.available);
     const current = activeId === t.checkId ? items : [];
     await run(() =>
-      addLine(db, { orderId: t.orderId, checkId: t.checkId, items: current, tableId: (activeId === t.checkId ? check?.tableIds[0] : undefined) ?? draft.tableIds[0] ?? null }, { item, modifiers: mods, qty: choice?.qty ?? 1, notes: choice?.notes ?? "", seat: choice?.seat ?? null, course: choice?.course ?? 1 }, menu.cats),
+      addLine(db, { orderId: t.orderId, checkId: t.checkId, items: current, tableId: (activeId === t.checkId ? check?.tableIds[0] : undefined) ?? draft.tableIds[0] ?? null }, { item, modifiers: mods, qty: choice?.qty ?? 1, notes: choice?.notes ?? "", seat: choice?.seat ?? null, course: choice?.course ?? 1 }, menu.cats, menu.items),
     );
   };
 
@@ -263,7 +268,7 @@ export default function Register() {
       if (!t) return;
       setActiveId(t.check.id);
       const mods = p.choice?.modifiers ?? menu.mods.filter((m) => p.item.modifierGroupIds.includes(m.groupId) && m.isDefault && m.available);
-      await run(() => addLine(db, { orderId: t.order.id, checkId: t.check.id, items: [], tableId }, { item: p.item, modifiers: mods, qty: p.choice?.qty ?? 1, notes: p.choice?.notes ?? "", seat: p.choice?.seat ?? null, course: p.choice?.course ?? 1 }, menu.cats));
+      await run(() => addLine(db, { orderId: t.order.id, checkId: t.check.id, items: [], tableId }, { item: p.item, modifiers: mods, qty: p.choice?.qty ?? 1, notes: p.choice?.notes ?? "", seat: p.choice?.seat ?? null, course: p.choice?.course ?? 1 }, menu.cats, menu.items));
     }
   };
 
@@ -503,7 +508,13 @@ export default function Register() {
       header={header}
       busy={busy}
       className="@container h-full"
-      onLine={setLineItem}
+      onLine={(it) => (setLineTab("edit"), setLineItem(it))}
+      onLineDiscount={(it) => (setLineTab("discount"), setLineItem(it))}
+      onSwipe={(it) => {
+        if (!check) return;
+        if (it.status === "new") void run(() => setLineQty(db, check.id, it, 0));
+        else (setLineTab("void"), setLineItem(it));
+      }}
       onQty={(it, q) => check && void run(() => setLineQty(db, check.id, it, q))}
       onSend={() => void send()}
       onFire={(c) => void fire(c)}
@@ -564,7 +575,7 @@ export default function Register() {
 
       <div className="flex min-h-0 flex-1">
         <div className="@container flex min-h-0 min-w-0 flex-1 flex-col">
-          <MenuPanel ref={searchRef} cats={menu.cats} items={menu.items} counts={counts} onPick={pick} />
+          <MenuPanel ref={searchRef} cats={menu.cats} items={menu.items} counts={counts} onPick={pick} fame={fame} />
         </div>
         {!isMobile ? <aside aria-label={L("الشيك", "Check")} data-pos-ticket className="w-[340px] shrink-0 border-s border-line lg:w-[380px] 2xl:w-[420px]">{ticketPanel}</aside> : null}
       </div>
@@ -596,14 +607,26 @@ export default function Register() {
         guests={guests}
         seat={null}
         course={1}
-        onClose={() => setModItem(null)}
+        edit={editLine}
+        onClose={() => (setModItem(null), setEditLine(null))}
         onAdd={(c) => {
           const it = modItem!;
+          const line = editLine;
           setModItem(null);
-          void add(it, c);
+          setEditLine(null);
+          if (line && check) void run(() => replaceLine(db, check.id, line, { ...c, item: it }, menu.items));
+          else void add(it, c);
         }}
       />
-      <LineSheet item={lineItem} guests={guests} onClose={() => setLineItem(null)} onSave={onLineSave} onVoid={onLineVoid} onDiscount={onLineDiscount} />
+      <LineSheet item={lineItem} guests={guests} startTab={lineTab}
+        onOptions={(it) => {
+          const mi = menu.items.find((x) => x.id === it.itemId);
+          if (!mi?.modifierGroupIds.length) return toast({ title: L("الصنف ده مالوش اختيارات", "No options on this item"), tone: "warn" });
+          setLineItem(null);
+          setEditLine(it);
+          setModItem(mi);
+        }}
+        onClose={() => setLineItem(null)} onSave={onLineSave} onVoid={onLineVoid} onDiscount={onLineDiscount} />
       <TablePicker
         open={dlg === "table" || dlg === "moveTable" || dlg === "itemsToTable"}
         onClose={() => {

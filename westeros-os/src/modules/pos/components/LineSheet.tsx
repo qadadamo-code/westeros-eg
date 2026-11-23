@@ -1,6 +1,6 @@
 /** Edit one ticket line: qty, notes, seat, course, item discount, void (manager PIN once the kitchen has it). */
 import { useEffect, useState } from "react";
-import { Ban, BadgePercent } from "lucide-react";
+import { Ban, BadgePercent, SlidersHorizontal } from "lucide-react";
 import type { Discount, OrderItem } from "@/data/types";
 import { useT } from "@/i18n/i18n";
 import { cn } from "@/lib/cn";
@@ -26,8 +26,11 @@ export const DISCOUNT_REASONS = [
   { ar: "مدير", en: "Manager's call" },
 ];
 
-export function LineSheet({ item, guests, onClose, onSave, onVoid, onDiscount }: {
+export function LineSheet({ item, guests, startTab = "edit", onOptions, onClose, onSave, onVoid, onDiscount }: {
   item: OrderItem | null;
+  startTab?: "edit" | "discount" | "void";
+  /** reopen the item's options (size, combo, extras, notes) to change them; only before the kitchen has the line */
+  onOptions?: (it: OrderItem) => void;
   guests: number;
   onClose: () => void;
   onSave: (it: OrderItem, patch: { qty?: number; notes?: string; seat?: number | null; course?: number }) => void;
@@ -49,9 +52,9 @@ export function LineSheet({ item, guests, onClose, onSave, onVoid, onDiscount }:
     setNotes(item.notes);
     setSeat(item.seat);
     setCourse(item.course);
-    setTab("edit");
+    setTab(startTab);
     setReason("");
-  }, [item?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [item?.id, startTab]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!item) return <Dialog open={false} onClose={onClose} />;
   const isNew = item.status === "new";
   const gross = lineUnitPrice(item) * item.qty;
@@ -107,6 +110,9 @@ export function LineSheet({ item, guests, onClose, onSave, onVoid, onDiscount }:
       <div className="mt-4 grid gap-4">
         {tab === "edit" ? (
           <>
+            {isNew && onOptions ? (
+              <Button variant="soft" icon={<SlidersHorizontal />} onClick={() => onOptions(item)}>{L("تعديل الاختيارات (الحجم، الإضافات، الملاحظات)", "Change options")}</Button>
+            ) : null}
             {isNew ? (
               <div className="flex items-center justify-between gap-3">
                 <span className="font-semibold">{L("الكمية", "Quantity")}</span>

@@ -10,6 +10,7 @@
 import type { MenuItem, OrderItem, Recipe, StockItem } from "@/data/types";
 import { grossQty } from "./costing";
 import { q3 } from "./units";
+import { COMBO_GROUP } from "@/modules/menu/sold";
 
 export interface ExplodeContext {
   menuItems: Map<string, MenuItem>;
@@ -44,7 +45,12 @@ export function explodeLine(line: Pick<OrderItem, "itemId" | "qty" | "modifiers"
   const own = ctx.recipes.get(recipeKey("menu_item", line.itemId));
   if (own) addRecipe(out, own, line.qty, ctx);
   else if (item?.comboOf?.length) for (const c of item.comboOf) addRecipe(out, ctx.recipes.get(recipeKey("menu_item", c.itemId)), line.qty * c.qty, ctx);
-  for (const m of line.modifiers) addRecipe(out, modifierRecipe(ctx, m.modifierId, line.itemId), line.qty, ctx);
+  for (const m of line.modifiers) {
+    if (m.groupId === COMBO_GROUP) continue; // a part of a box: the box's own recipe or comboOf above covers it
+    const r = modifierRecipe(ctx, m.modifierId, line.itemId);
+    // an option that is a menu item (a burger chosen in a box) uses that item's recipe when it has no recipe of its own
+    addRecipe(out, r ?? (m.itemId ? ctx.recipes.get(recipeKey("menu_item", m.itemId)) : undefined), line.qty, ctx);
+  }
   for (const [k, v] of out) if (v <= 0) out.delete(k);
   return out;
 }

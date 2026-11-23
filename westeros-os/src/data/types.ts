@@ -235,6 +235,8 @@ export interface MenuCategory extends TenantRow {
   imageUrl?: string | null;
   /** id in Bonbell, for the import */
   externalRef?: string | null;
+  /** 0045: first number of the category's block of codes (1, 1000, 2000…); its items are numbered inside it */
+  code?: number | null;
 }
 
 export type MenuTag = "spicy" | "veg" | "new" | "popular" | "chef" | "kids" | "gluten_free";
@@ -303,6 +305,10 @@ export interface Modifier extends TenantRow {
   minQty?: number;
   maxQty?: number;
   discount?: Units;
+  /* 0045_menu_links.sql: the side option it comes from (name, price, available are kept in step with it),
+     and the menu item it stands for (a burger chosen inside a box), counted in that item's sales */
+  sideOptionId?: string | null;
+  menuItemId?: string | null;
 }
 
 /* ───────────── Orders ───────────── */
@@ -360,6 +366,8 @@ export interface OrderItemModifier {
   modifierId: string;
   name: Localized;
   price: Units;
+  /** a menu item sold inside this line (an option that is a menu item, or a part of a box): counted in its sales */
+  itemId?: string | null;
 }
 
 export interface OrderItem extends TenantRow {

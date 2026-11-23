@@ -1,5 +1,6 @@
 /** 4- ثوابت النظام: the definitions of the document, in tabs by the main menu they belong to (2026-11-22): المخازن والفروع, التصنيع، الحسابات (خدمة التوصيل صارت قائمة رئيسية لوحدها في الإعدادات). */
 import { AreaGate, useArea } from "../useAccess";
+import { blockRange } from "../menu/codes";
 import { useState, type ReactNode } from "react";
 import { Factory, Landmark, Plus, Settings2, Trash2, Warehouse, X } from "lucide-react";
 import { Navigate, useLocation } from "react-router-dom";
@@ -171,7 +172,7 @@ function ConstantsPageBody() {
 
         <Card>
           <CardHeader title="تعريف فئات أصناف البيع" subtitle="لكل فئة مدى أكواد: بداية الكود وعدد الأصناف. الصنف الجديد ياخد أول كود فاضي في فئته" />
-          <SaleCategories cats={saleCats} used={usedSale} ranges={ranges.sale} onSave={(id, r) => saveRange("sale", id, r)} />
+          <SaleCategories cats={saleCats} used={usedSale} />
         </Card>
 
         <Card>
@@ -250,7 +251,7 @@ function Chips({ title, subtitle, values, onChange, placeholder, used }: { title
   );
 }
 
-function SaleCategories({ cats, used, ranges, onSave }: { cats: { id: string; name: { ar: string; en: string } }[]; used: Set<string>; ranges: Record<string, CodeRange>; onSave: (id: string, r: CodeRange) => void }) {
+function SaleCategories({ cats, used }: { cats: { id: string; name: { ar: string; en: string }; code?: number | null }[]; used: Set<string> }) {
   const db = useDb();
   return (
     <>
@@ -263,7 +264,7 @@ function SaleCategories({ cats, used, ranges, onSave }: { cats: { id: string; na
                 if (!v || cats.some((x) => x.id !== c.id && x.name.ar === v)) e.target.value = c.name.ar;
                 else if (v !== c.name.ar) void db.update("menuCategories", c.id, { name: { ar: v, en: c.name.en === c.name.ar ? v : c.name.en } });
               }} />
-              <RangeInputs id={c.id} ranges={ranges} nameOf={(k) => cats.find((x) => x.id === k)?.name.ar ?? ""} onSave={(r) => onSave(c.id, r)} />
+              <p className="num text-[12.5px] text-muted">{c.code != null ? `الأكواد تلقائي: من ${blockRange(c.code).from} إلى ${blockRange(c.code).to}` : "الأكواد هتتحط تلقائي (كل فئة 1000 كود)"}</p>
             </div>
             <IconButton label={used.has(c.id) ? "فيها أصناف" : "حذف"} disabled={used.has(c.id)} onClick={() => void db.remove("menuCategories", c.id)}><Trash2 /></IconButton>
           </li>

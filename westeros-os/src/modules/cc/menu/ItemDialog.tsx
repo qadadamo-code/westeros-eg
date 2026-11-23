@@ -3,7 +3,8 @@ import { useState } from "react";
 import { useDb } from "@/data/hooks";
 import type { MenuCategory, MenuItem, SalesChannel } from "@/data/types";
 import { UNITS_PER_MAJOR } from "@/lib/money";
-import { Button, Dialog, Input, Select, Switch, Textarea, useToast } from "@/ui";
+import { Plus, Trash2 } from "lucide-react";
+import { Button, Dialog, IconButton, Input, Select, Switch, Textarea, useToast } from "@/ui";
 import { ImageField } from "../ui";
 
 /** the channels a till sells on, like Bonbell's scenarios */
@@ -18,7 +19,7 @@ const num = (s: string) => {
   return Number.isFinite(n) ? n : 0;
 };
 
-export function ItemDialog({ item, cats, defaultCat, sort, onClose, onSaved }: { item: MenuItem | null; cats: MenuCategory[]; defaultCat: string; sort: number; onClose: () => void; onSaved?: (id: string) => void }) {
+export function ItemDialog({ item, cats, items = [], defaultCat, sort, onClose, onSaved }: { item: MenuItem | null; cats: MenuCategory[]; items?: MenuItem[]; defaultCat: string; sort: number; onClose: () => void; onSaved?: (id: string) => void }) {
   const db = useDb();
   const { toast } = useToast();
   const [d, setD] = useState(() => ({
@@ -35,6 +36,8 @@ export function ItemDialog({ item, cats, defaultCat, sort, onClose, onSaved }: {
     hiddenOn: item?.hiddenOn ?? ([] as SalesChannel[]),
     active: item?.active ?? true,
     recommended: item?.recommended ?? false,
+    // أصناف داخل الصنف (عرض أو بوكس بيشمل أصناف من المنيو): بتظهر تحته في الفاتورة وبتتحسب في مبيعاتها
+    comboOf: item?.comboOf ?? ([] as { itemId: string; qty: number }[]),
   }));
   const [busy, setBusy] = useState(false);
   const set = (p: Partial<typeof d>) => setD((x) => ({ ...x, ...p }));
@@ -56,14 +59,15 @@ export function ItemDialog({ item, cats, defaultCat, sort, onClose, onSaved }: {
         hiddenOn: d.hiddenOn,
         active: d.active,
         recommended: d.recommended,
+        comboOf: d.comboOf.filter((c) => c.itemId),
       };
       const row = item
         ? await db.update("menuItems", item.id, fields)
         : await db.insert("menuItems", {
             cost: null, sku: null, stationId: null, modifierGroupIds: [], tags: [], available: true, vatExempt: false, sort,
-            channelPrices: {}, branchPrices: {}, schedule: [], allergens: [], calories: fields.calories ?? null, comboOf: [],
+            channelPrices: {}, branchPrices: {}, schedule: [], allergens: [], calories: fields.calories ?? null,
             ...(fields as Required<Pick<MenuItem, "name" | "description" | "price" | "prepMinutes" | "categoryId" | "active">>),
-            imageUrl: d.imageUrl, hiddenOn: d.hiddenOn, discount: fields.discount, recommended: d.recommended,
+            imageUrl: d.imageUrl, hiddenOn: d.hiddenOn, discount: fields.discount, recommended: d.recommended, comboOf: fields.comboOf ?? [],
           });
       toast({ tone: "success", title: "اتحفظ الصنف" });
       onClose();
@@ -106,6 +110,21 @@ export function ItemDialog({ item, cats, defaultCat, sort, onClose, onSaved }: {
                 </button>
               );
             })}
+          </div>
+        </div>
+        <div>
+          <p className="mb-1 text-[13px] font-semibold text-ink-2">أصناف داخل الصنف ده</p>
+          <p className="mb-2 text-[12.5px] text-muted">لو الصنف عرض أو بوكس بيشمل أصناف من المنيو، ضيفها هنا: هتظهر تحته في الفاتورة وهتتحسب في مبيعات كل صنف. ولو الزبون بيختار (زي برجرين من 4)، خليها مجموعة خيارات، والخيار الجانبي يكون مربوط بالصنف.</p>
+          <div className="grid gap-2">
+            {d.comboOf.map((c, i) => (
+              <div key={i} className="flex items-end gap-2">
+                <div className="flex-1"><Select label={`الصنف ${i + 1}`} value={c.itemId} onChange={(e) => set({ comboOf: d.comboOf.map((x, j) => (j === i ? { ...x, itemId: e.target.value } : x)) })}
+                  options={[{ value: "", label: "اختار صنف" }, ...items.filter((x) => x.id !== item?.id && !x.comboOf?.length).map((x) => ({ value: x.id, label: x.name.ar || x.name.en }))]} /></div>
+                <Input wrapClassName="w-20" label="العدد" inputMode="numeric" className="num" dir="ltr" value={String(c.qty)} onChange={(e) => set({ comboOf: d.comboOf.map((x, j) => (j === i ? { ...x, qty: Math.max(1, Math.round(num(e.target.value)) || 1) } : x)) })} />
+                <IconButton label="شيل الصنف" onClick={() => set({ comboOf: d.comboOf.filter((_, j) => j !== i) })}><Trash2 /></IconButton>
+              </div>
+            ))}
+            <div><Button size="sm" variant="soft" icon={<Plus />} onClick={() => set({ comboOf: [...d.comboOf, { itemId: "", qty: 1 }] })}>إضافة صنف جواه</Button></div>
           </div>
         </div>
         <div className="grid gap-2 sm:grid-cols-2">

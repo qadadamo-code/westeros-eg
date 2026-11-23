@@ -1,4 +1,5 @@
-/** 3.3 أصناف البيع: the menu items table, add and edit, and the Excel import matched by the item code. */
+/** 3.3 أصناف البيع: the same items as المنيو (one table), each with its general info and its components for the cost.
+ * No Excel import here (Mohammed 2026-11-23): items come from the menu. */
 import { useArea } from "../useAccess";
 import { searchHit } from "@/lib/search";
 import { useMemo, useState } from "react";
@@ -10,17 +11,11 @@ import { formatMoney } from "@/lib/money";
 import { LinesEditor } from "@/modules/production/ui";
 import { Button, Card, Dialog, EmptyState, Input, Select, Table, useToast, type Column } from "@/ui";
 import { ExportButton, ImageField, Result } from "../ui";
-import { sheetCode } from "../xlsx";
-import { codeRanges, nextCodeIn } from "../lib";
+import { nextCode } from "../menu/codes";
+import { useAutoCodes } from "../menu/useAutoCodes";
 import { useCc, type Cc } from "../useCc";
 import { BulkBar, useSelection, type DeleteResult } from "./Bulk";
-import { ExcelImport, type ImportField, type ImportPlan } from "./Import";
 
-const FIELDS: ImportField[] = [
-  { key: "كود الصنف", aliases: ["الكود", "كود", "رقم الصنف", "code", "sku"] },
-  { key: "اسم الصنف", aliases: ["الاسم", "الصنف", "name"] },
-  { key: "فئة الصنف", aliases: ["الفئة", "فئة", "المجموعة", "القسم", "category"] },
-];
 const money = (u: number) => formatMoney(u, { lang: "ar" });
 const linesCost = (lines: { itemId: string; qty: number }[], unitCost: (id: string) => number) => Math.round(lines.reduce((a, l) => a + l.qty * unitCost(l.itemId), 0));
 const blank = (categoryId: string): Omit<MenuItem, "id" | "createdAt" | "updatedAt" | "restaurantId"> => ({
@@ -40,6 +35,7 @@ export default function SaleItems() {
   const [edit, setEdit] = useState<MenuItem | "new" | null>(null);
   const area = useArea();
   const manage = can("menu.edit");
+  useAutoCodes(manage, cats, items);
   const catName = (id: string) => cats.find((c) => c.id === id)?.name.ar ?? "—";
   const recipeOf = (id: string) => recipes.find((r) => r.ownerType === "menu_item" && r.ownerId === id && !r.scopeItemId) ?? null;
   // تكلفة الصنف: قيمة مكوناته (الكمية × تكلفة الوحدة لكل مكون)
@@ -79,53 +75,12 @@ export default function SaleItems() {
     { key: "comp", header: "مكونات الصنف", hideOnMobile: true, cell: (i) => { const n = recipeOf(i.id)?.lines.length ?? 0; return n ? <span className="num">{n} مكون</span> : <span className="text-faint">—</span>; } },
     { key: "cost", header: "تكلفة الصنف", align: "end", cell: (i) => (recipeOf(i.id)?.lines.length ? <span className="num font-semibold">{money(costOf(i.id))}</span> : <span className="text-faint">—</span>) },
   ];
-  // `dry`: only say what the file would add and edit (the review step); nothing is written
-  const importRows = async (sheet: Record<string, string>[], dry: boolean): Promise<ImportPlan> => {
-    const plan: ImportPlan = { added: [], updated: [], skipped: 0 };
-    const fresh = new Set<string>();
-    const bySku = new Map(items.filter((i) => i.sku).map((i) => [i.sku as string, i]));
-    const catByName = new Map(cats.map((c) => [c.name.ar.trim(), c]));
-    for (const r of sheet) {
-      const sku = sheetCode(r["كود الصنف"]);
-      if (!sku) {
-        plan.skipped++;
-        continue;
-      }
-      const name = (r["اسم الصنف"] ?? "").trim();
-      if (dry) {
-        const cur = bySku.get(sku);
-        if (cur) plan.updated.push({ code: sku, name: name || cur.name.ar });
-        else if (fresh.has(sku)) continue;
-        else if (name && ((r["فئة الصنف"] ?? "").trim() || cats[0])) (fresh.add(sku), plan.added.push({ code: sku, name }));
-        else plan.skipped++;
-        continue;
-      }
-      const cName = (r["فئة الصنف"] ?? "").trim();
-      let c: MenuCategory | undefined = cName ? catByName.get(cName) : undefined;
-      if (cName && !c) {
-        c = await db.insert("menuCategories", { name: { ar: cName, en: cName }, sort: cats.length + catByName.size + 1, color: "#F8BB18", icon: "utensils", stationId: null, active: true });
-        catByName.set(cName, c);
-      }
-      const cur = bySku.get(sku);
-      if (cur) {
-        await db.update("menuItems", cur.id, { ...(name ? { name: { ar: name, en: cur.name.en && cur.name.en !== cur.name.ar ? cur.name.en : name } } : {}), ...(c ? { categoryId: c.id } : {}) });
-        if (fresh.has(sku)) continue;
-        plan.updated.push({ code: sku, name: name || cur.name.ar });
-      } else if (name && (c ?? cats[0])) {
-        bySku.set(sku, await db.insert("menuItems", { ...blank((c ?? cats[0]).id), name: { ar: name, en: name }, sku }));
-        fresh.add(sku);
-        plan.added.push({ code: sku, name });
-      } else plan.skipped++;
-    }
-    return plan;
-  };
   return (
     <div className="grid gap-4">
-      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_200px_auto_auto_auto]">
+      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_200px_auto_auto]">
         <Input icon={<Search />} placeholder="ابحث باسم الصنف أو الكود" value={q} onChange={(e) => setQ(e.target.value)} />
         <Select value={cat} onChange={(e) => setCat(e.target.value)} options={[{ value: "", label: "كل الفئات" }, ...cats.map((c) => ({ value: c.id, label: c.name.ar }))]} />
         <ExportButton file="أصناف البيع" head={["كود الصنف", "اسم الصنف", "فئة الصنف", "عدد المكونات", "تكلفة الصنف"]} rows={() => rows.map((i) => [i.sku ?? "", i.name.ar, catName(i.categoryId), recipeOf(i.id)?.lines.length ?? 0, costOf(i.id) / 100])} />
-        {manage ? <ExcelImport fields={FIELDS} run={importRows} /> : null}
         {manage && area.add ? <Button icon={<Plus />} disabled={!cats.length} onClick={() => setEdit("new")}>اضافة صنف</Button> : null}
       </div>
       {manage ? <BulkBar count={sel.rows.length} noun="صنف" onClear={sel.clear} onEdit={() => setEdit(sel.rows[0])} categories={cats.map((c) => ({ value: c.id, label: c.name.ar }))} onMove={move} onDelete={remove} /> : null}
@@ -145,16 +100,16 @@ function SaleDialog({ item, recipe, cats, items, cc, readOnly, onClose }: { item
   const [lines, setLines] = useState<MfgRecipeLine[]>(() => (recipe?.lines ?? []).map((l) => ({ itemId: l.itemId, qty: l.qty })));
   const [busy, setBusy] = useState(false);
   const set = (p: Partial<typeof d>) => setD((x) => ({ ...x, ...p }));
-  // مكونات الصنف: المنتجات المصنعة ذات الوصفة الرئيسية فقط. الوصفات الفرعية والتتبيلات تدخل في الرئيسية، لا في صنف البيع
+  // مكونات الصنف: المواد الخام + المنتجات المصنعة ذات الوصفة الرئيسية (Mohammed 2026-11-23). الوصفات الفرعية والتتبيلات تدخل في الرئيسية
   // (plus anything already on this item's recipe, so an old line still shows its name)
   const choices = useMemo(() => {
     const made = new Set(prod.products.filter((p) => p.active && p.recipeType === "main").map((p) => p.stockItemId));
     const onRecipe = new Set((recipe?.lines ?? []).map((l) => l.itemId));
-    return prod.items.filter((i) => (i.active && made.has(i.id)) || onRecipe.has(i.id));
+    return prod.items.filter((i) => (i.active && (i.kind === "raw" || made.has(i.id))) || onRecipe.has(i.id));
   }, [prod.products, prod.items, recipe]);
-  // كود الصنف: the next free code of the category's range (ثوابت النظام), until the user types one
-  const auto = nextCodeIn(codeRanges(cc.lists.codeRanges?.sale, cats.map((c) => c.id))[d.categoryId], items.map((i) => i.sku));
-  const sku = d.sku ?? (auto ? String(auto) : "");
+  // كود الصنف: the next free code of the category's block of 1000 (same rule as المنيو), until the user types one
+  const auto = nextCode(cats.find((c) => c.id === d.categoryId), items, d.categoryId);
+  const sku = d.sku ?? auto;
   const dupe = !!sku.trim() && items.some((i) => i.sku === sku.trim() && i.id !== item?.id);
   const save = async () => {
     setBusy(true);
@@ -179,15 +134,29 @@ function SaleDialog({ item, recipe, cats, items, cc, readOnly, onClose }: { item
       <fieldset disabled={readOnly} className="grid gap-4">
         <div className="grid gap-3 sm:grid-cols-2">
           <Input label="اسم الصنف" value={d.name} onChange={(e) => set({ name: e.target.value })} />
-          <Input label="كود الصنف" dir="ltr" className="num" value={sku} onChange={(e) => set({ sku: e.target.value })} error={dupe ? "الكود مستخدم لصنف آخر" : undefined} hint={!item && d.sku === null ? (auto ? "تلقائي حسب فئة الصنف" : "أكواد الفئة خلصت، زود عدد الأصناف من ثوابت النظام") : undefined} />
+          <Input label="كود الصنف" dir="ltr" className="num" value={sku} onChange={(e) => set({ sku: e.target.value })} error={dupe ? "الكود مستخدم لصنف آخر" : undefined} hint={!item && d.sku === null ? (auto ? "تلقائي حسب فئة الصنف" : "هيتحط تلقائي بعد الحفظ") : undefined} />
         </div>
+        {item ? (
+          <div className="grid gap-2 rounded-xl border border-line p-3 text-[13.5px] sm:grid-cols-4">
+            <Info label="الاسم بالإنجليزي"><span dir="ltr">{item.name.en || "—"}</span></Info>
+            <Info label="سعر البيع"><span className="num">{money(item.price)}</span>{item.discount ? <span className="num block text-[12px] text-success">بعد الخصم {money(item.price - item.discount)}</span> : null}</Info>
+            <Info label="ظاهر في المنيو">{item.active ? "أيوه" : "لأ"}{!item.available ? " · خلصان" : ""}</Info>
+            <Info label="مجموعات الخيارات"><span className="num">{item.modifierGroupIds.length || "—"}</span></Info>
+            {item.description.ar || item.description.en ? <div className="sm:col-span-4"><Info label="الوصف">{item.description.ar || item.description.en}</Info></div> : null}
+            <p className="text-[12px] text-muted sm:col-span-4">السعر والوصف والخيارات بتتعدل من المنيو. الصنف ده هو نفس صنف المنيو.</p>
+          </div>
+        ) : null}
         <ImageField value={d.imageUrl} onChange={(imageUrl) => set({ imageUrl })} />
         <div className="grid gap-3 sm:grid-cols-2">
           <Select label="فئة الصنف" value={d.categoryId} onChange={(e) => set({ categoryId: e.target.value })} options={cats.map((c) => ({ value: c.id, label: c.name.ar }))} />
           <Result label="تكلفة الصنف">{money(linesCost(lines.filter((l) => l.qty > 0), prod.unitCost))}</Result>
         </div>
-        <LinesEditor readOnly={readOnly} title="مكونات الصنف" hint="من المنتجات المصنعة ذات الوصفة الرئيسية فقط" lines={lines} onChange={setLines} items={choices} itemById={prod.itemById} unitCost={prod.unitCost} />
+        <LinesEditor readOnly={readOnly} title="مكونات الصنف" hint="من المواد الخام والمنتجات المصنعة ذات الوصفة الرئيسية" lines={lines} onChange={setLines} items={choices} itemById={prod.itemById} unitCost={prod.unitCost} />
       </fieldset>
     </Dialog>
   );
+}
+
+function Info({ label, children }: { label: string; children: React.ReactNode }) {
+  return <div><span className="block text-[12px] text-muted">{label}</span><span className="font-semibold">{children}</span></div>;
 }

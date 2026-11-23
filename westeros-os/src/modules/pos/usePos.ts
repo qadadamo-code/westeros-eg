@@ -12,7 +12,12 @@ import type { ZatcaInvoiceRow } from "@/lib/zatca/model";
 
 export function useMenu() {
   const cats = useLive("menuCategories", { where: { active: true }, orderBy: [{ field: "sort" }] }).data;
-  const items = useLive("menuItems", { where: { active: true }, orderBy: [{ field: "sort" }] }).data;
+  const all = useLive("menuItems", { where: { active: true }, orderBy: [{ field: "sort" }] }).data;
+  // a hidden category hides all its items from the cashier, in "الكل" and in search too
+  const items = useMemo(() => {
+    const shown = new Set(cats.map((c) => c.id));
+    return all.filter((i) => shown.has(i.categoryId));
+  }, [all, cats]);
   const groups = useLive("modifierGroups", { orderBy: [{ field: "sort" }] }).data;
   const mods = useLive("modifiers", { orderBy: [{ field: "sort" }] }).data;
   return { cats, items, groups, mods };

@@ -24,6 +24,10 @@ const COURSE = (c: number, L: (a: string, e: string) => string) => (c === 1 ? L(
 export interface TicketActions {
   onLine: (it: OrderItem) => void;
   onQty: (it: OrderItem, qty: number) => void;
+  /** the line's discount button (opens its discount percentages) */
+  onLineDiscount?: (it: OrderItem) => void;
+  /** swiped left or right: remove (or void, once the kitchen has it) */
+  onSwipe?: (it: OrderItem) => void;
   onSend: () => void;
   onFire: (course: number) => void;
   onHold: () => void;
@@ -101,7 +105,16 @@ export function TicketPanel({ check, orders, items, header, busy, className, ...
                         exit={{ opacity: 0, height: 0, marginBottom: 0 }}
                         transition={spring.snappy}
                       >
-                        <div className={cn("group flex items-start gap-2.5 rounded-2xl border border-transparent px-2 py-2 hover:border-line hover:bg-surface-2", !isNew && "bg-surface-2/40")}>
+                        <motion.div
+                          drag={a.onSwipe && it.status !== "void" ? "x" : false}
+                          dragConstraints={{ left: 0, right: 0 }}
+                          dragElastic={0.6}
+                          dragSnapToOrigin
+                          onDragEnd={(_, info) => {
+                            if (Math.abs(info.offset.x) > 110) a.onSwipe?.(it);
+                          }}
+                          className={cn("group flex touch-pan-y items-start gap-2.5 rounded-2xl border border-transparent px-2 py-2 hover:border-line hover:bg-surface-2", !isNew && "bg-surface-2/40")}
+                        >
                           <button type="button" onClick={() => a.onLine(it)} className="flex min-w-0 flex-1 items-start gap-2.5 text-start" aria-label={`${loc(it.name)} × ${it.qty}`}>
                             <span className={cn("num grid h-8 min-w-8 shrink-0 place-items-center rounded-xl px-1.5 text-[15px] font-bold", isNew ? "bg-primary-soft text-primary" : "bg-surface-3 text-ink-2")}>{it.qty}</span>
                             <span className="min-w-0 flex-1">
@@ -142,7 +155,12 @@ export function TicketPanel({ check, orders, items, header, busy, className, ...
                               </button>
                             </span>
                           ) : null}
-                        </div>
+                          {a.onLineDiscount && it.status !== "void" ? (
+                            <button type="button" className={cn("grid size-8 shrink-0 place-items-center rounded-lg border hover:bg-surface-3", it.discount ? "border-brass/50 bg-brass-soft text-brass-text" : "border-line bg-surface text-muted")} onClick={() => a.onLineDiscount?.(it)} aria-label={L("خصم على الصنف", "Item discount")}>
+                              <BadgePercent className="size-4" />
+                            </button>
+                          ) : null}
+                        </motion.div>
                       </motion.li>
                     );
                   })}

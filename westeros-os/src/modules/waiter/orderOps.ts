@@ -14,7 +14,7 @@ export interface CartLine {
   key: string;
   item: Pick<MenuItem, "id" | "name" | "price" | "stationId" | "categoryId">;
   qty: number;
-  modifiers: Pick<Modifier, "id" | "groupId" | "name" | "price">[];
+  modifiers: (Pick<Modifier, "id" | "groupId" | "name" | "price"> & { menuItemId?: string | null })[];
   notes: string;
   seat: number | null;
   course: number;
@@ -59,7 +59,7 @@ export async function sendRound(
     const fire = !holdLater || l.course <= firstCourse;
     return {
       orderId: order.id, itemId: l.item.id, name: l.item.name, qty: l.qty, unitPrice: l.item.price,
-      modifiers: l.modifiers.map((m) => ({ groupId: m.groupId, modifierId: m.id, name: m.name, price: m.price })),
+      modifiers: l.modifiers.map((m) => ({ groupId: m.groupId, modifierId: m.id, name: m.name, price: m.price, ...(m.menuItemId ? { itemId: m.menuItemId } : {}) })),
       notes: l.notes.trim(), seat: l.seat, course: l.course, status: fire ? "sent" : "new",
       stationId: l.item.stationId ?? stationOfCat.get(l.item.categoryId) ?? null, originTableId: table.id, discount: 0,
       firedAt: fire ? t : null, readyAt: null, servedAt: null, voidReason: null, voidedBy: null, createdBy: db.actorId,

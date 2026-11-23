@@ -53,3 +53,41 @@ describe("groupRow", () => {
     expect(groupRow({ name: "Size", required: false, multi: false, min: 0, max: 0, options: [opt("a")] })).toMatchObject({ min: 0, max: 1 });
   });
 });
+
+import { linkPlan, modFieldsOf } from "./sideOptions";
+import type { Modifier } from "@/data/types";
+describe("side options", () => {
+  const mod = (id: string, en: string, price: number, extra: Partial<Modifier> = {}) => ({ id, groupId: "g", name: { ar: en, en }, price, isDefault: false, available: true, sort: 1, ...extra }) as Modifier;
+  it("ties every option to the list by name, adds missing ones, and finds the menu item an option stands for", () => {
+    const p = linkPlan([{ id: "s1", name: "Add Jalapeno", price: 15 }], [mod("m1", "add jalapeno", 1500000), mod("m2", "Classic Beef Burger", 0), mod("m3", "Spicy", 0)], [{ id: "i1", name: { ar: "كلاسيك بيف برجر", en: "Classic Beef Burger" } }]);
+    expect(p.library).toHaveLength(3);
+    expect(p.links.find((l) => l.id === "m1")?.sideOptionId).toBe("s1");
+    expect(p.links.find((l) => l.id === "m2")?.menuItemId).toBe("i1");
+    expect(p.library.find((o) => o.name === "Spicy")?.menuItemId).toBeNull();
+    // a second run changes nothing
+    const linked = [mod("m1", "Add Jalapeno", 1500000, { sideOptionId: "s1", menuItemId: null })];
+    expect(linkPlan(p.library, linked, []).links).toHaveLength(0);
+  });
+  it("gives the option its price and names from the list", () => {
+    expect(modFieldsOf({ id: "s", name: "Extra Cheese", nameAr: "جبنة زيادة", price: 20, available: false })).toMatchObject({ name: { ar: "جبنة زيادة", en: "Extra Cheese" }, price: 2000000, available: false, sideOptionId: "s" });
+  });
+});
+
+import { blockRange, planCodes } from "./codes";
+describe("menu codes", () => {
+  it("gives each category a block of 1000 and numbers its items in order", () => {
+    const cats = [{ id: "beef", sort: 1, code: null }, { id: "chicken", sort: 2, code: null }];
+    const items = [
+      { id: "classic", categoryId: "beef", sort: 1, sku: null },
+      { id: "smoky", categoryId: "beef", sort: 2, sku: "" },
+      { id: "c1", categoryId: "chicken", sort: 1, sku: "77" },
+      { id: "c2", categoryId: "chicken", sort: 2, sku: "1000" },
+    ];
+    const p = planCodes(cats, items);
+    expect(p.cats).toEqual([{ id: "beef", code: 1 }, { id: "chicken", code: 1000 }]);
+    expect(p.fill).toEqual([{ id: "classic", sku: "1" }, { id: "smoky", sku: "2" }]);
+    expect(p.fix).toEqual([{ id: "c1", from: "77", sku: "1001" }]);
+    expect(blockRange(2000)).toEqual({ from: 2000, to: 2999 });
+    expect(blockRange(1)).toEqual({ from: 1, to: 999 });
+  });
+});

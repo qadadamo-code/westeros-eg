@@ -1,21 +1,21 @@
 /**
  * مجموعة خيارات لصنف (زي Bonbell): الاسم بالعربي والإنجليزي، مطلوبة أو اختيارية، خيار واحد أو أكتر، أقل وأكتر عدد
- * اختيارات، وكل خيار باسمه وسعره وأقل وأكتر عدد مرات يتختار (0 = من غير حد).
+ * اختيارات. الخيارات بتتختار من الخيارات الجانبية (اسمها وسعرها من هناك)، وهنا بس أقل وأكتر عدد مرات يتختار كل خيار.
  */
 import { useMemo, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { useDb, useLive } from "@/data/hooks";
 import type { MenuItem, Modifier, ModifierGroup } from "@/data/types";
-import { UNITS_PER_MAJOR } from "@/lib/money";
-import { Button, Dialog, IconButton, Input, Segmented, Switch, useToast } from "@/ui";
+import { Button, Dialog, IconButton, Input, Segmented, Select, useToast } from "@/ui";
 import { listsOf } from "../lib";
+import { modFieldsOf } from "./sideOptions";
 
-interface Row { id: string | null; ar: string; en: string; price: string; minQty: string; maxQty: string; available: boolean }
+interface Row { id: string | null; sideOptionId: string; minQty: string; maxQty: string }
 const num = (s: string) => {
   const n = Number(String(s).replace(/[^\d.]/g, ""));
   return Number.isFinite(n) ? n : 0;
 };
-const blankRow = (): Row => ({ id: null, ar: "", en: "", price: "0", minQty: "0", maxQty: "1", available: true });
+const blankRow = (): Row => ({ id: null, sideOptionId: "", minQty: "0", maxQty: "1" });
 
 /** the group's columns from the form: max ≥ 1 always; multi with max 0 = as many as the options */
 export function groupLimits(f: { required: boolean; multi: boolean; min: number; max: number }, options: number) {
@@ -40,18 +40,13 @@ export function GroupDialog({ item, group, mods, onClose }: { item: MenuItem; gr
   }));
   const [rows, setRows] = useState<Row[]>(() =>
     own.length
-      ? own.map((m) => ({ id: m.id, ar: m.name.ar, en: m.name.en, price: String(m.price / UNITS_PER_MAJOR), minQty: String(m.minQty ?? 0), maxQty: String(m.maxQty ?? 1), available: m.available }))
+      ? own.map((m) => ({ id: m.id, sideOptionId: m.sideOptionId ?? library.find((o) => o.name.toLowerCase() === (m.name.en || m.name.ar).toLowerCase())?.id ?? "", minQty: String(m.minQty ?? 0), maxQty: String(m.maxQty ?? 1) }))
       : [blankRow()],
   );
   const [busy, setBusy] = useState(false);
-  // اسم الخيار: from the side options and every option already on the menu
-  const names = useMemo(() => [...new Set([...library.map((o) => o.name), ...mods.map((m) => m.name.en || m.name.ar)])].filter(Boolean).sort(), [library, mods]);
+  const libOptions = [{ value: "", label: "اختار من الخيارات الجانبية" }, ...library.map((o) => ({ value: o.id, label: `${o.name}${o.nameAr ? ` · ${o.nameAr}` : ""} (${o.price})${o.available === false ? " · مش متاح" : ""}` }))];
   const setRow = (i: number, p: Partial<Row>) => setRows((r) => r.map((x, j) => (j === i ? { ...x, ...p } : x)));
-  const pickName = (i: number, v: string) => {
-    const lib = library.find((o) => o.name === v);
-    setRow(i, { en: v, ...(lib && !rows[i].ar ? { ar: lib.nameAr || "" } : {}), ...(lib && num(rows[i].price) === 0 ? { price: String(lib.price) } : {}) });
-  };
-  const valid = rows.filter((r) => r.ar.trim() || r.en.trim());
+  const valid = rows.filter((r) => library.some((o) => o.id === r.sideOptionId));
   const save = async () => {
     setBusy(true);
     try {
@@ -60,7 +55,9 @@ export function GroupDialog({ item, group, mods, onClose }: { item: MenuItem; gr
       const g = group ? await db.update("modifierGroups", group.id, row) : await db.insert("modifierGroups", { ...row, sort: 0 });
       const keep = new Set<string>();
       for (const [k, r] of valid.entries()) {
-        const m = { name: { ar: r.ar.trim() || r.en.trim(), en: r.en.trim() || r.ar.trim() }, price: Math.round(num(r.price) * UNITS_PER_MAJOR), minQty: Math.round(num(r.minQty)), maxQty: Math.round(num(r.maxQty)), available: r.available, sort: k + 1 };
+        const o = library.find((x) => x.id === r.sideOptionId)!;
+        // name, price and availability come from the side option; here only how many times it may be picked
+        const m = { ...modFieldsOf(o), minQty: Math.round(num(r.minQty)), maxQty: Math.round(num(r.maxQty)), sort: k + 1 };
         if (r.id) {
           await db.update("modifiers", r.id, m);
           keep.add(r.id);
@@ -90,25 +87,26 @@ export function GroupDialog({ item, group, mods, onClose }: { item: MenuItem; gr
           <Segmented label="نوع الخيارات" value={f.multi ? "multi" : "single"} onChange={(v) => setF({ ...f, multi: v === "multi" })} options={[{ value: "single", label: "خيار واحد" }, { value: "multi", label: "أكتر من خيار" }]} />
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
-          <Input label="أقل عدد اختيارات" inputMode="numeric" className="num" dir="ltr" value={f.min} onChange={(e) => setF({ ...f, min: e.target.value })} disabled={!f.required} />
+          <Input label="أقل عدد اختيارات" inputMode="numeric" className="num" dir="ltr" value={f.required ? f.min : "0"} onChange={(e) => setF({ ...f, min: e.target.value })} disabled={!f.required} hint={f.required ? undefined : "المجموعة الاختيارية أقل عدد فيها 0"} />
           <Input label="أكتر عدد اختيارات" inputMode="numeric" className="num" dir="ltr" value={f.max} onChange={(e) => setF({ ...f, max: e.target.value })} disabled={!f.multi} hint={f.multi ? "0 = من غير حد" : undefined} />
         </div>
-        <datalist id="side-option-names">{names.map((n) => <option key={n} value={n} />)}</datalist>
         <div className="grid gap-2">
           <p className="text-[14px] font-semibold">الخيارات</p>
-          {rows.map((r, i) => (
-            <div key={i} className="grid items-end gap-2 rounded-xl border border-line p-2 sm:grid-cols-[minmax(0,1.3fr)_minmax(0,1.3fr)_90px_80px_80px_auto_auto]">
-              <Input label={`الخيار ${i + 1} بالإنجليزي`} dir="ltr" list="side-option-names" value={r.en} onChange={(e) => pickName(i, e.target.value)} />
-              <Input label="بالعربي" value={r.ar} onChange={(e) => setRow(i, { ar: e.target.value })} />
-              <Input label="السعر" inputMode="decimal" className="num" dir="ltr" value={r.price} onChange={(e) => setRow(i, { price: e.target.value })} />
-              <Input label="أقل عدد" inputMode="numeric" className="num" dir="ltr" value={r.minQty} onChange={(e) => setRow(i, { minQty: e.target.value })} />
-              <Input label="أكتر عدد" inputMode="numeric" className="num" dir="ltr" value={r.maxQty} onChange={(e) => setRow(i, { maxQty: e.target.value })} />
-              <div className="pb-1"><Switch checked={r.available} onChange={(available) => setRow(i, { available })} label="متاح" /></div>
-              <IconButton label="حذف الخيار" onClick={() => setRows((x) => (x.length > 1 ? x.filter((_, j) => j !== i) : [blankRow()]))}><Trash2 /></IconButton>
-            </div>
-          ))}
+          {!library.length ? <p className="rounded-xl border border-line px-3 py-2 text-[13px] text-muted">مافيش خيارات جانبية لسه. ضيفها الأول من تبويب "الخيارات الجانبية".</p> : null}
+          {rows.map((r, i) => {
+            const o = library.find((x) => x.id === r.sideOptionId);
+            return (
+              <div key={i} className="grid items-end gap-2 rounded-xl border border-line p-2 sm:grid-cols-[minmax(0,2.4fr)_90px_80px_80px_auto]">
+                <Select label={`الخيار ${i + 1}`} value={r.sideOptionId} onChange={(e) => setRow(i, { sideOptionId: e.target.value })} options={libOptions} />
+                <div className="pb-2 text-[13px]"><span className="block text-[12px] text-muted">السعر</span><span className="num font-semibold">{o ? o.price : "—"}</span>{o?.available === false ? <span className="block text-[11.5px] text-danger">مش متاح</span> : null}</div>
+                <Input label="أقل عدد" inputMode="numeric" className="num" dir="ltr" value={r.minQty} onChange={(e) => setRow(i, { minQty: e.target.value })} />
+                <Input label="أكتر عدد" inputMode="numeric" className="num" dir="ltr" value={r.maxQty} onChange={(e) => setRow(i, { maxQty: e.target.value })} />
+                <IconButton label="شيل الخيار" onClick={() => setRows((x) => (x.length > 1 ? x.filter((_, j) => j !== i) : [blankRow()]))}><Trash2 /></IconButton>
+              </div>
+            );
+          })}
           <div><Button size="sm" variant="soft" icon={<Plus />} onClick={() => setRows((x) => [...x, blankRow()])}>إضافة خيار</Button></div>
-          <p className="text-[12.5px] text-muted">سعر الخيار بيتضاف على سعر الصنف عند الكاشير. "أكتر عدد" للخيار = كام مرة يتختار (زي 2 جبنة)، و0 = من غير حد.</p>
+          <p className="text-[12.5px] text-muted">الاسم والسعر والإتاحة بيتعدلوا من الخيارات الجانبية بس. "أكتر عدد" للخيار = كام مرة يتختار (زي 2 جبنة)، و0 = من غير حد.</p>
         </div>
       </div>
     </Dialog>

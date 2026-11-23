@@ -3,8 +3,8 @@
  * ظاهر، مميز، القنوات)، وتفاصيل الصنف بمجموعات الخيارات بتاعته (الاسم، مطلوب أو اختياري، خيار واحد أو أكتر، أقل وأكتر عدد،
  * وكل خيار بسعره). الكاشير بيعرض المجموعات دي ويزود سعر كل خيار على الصنف.
  */
-import { useMemo, useState } from "react";
-import { BookOpen, Download, Eye, EyeOff, Pencil, Plus, Search, Star, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { BookOpen, Download, Eye, EyeOff, Flame, Pencil, Plus, Search, Star, Trash2, TrendingUp } from "lucide-react";
 import { useSession } from "@/auth/session";
 import { useDb, useLive } from "@/data/hooks";
 import type { MenuCategory, MenuItem, Modifier, ModifierGroup } from "@/data/types";
@@ -20,6 +20,12 @@ import { GroupDialog } from "./GroupDialog";
 import { ItemDialog, CHANNELS } from "./ItemDialog";
 import { SideOptions } from "./SideOptions";
 import { groupsOf } from "./bonbell";
+import { linkPlan } from "./sideOptions";
+import { blockRange } from "./codes";
+import { useAutoCodes } from "./useAutoCodes";
+import { listsOf } from "../lib";
+import { useFame, FAME_LABEL } from "@/modules/menu/useFame";
+import type { Fame } from "@/modules/menu/sold";
 
 const egp = (u: number) => `${(u / UNITS_PER_MAJOR).toLocaleString("en", { maximumFractionDigits: 2 })}`;
 export const pctOf = (i: Pick<MenuItem, "price" | "discount">) => (i.price && i.discount ? Math.round((i.discount / i.price) * 1000) / 10 : 0);
@@ -48,10 +54,44 @@ function Body() {
   const [item, setItem] = useState<MenuItem | "new" | null>(null);
   const [detail, setDetail] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
+  const settings = useLive("mfgSettings").data[0];
+  const { fame, sold } = useFame();
+  // every option on the menu is tied to the side options list (the one place its name and price change), once per visit
+  const linked = useRef(false);
+  useEffect(() => {
+    if (!manage || linked.current || !settings || !mods.length || !items.length) return;
+    linked.current = true;
+    const lists = listsOf(settings);
+    const plan = linkPlan(lists.sideOptions ?? [], mods, items);
+    void (async () => {
+      try {
+        if (plan.libraryChanged) await db.update("mfgSettings", settings.id, { lists: { ...lists, sideOptions: plan.library } });
+        for (const l of plan.links) await db.update("modifiers", l.id, { sideOptionId: l.sideOptionId, menuItemId: l.menuItemId });
+      } catch (e) {
+        toast({ tone: "error", title: "تعذر ربط الخيارات بالخيارات الجانبية", description: err(e) });
+      }
+    })();
+  }, [manage, settings, mods, items, db, toast]);
+  // أكواد تلقائية: each category a block of 1000, each item the next number in it. Empty codes fill by themselves;
+  // a code that is already there but outside its block changes only after the manager confirms.
+  const codes = useAutoCodes(manage, cats, items);
+  const [fixing, setFixing] = useState(false);
+  const applyFix = async () => {
+    setFixing(true);
+    try {
+      for (const f of codes.fix) await db.update("menuItems", f.id, { sku: f.sku });
+      toast({ tone: "success", title: `اتغيرت أكواد ${codes.fix.length} صنف` });
+    } catch (e) {
+      toast({ tone: "error", title: "تعذر حفظ الأكواد", description: err(e) });
+    } finally {
+      setFixing(false);
+    }
+  };
+  const [showFix, setShowFix] = useState(false);
   const current = cats.find((c) => c.id === catId) ?? cats[0] ?? null;
   const rows = useMemo(() => {
     const n = q.trim().toLowerCase();
-    const hit = (i: MenuItem) => !n || i.name.ar.toLowerCase().includes(n) || i.name.en.toLowerCase().includes(n);
+    const hit = (i: MenuItem) => !n || i.name.ar.toLowerCase().includes(n) || i.name.en.toLowerCase().includes(n) || (i.sku ?? "") === n;
     if (view === "recommended") return items.filter((i) => i.recommended && hit(i));
     if (view === "discount") return items.filter((i) => (i.discount ?? 0) > 0 && hit(i));
     if (view === "off") return items.filter((i) => (!i.active || !i.available) && hit(i));
@@ -78,6 +118,22 @@ function Body() {
       <PageHeader icon={<BookOpen />} title="المنيو" subtitle="الأصناف والإضافات والملاحظات وأسعارها زي ما الكاشير بيشوفها"
         actions={manage ? <Button variant="soft" icon={<Download />} onClick={() => setImporting(true)}>استيراد من Bonbell</Button> : null} />
       {!manage ? <p className="rounded-xl border border-line px-3 py-2 text-[13.5px] text-muted">للمشاهدة بس: الدور بتاعك مالوش صلاحية تعديل المنيو.</p> : null}
+      {manage && codes.fix.length ? (
+        <Card className="grid gap-2 border-brass/50 p-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="min-w-0 flex-1 text-[13.5px]"><b className="num">{codes.fix.length}</b> صنف كودهم مش في نطاق فئتهم (كل فئة ليها 1000 كود). راجع الأكواد الجديدة قبل ما تتغير.</span>
+            <Button size="sm" variant="ghost" onClick={() => setShowFix((v) => !v)}>{showFix ? "إخفاء" : "عرض التغييرات"}</Button>
+            <Button size="sm" variant="brass" loading={fixing} onClick={applyFix}>غيّر الأكواد</Button>
+          </div>
+          {showFix ? (
+            <div className="max-h-60 overflow-y-auto text-[13px]">
+              <table className="w-full"><thead><tr className="text-muted"><th className="p-1 text-start">الصنف</th><th className="p-1 text-start">الكود الحالي</th><th className="p-1 text-start">الكود الجديد</th></tr></thead>
+                <tbody>{codes.fix.map((f) => <tr key={f.id} className="border-t border-line/60"><td className="p-1">{items.find((i) => i.id === f.id)?.name.ar}</td><td className="num p-1 text-muted">{f.from}</td><td className="num p-1 font-semibold">{f.sku}</td></tr>)}</tbody>
+              </table>
+            </div>
+          ) : null}
+        </Card>
+      ) : null}
       <Segmented label="عرض" value={view} onChange={setView} options={[
         { value: "menu", label: "المنيو" },
         { value: "recommended", label: "المميزة" },
@@ -85,7 +141,7 @@ function Body() {
         { value: "off", label: "مش متاحة" },
         { value: "side", label: "الخيارات الجانبية" },
       ]} />
-      {view === "side" ? <SideOptions readOnly={!manage} mods={mods} /> : (
+      {view === "side" ? <SideOptions readOnly={!manage} mods={mods} items={items} /> : (
         <div className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
           {view === "menu" ? (
             <Card className="grid content-start gap-2 p-3">
@@ -101,7 +157,7 @@ function Body() {
                       <span className={cn("min-w-0 flex-1 text-[13.5px] font-semibold leading-tight", !c.active && "text-faint line-through")}>
                         {c.name.ar}
                         {c.name.en && c.name.en !== c.name.ar ? <span className="block text-[11.5px] font-medium text-muted" dir="ltr">{c.name.en}</span> : null}
-                        <span className="num block text-[11.5px] font-medium text-muted">{items.filter((i) => i.categoryId === c.id).length} صنف</span>
+                        <span className="num block text-[11.5px] font-medium text-muted">{items.filter((i) => i.categoryId === c.id).length} صنف{c.code != null ? ` · أكواد ${blockRange(c.code).from}–${blockRange(c.code).to}` : ""}</span>
                       </span>
                     </button>
                     {manage ? (
@@ -126,6 +182,7 @@ function Body() {
               <table className="w-full min-w-[760px] text-[13.5px]">
                 <thead>
                   <tr className="border-b border-line text-start text-[12.5px] text-muted">
+                    <th className="p-2 text-start font-semibold">الكود</th>
                     <th className="p-2 text-start font-semibold">الصورة</th>
                     <th className="p-2 text-start font-semibold">الاسم</th>
                     <th className="p-2 text-start font-semibold">السعر</th>
@@ -135,6 +192,7 @@ function Body() {
                     <th className="p-2 text-start font-semibold">مميز</th>
                     <th className="p-2 text-start font-semibold">القنوات</th>
                     <th className="p-2 text-start font-semibold">الخيارات</th>
+                    <th className="p-2 text-start font-semibold" title="آخر 30 يوم: لوحده + جوه أصناف تانية">المبيعات</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -142,8 +200,9 @@ function Body() {
                     const gs = groupsOf(i, groups);
                     return (
                       <tr key={i.id} className="cursor-pointer border-b border-line/60 hover:bg-surface-2" onClick={() => setDetail(i.id)}>
+                        <td className="num p-2 font-semibold text-muted">{i.sku || "—"}</td>
                         <td className="p-2">{i.imageUrl ? <img src={i.imageUrl} alt="" loading="lazy" className="size-12 rounded-lg object-cover" /> : <span className="block size-12 rounded-lg bg-surface-3" />}</td>
-                        <td className="p-2 font-semibold">{i.name.ar}{i.name.en && i.name.en !== i.name.ar ? <span className="block text-[12px] font-medium text-muted" dir="ltr">{i.name.en}</span> : null}</td>
+                        <td className="p-2 font-semibold">{i.name.ar}<FameBadge fame={fame.get(i.id)} />{i.name.en && i.name.en !== i.name.ar ? <span className="block text-[12px] font-medium text-muted" dir="ltr">{i.name.en}</span> : null}</td>
                         <td className="num p-2 font-semibold">{egp(i.price)}{i.discount ? <span className="block text-[12px] text-success">{egp(i.price - i.discount)}</span> : null}</td>
                         <td className="num p-2">{pctOf(i) ? `${pctOf(i)}%` : "0"}</td>
                         <td className="max-w-[220px] p-2 text-muted"><span className="line-clamp-2">{i.description.ar || i.description.en || "—"}</span></td>
@@ -151,6 +210,7 @@ function Body() {
                         <td className="p-2" onClick={(e) => e.stopPropagation()}><Toggle on={!!i.recommended} disabled={!manage} label="مميز" onChange={(v) => flip(i, { recommended: v })} /></td>
                         <td className="p-2"><div className="flex flex-wrap gap-1">{CHANNELS.filter((c) => !(i.hiddenOn ?? []).includes(c.id)).map((c) => <Badge key={c.id} size="sm">{c.label}</Badge>)}</div></td>
                         <td className="num p-2 text-muted">{gs.length ? `${gs.length} مجموعة` : "—"}</td>
+                        <td className="num p-2">{(() => { const s = sold.get(i.id); if (!s) return <span className="text-muted">0</span>; return <span>{s.direct + s.inside}{s.inside ? <span className="block text-[11.5px] text-muted">منها {s.inside} جوه أصناف تانية</span> : null}</span>; })()}</td>
                       </tr>
                     );
                   })}
@@ -162,11 +222,16 @@ function Body() {
         </div>
       )}
       {cat ? <CategoryDialog key={cat === "new" ? "new" : cat.id} cat={cat === "new" ? null : cat} sort={cats.length + 1} count={cat === "new" ? 0 : items.filter((i) => i.categoryId === cat.id).length} onClose={() => setCat(null)} /> : null}
-      {item ? <ItemDialog key={item === "new" ? "new" : item.id} item={item === "new" ? null : item} cats={cats} defaultCat={current?.id ?? ""} sort={items.length + 1} onClose={() => setItem(null)} onSaved={(id) => setDetail(id)} /> : null}
+      {item ? <ItemDialog key={item === "new" ? "new" : item.id} item={item === "new" ? null : item} cats={cats} items={items} defaultCat={current?.id ?? ""} sort={items.length + 1} onClose={() => setItem(null)} onSaved={(id) => setDetail(id)} /> : null}
       {open ? <ItemDetail item={open} cats={cats} groups={groups} mods={mods} manage={manage} canDelete={area.delete} onEdit={() => setItem(open)} onClose={() => setDetail(null)} /> : null}
       {importing ? <BonbellImport onClose={() => setImporting(false)} /> : null}
     </div>
   );
+}
+
+export function FameBadge({ fame }: { fame?: Fame }) {
+  if (!fame) return null;
+  return <Badge size="sm" tone={fame === "top" ? "brass" : "info"} className="ms-1.5 align-middle" icon={fame === "top" ? <Flame /> : <TrendingUp />}>{FAME_LABEL[fame]}</Badge>;
 }
 
 function Toggle({ on, onChange, disabled, label }: { on: boolean; onChange: (v: boolean) => void; disabled?: boolean; label: string }) {

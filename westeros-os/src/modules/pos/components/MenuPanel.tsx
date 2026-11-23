@@ -1,7 +1,8 @@
 /** Category rail + search + item grid. Tap = add (or open modifiers), long-press/right-click = always open the sheet. */
 import { forwardRef, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Ban, Flame, Leaf, Search, Sparkles, Star, X } from "lucide-react";
+import { Ban, Flame, Leaf, Search, Sparkles, Star, X, TrendingUp } from "lucide-react";
+import type { Fame } from "@/modules/menu/sold";
 import type { MenuCategory, MenuItem } from "@/data/types";
 import { useT } from "@/i18n/i18n";
 import { matches } from "@/lib/arabic";
@@ -16,9 +17,11 @@ export interface MenuPanelProps {
   items: MenuItem[];
   counts: Map<string, number>;
   onPick: (item: MenuItem, opts: { forceSheet: boolean }) => void;
+  /** الأكثر طلباً / تريند, from the last 30 days of sales */
+  fame?: Map<string, Fame>;
 }
 
-export const MenuPanel = forwardRef<HTMLInputElement, MenuPanelProps>(function MenuPanel({ cats, items, counts, onPick }, searchRef) {
+export const MenuPanel = forwardRef<HTMLInputElement, MenuPanelProps>(function MenuPanel({ cats, items, counts, onPick, fame }, searchRef) {
   const { L, loc, lang } = useT();
   const reduced = useReduced();
   const [cat, setCat] = useState<string | "all">("all");
@@ -85,7 +88,7 @@ export const MenuPanel = forwardRef<HTMLInputElement, MenuPanelProps>(function M
           <motion.ul layout={!reduced} className="grid grid-cols-2 gap-2.5 @lg:grid-cols-3 @3xl:grid-cols-4 @6xl:grid-cols-5" aria-label={L("الأصناف", "Items")}>
             <AnimatePresence initial={false}>
               {shown.map((it) => (
-                <ItemTile key={it.id} item={it} cat={catById.get(it.categoryId)} count={counts.get(it.id) ?? 0} onPick={onPick} lang={lang} />
+                <ItemTile key={it.id} item={it} cat={catById.get(it.categoryId)} count={counts.get(it.id) ?? 0} onPick={onPick} lang={lang} fame={fame?.get(it.id)} />
               ))}
             </AnimatePresence>
           </motion.ul>
@@ -95,7 +98,7 @@ export const MenuPanel = forwardRef<HTMLInputElement, MenuPanelProps>(function M
   );
 });
 
-function ItemTile({ item, cat, count, onPick, lang }: { item: MenuItem; cat?: MenuCategory; count: number; onPick: MenuPanelProps["onPick"]; lang: "ar" | "en" }) {
+function ItemTile({ item, cat, count, onPick, lang, fame }: { item: MenuItem; cat?: MenuCategory; count: number; onPick: MenuPanelProps["onPick"]; lang: "ar" | "en"; fame?: Fame }) {
   const { L, loc } = useT();
   const reduced = useReduced();
   const Icon = catIcon(cat?.icon);
@@ -156,6 +159,11 @@ function ItemTile({ item, cat, count, onPick, lang }: { item: MenuItem; cat?: Me
           </span>
         </span>
         <span className="relative mt-2 line-clamp-2 text-[15px] font-semibold leading-snug">{loc(item.name)}</span>
+        {fame ? (
+          <span className={cn("relative mt-1 inline-flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold [&_svg]:size-3", fame === "top" ? "bg-brass-soft text-brass-text" : "bg-info-soft text-info")}>
+            {fame === "top" ? <Flame /> : <TrendingUp />} {fame === "top" ? L("الأكثر طلباً", "Best seller") : L("تريند", "Trending")}
+          </span>
+        ) : null}
         <span className="relative mt-auto flex items-end justify-between gap-2 pt-2">
           <span className="num text-[14.5px] font-semibold text-ink-2" dir="ltr">
             {formatMoney(Math.max(0, item.price - (item.discount ?? 0)), { lang, compact: true, bare: true })}

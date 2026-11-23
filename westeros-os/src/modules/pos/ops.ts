@@ -9,6 +9,7 @@ import { nowIso } from "@/lib/time";
 import { sameLine, sendableItems } from "./math";
 import { deductForItems, onLineVoided } from "@/modules/inventory/deduct";
 import { channelOf, priceFor } from "@/modules/menu/rules";
+import { comboMods } from "@/modules/menu/sold";
 
 export interface TicketDraft {
   mode: OrderMode;
@@ -75,8 +76,9 @@ export interface LineInput {
 }
 
 /** Adds a line (or bumps the qty of an identical unsent one). */
-export async function addLine(db: Db, t: { orderId: string; checkId: string; items: OrderItem[]; tableId: string | null }, x: LineInput, cats: MenuCategory[]) {
-  const mods: OrderItemModifier[] = x.modifiers.map((m) => ({ groupId: m.groupId, modifierId: m.id, name: m.name, price: m.price }));
+export async function addLine(db: Db, t: { orderId: string; checkId: string; items: OrderItem[]; tableId: string | null }, x: LineInput, cats: MenuCategory[], menu: MenuItem[] = []) {
+  // the parts of a box first, then the chosen options; a part or an option that is a menu item carries its id (printed under the item, counted in its sales)
+  const mods: OrderItemModifier[] = [...comboMods(x.item, menu), ...x.modifiers.map((m) => ({ groupId: m.groupId, modifierId: m.id, name: m.name, price: m.price, ...(m.menuItemId ? { itemId: m.menuItemId } : {}) }))];
   const probe = { itemId: x.item.id, modifiers: mods, notes: x.notes.trim(), seat: x.seat, course: x.course, status: "new" as const, discount: 0 };
   const same = t.items.find((i) => sameLine(i, probe));
   let row: OrderItem;
@@ -98,6 +100,15 @@ export async function setLineQty(db: Db, checkId: string, it: OrderItem, qty: nu
   if (it.status !== "new") throw new Error("sent lines change through void");
   if (qty <= 0) await db.remove("orderItems", it.id);
   else await db.update("orderItems", it.id, { qty, discount: Math.min(it.discount, it.unitPrice * qty) });
+  await recomputeCheck(db, checkId);
+}
+
+/** A line not sent yet, edited from the options sheet: its options, qty, notes, seat and course change in place. */
+export async function replaceLine(db: Db, checkId: string, it: OrderItem, x: Omit<LineInput, "item"> & { item: MenuItem }, menu: MenuItem[] = []) {
+  if (it.status !== "new") throw new Error("sent lines change through void");
+  const mods: OrderItemModifier[] = [...comboMods(x.item, menu), ...x.modifiers.map((m) => ({ groupId: m.groupId, modifierId: m.id, name: m.name, price: m.price, ...(m.menuItemId ? { itemId: m.menuItemId } : {}) }))];
+  const unit = it.unitPrice + mods.reduce((a, m) => a + m.price, 0);
+  await db.update("orderItems", it.id, { modifiers: mods, qty: x.qty, notes: x.notes.trim(), seat: x.seat, course: x.course, discount: Math.min(it.discount, unit * x.qty) });
   await recomputeCheck(db, checkId);
 }
 

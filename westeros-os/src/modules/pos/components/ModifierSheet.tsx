@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
 import { Check, CircleAlert } from "lucide-react";
-import type { MenuItem, Modifier, ModifierGroup } from "@/data/types";
+import type { MenuItem, Modifier, ModifierGroup, OrderItem } from "@/data/types";
 import { useT } from "@/i18n/i18n";
 import { cn } from "@/lib/cn";
 import { formatMoney } from "@/lib/money";
@@ -26,8 +26,10 @@ const QUICK_NOTES = [
   { ar: "مستعجل", en: "Rush" },
 ];
 
-export function ModifierSheet({ item, groups, mods, guests, seat: seat0, course: course0, onClose, onAdd }: {
+export function ModifierSheet({ item, groups, mods, guests, seat: seat0, course: course0, edit, onClose, onAdd }: {
   item: MenuItem | null;
+  /** a line already on the ticket: the sheet opens with its options, qty and notes, and saves over it */
+  edit?: OrderItem | null;
   groups: ModifierGroup[];
   mods: Modifier[];
   guests: number;
@@ -49,17 +51,20 @@ export function ModifierSheet({ item, groups, mods, guests, seat: seat0, course:
   useEffect(() => {
     if (!item) return;
     const init: Record<string, string[]> = {};
-    for (const g of itemGroups) init[g.id] = mods.filter((m) => m.groupId === g.id && m.isDefault && m.available).map((m) => m.id).slice(0, g.max);
+    for (const g of itemGroups)
+      init[g.id] = edit
+        ? edit.modifiers.filter((m) => m.groupId === g.id && mods.some((x) => x.id === m.modifierId)).map((m) => m.modifierId)
+        : mods.filter((m) => m.groupId === g.id && m.isDefault && m.available).map((m) => m.id).slice(0, g.max);
     setPicked(init);
-    setQty(1);
-    setNotes("");
-    setSeat(seat0);
-    setCourse(course0);
+    setQty(edit?.qty ?? 1);
+    setNotes(edit?.notes ?? "");
+    setSeat(edit ? edit.seat : seat0);
+    setCourse(edit?.course ?? course0);
     setTried(false);
-  }, [item?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [item?.id, edit?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const chosen = useMemo(() => Object.values(picked).flat().map((id) => mods.find((m) => m.id === id)).filter((m): m is Modifier => !!m), [picked, mods]);
-  const missing = itemGroups.filter((g) => (picked[g.id]?.length ?? 0) < g.min || mods.some((m) => m.groupId === g.id && (m.minQty ?? 0) > 0 && (picked[g.id] ?? []).filter((x) => x === m.id).length < (m.minQty ?? 0)));
+  const missing = itemGroups.filter((g) => (picked[g.id]?.length ?? 0) < g.min || mods.some((m) => { const n = (picked[g.id] ?? []).filter((x) => x === m.id).length; return m.groupId === g.id && n > 0 && n < (m.minQty ?? 0); }));
   const unit = (item?.price ?? 0) + chosen.reduce((a, m) => a + m.price, 0);
 
   // how many times an option may be picked (المنيو، زي Bonbell): 1 = on/off, more = a counter, 0 = no limit
@@ -103,7 +108,7 @@ export function ModifierSheet({ item, groups, mods, guests, seat: seat0, course:
           <Stepper value={qty} onChange={setQty} min={1} label={L("الكمية", "Quantity")} />
           <div className="flex-1" />
           <Button size="lg" onClick={submit} className="min-w-52" data-autofocus>
-            {L("ضيف", "Add")} · <AnimatedMoney value={unit * qty} />
+            {edit ? L("حفظ التعديل", "Save changes") : L("ضيف", "Add")} · <AnimatedMoney value={unit * qty} />
           </Button>
         </div>
       }
