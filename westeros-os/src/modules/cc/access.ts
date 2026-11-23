@@ -74,6 +74,8 @@ const LISTED: Area[] = [
   { id: "finance.budget", screen: "cc-finance", label: "الموازنة", acts: ["view", "export"] },
   { id: "finance.close", screen: "cc-finance", label: "الإقفال", acts: ["view"] },
   { id: "finance.settings", screen: "cc-finance", label: "الإعدادات وربط الحسابات", acts: ["view"] },
+
+  { id: "delivery", screen: "cc-delivery", label: "خدمة التوصيل", acts: ["view", "edit"], note: "التعديل: إضافة وتعديل وحذف طرق التوصيل والمندوبين." },
 ];
 
 /** every area of the screens the system has now, in the order of the screens */

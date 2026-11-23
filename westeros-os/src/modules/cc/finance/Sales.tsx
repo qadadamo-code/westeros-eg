@@ -161,7 +161,7 @@ function DayDialog({ fin, last, onClose, onSaved }: { fin: Fin; last?: FinDoc; o
             <Switch checked={d.inclusive} onChange={(v) => setD({ ...d, inclusive: v })} label="الأرقام شاملة الضريبة" description={d.inclusive ? "السيستم يطلع الضريبة من الأرقام المكتوبة" : "السيستم يضيف الضريبة فوق الأرقام المكتوبة"} />
             <div className="grid gap-3 sm:grid-cols-2">
               {CHANNELS.map((c) => <div key={c.key}>{money(`مبيعات ${c.label}`, ch[c.key] ?? "", (v) => setCh({ ...ch, [c.key]: v }))}</div>)}
-              {methods.length ? null : money("رسوم التوصيل المحصلة", d.fees, (v) => setD({ ...d, fees: v }), "عرف طرق التوصيل من ثوابت النظام عشان الرسوم تتوزع حسب نسبة التحصيل")}
+              {methods.length ? null : money("رسوم التوصيل المحصلة", d.fees, (v) => setD({ ...d, fees: v }), "عرف طرق التوصيل من قائمة خدمة التوصيل عشان الرسوم تتوزع حسب نسبة التحصيل")}
               {money("خصومات وعروض", d.discounts, (v) => setD({ ...d, discounts: v }), "تنزل من المبيعات")}
               {money("مرتجعات", d.returns, (v) => setD({ ...d, returns: v }))}
               {money("خدمة وإكراميات", d.tips, (v) => setD({ ...d, tips: v }), "تتسجل مستحقة للموظفين، خارج الضريبة")}
@@ -179,7 +179,7 @@ function DayDialog({ fin, last, onClose, onSaved }: { fin: Fin; last?: FinDoc; o
                     <div key={f.key} className="grid gap-1">
                       <div className={cn("grid items-end gap-2", forDriver ? "grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]" : "grid-cols-[minmax(0,1fr)_auto]")}>
                         {money(m.name, f.amount, (v) => set({ amount: v }))}
-                        {forDriver ? <Select label="المندوب" value={f.driverId} onChange={(e) => set({ driverId: e.target.value })} options={[{ value: "", label: drivers.length ? "اختر" : "عرف المندوبين من ثوابت النظام" }, ...drivers.map((x) => ({ value: x.id, label: x.name }))]} /> : null}
+                        {forDriver ? <Select label="المندوب" value={f.driverId} onChange={(e) => set({ driverId: e.target.value })} options={[{ value: "", label: drivers.length ? "اختر" : "عرف المندوبين من خدمة التوصيل" }, ...drivers.map((x) => ({ value: x.id, label: x.name }))]} /> : null}
                         {forDriver ? <Button variant="ghost" size="sm" icon={<Plus />} onClick={() => setFees([...fees.slice(0, i + 1), { key: `${m.id}-${Date.now()}`, methodId: m.id, driverId: "", amount: "" }, ...fees.slice(i + 1)])}>مندوب</Button> : <span />}
                       </div>
                       {split.party ? <span className="text-[12.5px] text-muted">{shareOf(m)}% لصالح {forDriver ? (drivers.find((x) => x.id === f.driverId)?.name ?? "المندوب") : m.beneficiary === "company" ? m.company : "الموظفين"}، والباقي إيرادات</span> : null}

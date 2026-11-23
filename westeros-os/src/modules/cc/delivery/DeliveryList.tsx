@@ -1,4 +1,4 @@
-/** ثوابت النظام > خدمة التوصيل (Mohammed, 2026-11-22): طرق التوصيل وتحصيل رسومها ونسبة التحصيل، ومندوبو التوصيل. */
+/** خدمة التوصيل (قائمة رئيسية في الإعدادات زي المستخدمين، 2026-11-23) (Mohammed, 2026-11-22): طرق التوصيل وتحصيل رسومها ونسبة التحصيل، ومندوبو التوصيل. */
 import { useMemo, useState } from "react";
 import { Bike, Pencil, Plus, Trash2, Truck } from "lucide-react";
 import { useDb, useLive } from "@/data/hooks";
@@ -13,7 +13,7 @@ import { useFinance, type Fin } from "../finance/useFinance";
 
 const err = (e: unknown) => String((e as Error)?.message ?? e);
 
-export default function DeliveryConstants({ readOnly }: { readOnly: boolean }) {
+export default function DeliveryList({ readOnly }: { readOnly: boolean }) {
   const fin = useFinance();
   const db = useDb();
   const { toast } = useToast();
