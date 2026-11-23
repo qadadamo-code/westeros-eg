@@ -1,11 +1,12 @@
-/** خدمة التوصيل (قائمة رئيسية في الإعدادات زي المستخدمين، 2026-11-23) (Mohammed, 2026-11-22): طرق التوصيل وتحصيل رسومها ونسبة التحصيل، ومندوبو التوصيل. */
+/** خدمة التوصيل (قائمة رئيسية في الإعدادات زي المستخدمين، 2026-11-23) (Mohammed, 2026-11-22): مقدمو خدمة التوصيل وتحصيل رسومها ونسبة التحصيل وطريقة حسابها، مناطق التوصيل وأسعارها، ومندوبو التوصيل. */
 import { useMemo, useState } from "react";
-import { Bike, Pencil, Plus, Trash2, Truck } from "lucide-react";
+import { Bike, MapPin, Pencil, Plus, Trash2, Truck } from "lucide-react";
 import { useDb, useLive } from "@/data/hooks";
 import type { DeliveryMethod, FinDoc } from "@/data/financeTypes";
 import { uuid } from "@/lib/id";
 import { Badge, Button, Card, CardHeader, Dialog, IconButton, Input, Select, Switch, Textarea, useToast } from "@/ui";
-import { BENEFICIARIES, BENEFICIARY_LABEL, COLLECTION_LABEL, DRIVER, driverOf, feeAccountText, methodsOf, methodProblem, newMethod, removeDriver, removeMethod, ROLE_LABEL, saveDriver, saveMethod, TYPE_LABEL, type DriverData } from "../finance/delivery";
+import { onInvoice } from "../finance/delivery";
+import { BENEFICIARIES, BENEFICIARY_LABEL, COLLECTION_LABEL, FEE_BASIS_LABEL, DRIVER, driverOf, feeAccountText, methodsOf, methodProblem, newMethod, removeDriver, removeMethod, ROLE_LABEL, saveDriver, saveMethod, TYPE_LABEL, type DriverData } from "../finance/delivery";
 import { EMPLOYEE } from "../finance/payroll";
 import { netByCode } from "../finance/statements";
 import { BranchSelect, Confirm, fmt, fromText, toText } from "../finance/ui";
@@ -38,7 +39,7 @@ export default function DeliveryList({ readOnly }: { readOnly: boolean }) {
   return (
     <div className="grid items-start gap-5 lg:grid-cols-2">
       <Card>
-        <CardHeader icon={<Truck />} title="طرق التوصيل" subtitle="لكل طريقة: مين بيوصل، إزاي الرسوم بتتحصل، الرسوم لصالح مين ونسبة التحصيل. الباقي بيروح لحساب الإيرادات." />
+        <CardHeader icon={<Truck />} title="مقدم خدمة التوصيل" subtitle="لكل مقدم خدمة: مين بيوصل، إزاي الرسوم بتتحسب وبتتحصل، الرسوم لصالح مين ونسبة التحصيل. الباقي بيروح لحساب الإيرادات." />
         <ul className="grid gap-2 px-5 pb-3">
           {methods.map((m) => (
             <li key={m.id} className="grid gap-1.5 rounded-xl border border-line p-3">
@@ -52,14 +53,17 @@ export default function DeliveryList({ readOnly }: { readOnly: boolean }) {
               </div>
               <p className="text-[13.5px] text-muted">
                 {m.type === "external" ? `${m.company} · ${COLLECTION_LABEL[m.collection]}${m.collection === "monthly" ? ` · ${fmt(m.monthlyFee)} ج.م في الشهر` : ""}` : "تحصيل مع فاتورة الزبون"}
+                {onInvoice(m) ? ` · الرسوم ${m.feeBasis === "fixed" ? `ثابتة ${fmt(m.fixedFee ?? 0)} ج.م` : m.feeBasis === "distance" ? `حسب المسافة: ${(m.distanceTiers ?? []).map((t) => `لحد ${t.upToKm} كم ${fmt(t.fee)}`).join("، ")}${m.extraPerKm ? `، وبعدها ${fmt(m.extraPerKm)} لكل كيلو` : ""}` : FEE_BASIS_LABEL[m.feeBasis ?? "area"]}` : ""}
               </p>
               <p className="text-[13.5px]">{feeAccountText(m)}</p>
             </li>
           ))}
-          {methods.length ? null : <li className="rounded-xl border border-dashed border-line px-3 py-4 text-center text-[14px] text-muted">لسه مفيش طرق توصيل. أضف طريقة التوصيل بتاعة المطعم أو شركة التوصيل اللي بتتعامل معاها.</li>}
+          {methods.length ? null : <li className="rounded-xl border border-dashed border-line px-3 py-4 text-center text-[14px] text-muted">لسه مفيش مقدم خدمة توصيل. أضف توصيل المطعم أو شركة التوصيل اللي بتتعامل معاها.</li>}
         </ul>
-        <div className="px-5 pb-5"><Button variant="outline" icon={<Plus />} disabled={readOnly} onClick={() => setMethod(newMethod(uuid()))}>طريقة توصيل جديدة</Button></div>
+        <div className="px-5 pb-5"><Button variant="outline" icon={<Plus />} disabled={readOnly} onClick={() => setMethod(newMethod(uuid()))}>مقدم خدمة جديد</Button></div>
       </Card>
+
+      <ZonesCard readOnly={readOnly} />
 
       <Card>
         <CardHeader icon={<Bike />} title="مندوبو التوصيل" subtitle="كل مندوب له حساب ذمم في الأصول المتداولة: الطلبات اللي استلمها وما حاسبش عليها بتتسجل عليه لحد ما يحاسب، ونصيبه من رسوم التوصيل بيتسجل لصالحه." />
@@ -104,9 +108,13 @@ function MethodDialog({ start, all, employees, onClose }: { start: DeliveryMetho
   const [m, setM] = useState<DeliveryMethod>(start);
   const [pct, setPct] = useState(start.sharePct ? String(start.sharePct) : "");
   const [monthly, setMonthly] = useState(toText(start.monthlyFee || undefined));
+  const [fixed, setFixed] = useState(toText(start.fixedFee || undefined));
+  const [tiers, setTiers] = useState<{ km: string; fee: string }[]>(() => (start.distanceTiers?.length ? start.distanceTiers.map((t) => ({ km: String(t.upToKm), fee: toText(t.fee) })) : [{ km: "2", fee: "" }, { km: "4", fee: "" }]));
+  const [extra, setExtra] = useState(toText(start.extraPerKm || undefined));
   const [busy, setBusy] = useState(false);
   const isNew = !all.some((x) => x.id === start.id);
-  const v: DeliveryMethod = { ...m, sharePct: Number(pct) || 0, monthlyFee: fromText(monthly) };
+  const v: DeliveryMethod = { ...m, sharePct: Number(pct) || 0, monthlyFee: fromText(monthly), fixedFee: fromText(fixed),
+    distanceTiers: tiers.filter((t) => t.km.trim() || t.fee.trim()).map((t) => ({ upToKm: Number(t.km.replace(",", ".")) || 0, fee: fromText(t.fee) })), extraPerKm: fromText(extra) };
   const problem = methodProblem(v, all);
   const setType = (type: DeliveryMethod["type"]) => setM({ ...m, type, beneficiary: BENEFICIARIES[type].includes(m.beneficiary) ? m.beneficiary : BENEFICIARIES[type][0] });
   const save = async () => {
@@ -115,10 +123,10 @@ function MethodDialog({ start, all, employees, onClose }: { start: DeliveryMetho
     catch (e) { toast({ tone: "error", title: "تعذر الحفظ", description: err(e) }); } finally { setBusy(false); }
   };
   return (
-    <Dialog open onClose={onClose} size="lg" title={isNew ? "طريقة توصيل جديدة" : `تعديل ${start.name}`}
+    <Dialog open onClose={onClose} size="lg" title={isNew ? "مقدم خدمة توصيل جديد" : `تعديل ${start.name}`}
       footer={<div className="flex flex-wrap items-center justify-end gap-2">{problem ? <span className="me-auto text-[13px] font-semibold text-danger">{problem}</span> : <span className="me-auto text-[13.5px]">{feeAccountText(v)}</span>}<Button variant="ghost" onClick={onClose}>إلغاء</Button><Button loading={busy} disabled={!!problem} onClick={save}>حفظ</Button></div>}>
       <div className="grid gap-3 sm:grid-cols-2">
-        <Input label="اسم الطريقة" autoFocus placeholder="مثلا: توصيل المطعم، مرسول" value={m.name} onChange={(e) => setM({ ...m, name: e.target.value })} />
+        <Input label="اسم مقدم الخدمة" autoFocus placeholder="مثلا: توصيل المطعم، مرسول" value={m.name} onChange={(e) => setM({ ...m, name: e.target.value })} />
         <Select label="مين بيوصل" value={m.type} onChange={(e) => setType(e.target.value as DeliveryMethod["type"])} options={(Object.keys(TYPE_LABEL) as DeliveryMethod["type"][]).map((k) => ({ value: k, label: TYPE_LABEL[k] }))} />
         {m.type === "external" ? (
           <>
@@ -129,6 +137,26 @@ function MethodDialog({ start, all, employees, onClose }: { start: DeliveryMetho
         ) : null}
         {m.type === "external" && m.collection === "outside" ? null : (
           <>
+            <Select label="طريقة حساب رسوم التوصيل" value={m.feeBasis ?? "area"} onChange={(e) => setM({ ...m, feeBasis: e.target.value as DeliveryMethod["feeBasis"] })} options={(Object.keys(FEE_BASIS_LABEL) as NonNullable<DeliveryMethod["feeBasis"]>[]).map((k) => ({ value: k, label: FEE_BASIS_LABEL[k] }))} hint={(m.feeBasis ?? "area") === "area" ? "الكاشير بيختار منطقة عنوان الزبون وسعرها بيتحط لوحده" : undefined} />
+            {m.feeBasis === "fixed" ? <Input label="رسوم التوصيل لكل طلب" dir="ltr" inputMode="decimal" placeholder="0" value={fixed} onChange={(e) => setFixed(e.target.value)} /> : null}
+            {m.feeBasis === "distance" ? (
+              <div className="grid gap-2 rounded-xl border border-line p-3 sm:col-span-2">
+                <span className="text-[13.5px] font-semibold">رينج المسافات وسعر كل رينج</span>
+                <span className="text-[12.5px] text-muted">المسافة المباشرة بالكيلو من لوكيشن الفرع للوكيشن الزبون. أول رينج هو الحد الأدنى.</span>
+                {tiers.map((t, i) => (
+                  <div key={i} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-end gap-2">
+                    <Input label={i === 0 ? "لحد كام كيلو (كم)" : `من ${tiers[i - 1].km || "…"} لحد كام كيلو (كم)`} dir="ltr" inputMode="decimal" value={t.km} onChange={(e) => setTiers(tiers.map((x, j) => (j === i ? { ...x, km: e.target.value } : x)))} />
+                    <Input label="رسوم التوصيل" dir="ltr" inputMode="decimal" placeholder="0" value={t.fee} onChange={(e) => setTiers(tiers.map((x, j) => (j === i ? { ...x, fee: e.target.value } : x)))} />
+                    <IconButton label="حذف الرينج" disabled={tiers.length < 2} onClick={() => setTiers(tiers.filter((_, j) => j !== i))}><Trash2 /></IconButton>
+                  </div>
+                ))}
+                <div className="flex flex-wrap items-end gap-2">
+                  <Button variant="ghost" size="sm" icon={<Plus />} onClick={() => setTiers([...tiers, { km: "", fee: "" }])}>رينج</Button>
+                  <span className="flex-1" />
+                  <div className="w-44"><Input label="لكل كيلو بعد آخر رينج" dir="ltr" inputMode="decimal" placeholder="0" value={extra} onChange={(e) => setExtra(e.target.value)} hint="فاضي = مفيش توصيل أبعد من كده" /></div>
+                </div>
+              </div>
+            ) : null}
             <Select label="الرسوم لصالح مين" value={m.beneficiary} onChange={(e) => setM({ ...m, beneficiary: e.target.value as DeliveryMethod["beneficiary"] })} options={BENEFICIARIES[m.type].map((k) => ({ value: k, label: BENEFICIARY_LABEL[k] }))} />
             {m.beneficiary === "restaurant" ? null : <Input label="نسبة التحصيل لصالحه" dir="ltr" inputMode="decimal" placeholder="100" value={pct} onChange={(e) => setPct(e.target.value)} end={<span className="text-muted">%</span>} hint="الباقي بيتضاف لحساب الإيرادات" />}
           </>
@@ -145,7 +173,7 @@ function MethodDialog({ start, all, employees, onClose }: { start: DeliveryMetho
             </div>
           </div>
         ) : null}
-        <div className="sm:col-span-2"><Switch checked={m.active} onChange={(a) => setM({ ...m, active: a })} label="شغالة" description="الطريقة الموقوفة ما بتظهرش في مبيعات اليوم، وحركاتها القديمة تفضل." /></div>
+        <div className="sm:col-span-2"><Switch checked={m.active} onChange={(a) => setM({ ...m, active: a })} label="شغال" description="مقدم الخدمة الموقوف ما بيظهرش في الكاشير ولا مبيعات اليوم، وحركاته القديمة تفضل." /></div>
       </div>
     </Dialog>
   );
@@ -175,7 +203,7 @@ function DriverDialog({ fin, row, methods, employees, onClose }: { fin: Fin; row
         <Select label="تابع لـ" value={d.affiliation} onChange={(e) => setD({ ...d, affiliation: e.target.value as DriverData["affiliation"] })} options={[{ value: "employee", label: "موظف في المطعم" }, { value: "company", label: "شركة توصيل خارجية" }]} />
         {d.affiliation === "employee"
           ? <Select label="الموظف المسجل في النظام" value={d.employeeId} onChange={(e) => pickEmployee(e.target.value)} options={[{ value: "", label: employees.length ? "اختر الموظف" : "سجل الموظفين الأول من الحسابات > الرواتب" }, ...employees.filter((e) => e.status === "active" || e.id === d.employeeId).map((e) => ({ value: e.id, label: e.name }))]} />
-          : <Select label="شركة التوصيل" value={d.companyMethodId} onChange={(e) => setD({ ...d, companyMethodId: e.target.value })} options={[{ value: "", label: companies.length ? "اختر الشركة" : "أضف شركة في طرق التوصيل الأول" }, ...companies.map((m) => ({ value: m.id, label: m.company }))]} />}
+          : <Select label="شركة التوصيل" value={d.companyMethodId} onChange={(e) => setD({ ...d, companyMethodId: e.target.value })} options={[{ value: "", label: companies.length ? "اختر الشركة" : "أضف شركة في مقدم خدمة التوصيل الأول" }, ...companies.map((m) => ({ value: m.id, label: m.company }))]} />}
         <Input label="الاسم" value={name} onChange={(e) => setName(e.target.value)} />
         <Input label="اللقب" placeholder="اختياري" value={d.title} onChange={(e) => setD({ ...d, title: e.target.value })} />
         <Input label="الرقم القومي" dir="ltr" inputMode="numeric" maxLength={14} value={d.nationalId} onChange={(e) => setD({ ...d, nationalId: e.target.value.replace(/\D/g, "") })} />
@@ -186,5 +214,52 @@ function DriverDialog({ fin, row, methods, employees, onClose }: { fin: Fin; row
         <div className="sm:col-span-2"><Switch checked={active} onChange={setActive} label="شغال" description="المندوب الموقوف ما بيظهرش في مبيعات اليوم، وحسابه وحركاته تفضل." /></div>
       </div>
     </Dialog>
+  );
+}
+
+/** مناطق التوصيل وأسعارها: the delivery areas (delivery_zones) the till prices an order by. An area is stopped, never deleted, so old orders keep it. */
+function ZonesCard({ readOnly }: { readOnly: boolean }) {
+  const db = useDb();
+  const { toast } = useToast();
+  const zones = useLive("deliveryZones", { orderBy: [{ field: "sort" }] }).data;
+  const [name, setName] = useState("");
+  const [fee, setFee] = useState("");
+  const [showAll, setShowAll] = useState(false);
+  const run = async (f: () => Promise<unknown>, title = "تم الحفظ") => {
+    try { await f(); toast({ tone: "success", title }); } catch (e) { toast({ tone: "error", title: "تعذر الحفظ", description: err(e) }); }
+  };
+  const add = () => {
+    const n = name.trim();
+    if (!n) return;
+    if (zones.some((z) => z.name.ar.trim() === n)) { toast({ tone: "error", title: "فيه منطقة بنفس الاسم" }); return; }
+    void run(async () => {
+      const used = new Set(zones.map((z) => z.slug));
+      let i = zones.length + 1, slug = `area-${String(i).padStart(2, "0")}`;
+      while (used.has(slug)) slug = `area-${String(++i).padStart(2, "0")}`;
+      await db.insert("deliveryZones", { branchId: null, slug, name: { ar: n, en: "" }, fee: fromText(fee), minOrder: 0, freeOver: null, etaMin: 30, etaMax: 45, geometry: null, hours: null, color: "#0d5a53", sort: Math.max(0, ...zones.map((z) => z.sort)) + 1, active: true });
+      setName(""); setFee("");
+    }, `تمت إضافة ${n}`);
+  };
+  const shown = showAll ? zones : zones.filter((z) => z.active);
+  return (
+    <Card className="lg:col-span-2">
+      <CardHeader icon={<MapPin />} title="مناطق التوصيل وأسعارها" subtitle="لما مقدم الخدمة رسومه حسب المنطقة: الكاشير بيختار منطقة عنوان الزبون، ورسوم التوصيل بتتحط لوحدها من هنا." />
+      <ul className="grid gap-2 px-5 pb-3 sm:grid-cols-2 xl:grid-cols-3">
+        {shown.map((z) => (
+          <li key={z.id} className="grid grid-cols-[minmax(0,1fr)_7rem_auto] items-end gap-2 rounded-xl border border-line p-2.5">
+            <Input label="المنطقة" disabled={readOnly} key={`n-${z.id}-${z.name.ar}`} defaultValue={z.name.ar} onBlur={(e) => { const v = e.target.value.trim(); if (!v) { e.target.value = z.name.ar; return; } if (v !== z.name.ar) void run(() => db.update("deliveryZones", z.id, { name: { ...z.name, ar: v } })); }} />
+            <Input label="الرسوم" dir="ltr" inputMode="decimal" disabled={readOnly} key={`f-${z.id}-${z.fee}`} defaultValue={toText(z.fee)} onBlur={(e) => { const v = fromText(e.target.value); if (v !== z.fee) void run(() => db.update("deliveryZones", z.id, { fee: v })); }} />
+            <Switch checked={z.active} disabled={readOnly} onChange={(a) => void run(() => db.update("deliveryZones", z.id, { active: a }), a ? `${z.name.ar} شغالة` : `اتوقفت ${z.name.ar}`)} label={z.active ? "شغالة" : "موقوفة"} />
+          </li>
+        ))}
+        {zones.length ? null : <li className="rounded-xl border border-dashed border-line px-3 py-4 text-center text-[14px] text-muted sm:col-span-2 xl:col-span-3">لسه مفيش مناطق. أضف كل منطقة بتوصل لها وسعرها.</li>}
+      </ul>
+      <div className="flex flex-wrap items-end gap-2 px-5 pb-5">
+        <div className="min-w-0 flex-1 sm:max-w-xs"><Input label="منطقة جديدة" placeholder="اسم المنطقة" value={name} disabled={readOnly} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") add(); }} /></div>
+        <div className="w-28"><Input label="الرسوم" dir="ltr" inputMode="decimal" placeholder="0" value={fee} disabled={readOnly} onChange={(e) => setFee(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") add(); }} /></div>
+        <Button variant="outline" icon={<Plus />} disabled={readOnly || !name.trim()} onClick={add}>إضافة</Button>
+        {zones.some((z) => !z.active) ? <Button variant="ghost" onClick={() => setShowAll(!showAll)}>{showAll ? "إخفاء الموقوفة" : `عرض الموقوفة (${zones.filter((z) => !z.active).length})`}</Button> : null}
+      </div>
+    </Card>
   );
 }

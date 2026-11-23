@@ -298,6 +298,10 @@ export interface DeliveryInfo {
   notes: string;
   lat: number | null;
   lng: number | null;
+  /** مقدم خدمة التوصيل chosen at the till (fin_settings.data.delivery.methods[].id) */
+  providerId?: string | null;
+  /** the delivery area of the address (delivery_zones.id) its fee came from */
+  zoneId?: string | null;
 }
 
 export interface Order extends TenantRow {

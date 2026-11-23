@@ -28,7 +28,62 @@ export const BENEFICIARY_LABEL: Record<DeliveryMethod["beneficiary"], string> = 
 /** who may get the fee for each kind of delivery */
 export const BENEFICIARIES: Record<DeliveryMethod["type"], DeliveryMethod["beneficiary"][]> = { external: ["company", "restaurant"], own: ["restaurant", "driver", "employees"] };
 
-export const newMethod = (id: string): DeliveryMethod => ({ id, name: "", type: "own", company: "", collection: "daily", monthlyFee: 0, beneficiary: "restaurant", employeeIds: [], sharePct: 0, active: true });
+export const newMethod = (id: string): DeliveryMethod => ({ id, name: "", type: "own", company: "", collection: "daily", feeBasis: "area", fixedFee: 0, monthlyFee: 0, beneficiary: "restaurant", employeeIds: [], sharePct: 0, active: true });
+export const FEE_BASIS_LABEL: Record<NonNullable<DeliveryMethod["feeBasis"]>, string> = { area: "حسب المنطقة", distance: "حسب المسافة من الفرع", fixed: "مبلغ ثابت لكل طلب", manual: "الكاشير يكتبها" };
+
+/** المسافة المباشرة بالكيلو بين نقطتين (خط مستقيم، من غير خرائط مدفوعة) */
+export function straightKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const rad = (d: number) => (d * Math.PI) / 180;
+  const h = Math.sin(rad(b.lat - a.lat) / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(rad(b.lng - a.lng) / 2) ** 2;
+  return 2 * 6371.0088 * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+/**
+ * لوكيشن من نص: "30.06, 31.33" or a Google Maps / WhatsApp location link that carries the coordinates
+ * (…?q=30.06,31.33 · …/@30.06,31.33,17z · …!3d30.06!4d31.33). A short link (maps.app.goo.gl) holds none.
+ */
+export function coordsOf(text: string | null | undefined): { lat: number; lng: number } | null {
+  if (!text) return null;
+  const t = decodeURIComponent(text.trim());
+  const num = "(-?\\d{1,3}(?:\\.\\d+)?)";
+  const tries = [new RegExp(`!3d${num}!4d${num}`), new RegExp(`@${num},\\s*${num}`), new RegExp(`[?&](?:q|query|ll|destination|daddr|center)=(?:loc:)?${num},\\s*${num}`), new RegExp(`^${num}\\s*[,،]\\s*${num}$`)];
+  for (const re of tries) {
+    const m = t.match(re);
+    if (!m) continue;
+    const lat = Number(m[1]), lng = Number(m[2]);
+    if (Math.abs(lat) <= 90 && Math.abs(lng) <= 180 && (lat || lng)) return { lat, lng };
+  }
+  return null;
+}
+
+/** رسوم المسافة: the first range that covers the distance; beyond the last one, the extra per started km, or null when there is none. */
+export function distanceFee(m: Pick<DeliveryMethod, "distanceTiers" | "extraPerKm">, km: number): Units | null {
+  const tiers = [...(m.distanceTiers ?? [])].sort((a, b) => a.upToKm - b.upToKm);
+  if (!tiers.length) return null;
+  const hit = tiers.find((t) => km <= t.upToKm + 1e-9);
+  if (hit) return hit.fee;
+  const last = tiers[tiers.length - 1];
+  if (!m.extraPerKm) return null;
+  return last.fee + Math.ceil(km - last.upToKm - 1e-9) * m.extraPerKm;
+}
+/**
+ * رسوم التوصيل عند الكاشير: by the area of the customer's address, a fixed amount, or typed by the cashier (null).
+ * A fee outside the invoice is not charged to the customer here.
+ */
+export function feeFor(m: DeliveryMethod, at: { zone?: { fee: Units } | null; km?: number | null }): Units | null {
+  if (!onInvoice(m)) return 0;
+  if (m.feeBasis === "fixed") return m.fixedFee ?? 0;
+  if (m.feeBasis === "manual") return null;
+  if (m.feeBasis === "distance") return at.km == null ? null : distanceFee(m, at.km);
+  return at.zone ? at.zone.fee : null;
+}
+/** the active delivery area whose name the typed area matches */
+export function zoneByArea<Z extends { name: { ar: string; en: string }; active: boolean }>(zones: Z[], area: string): Z | null {
+  const norm = (x: string) => x.trim().replace(/\s+/g, " ").replace(/[أإآ]/g, "ا").replace(/ة/g, "ه").replace(/ى/g, "ي");
+  const a = norm(area);
+  if (!a) return null;
+  return zones.find((z) => z.active && (norm(z.name.ar) === a || norm(z.name.en).toLowerCase() === a.toLowerCase())) ?? null;
+}
 export const methodsOf = (data: { delivery?: { methods: DeliveryMethod[] } }) => (data.delivery?.methods ?? []).map((m) => ({ ...newMethod(m.id), ...m }));
 /** the fee is on the invoice, so it is entered with the day's sales */
 export const onInvoice = (m: DeliveryMethod) => m.type === "own" || m.collection !== "outside";
@@ -53,13 +108,21 @@ export function feeAccountText(m: DeliveryMethod): string {
 
 export function methodProblem(m: DeliveryMethod, all: DeliveryMethod[]): string {
   const name = m.name.trim();
-  if (!name) return "اكتب اسم طريقة التوصيل";
-  if (all.some((x) => x.id !== m.id && x.name.trim() === name)) return "فيه طريقة توصيل بنفس الاسم";
+  if (!name) return "اكتب اسم مقدم خدمة التوصيل";
+  if (all.some((x) => x.id !== m.id && x.name.trim() === name)) return "فيه مقدم خدمة توصيل بنفس الاسم";
   if (m.type === "external" && !m.company.trim()) return "اكتب اسم شركة التوصيل";
   if (!BENEFICIARIES[m.type].includes(m.beneficiary)) return "اختر الرسوم لصالح مين";
   if (m.beneficiary !== "restaurant" && !(m.sharePct > 0 && m.sharePct <= 100)) return "نسبة التحصيل من 1 إلى 100";
   if (m.beneficiary === "employees" && !m.employeeIds.length) return "اختر الموظفين";
   if (m.collection === "monthly" && m.type === "external" && !(m.monthlyFee > 0)) return "اكتب الرسوم الشهرية";
+  if (m.feeBasis === "fixed" && onInvoice(m) && !((m.fixedFee ?? 0) > 0)) return "اكتب رسوم التوصيل الثابتة";
+  if (m.feeBasis === "distance" && onInvoice(m)) {
+    const t = m.distanceTiers ?? [];
+    if (!t.length) return "حدد رينج المسافات وسعر كل رينج";
+    if (t.some((x) => !(x.upToKm > 0) || x.fee < 0)) return "كل رينج له مسافة أكبر من صفر وسعر";
+    if (new Set(t.map((x) => x.upToKm)).size !== t.length) return "فيه رينجين بنفس المسافة";
+    if ((m.extraPerKm ?? 0) < 0) return "المبالغ لا تكون بالسالب";
+  }
   if (m.monthlyFee < 0) return "المبالغ لا تكون بالسالب";
   return "";
 }
@@ -71,7 +134,8 @@ export async function saveMethod(db: Db, m: DeliveryMethod): Promise<DeliveryMet
   const clean: DeliveryMethod = {
     ...m, name: m.name.trim(), company: m.type === "external" ? m.company.trim() : "",
     collection: m.type === "external" ? m.collection : "daily", monthlyFee: m.type === "external" && m.collection === "monthly" ? m.monthlyFee : 0,
-    sharePct: m.beneficiary === "restaurant" ? 0 : m.sharePct, employeeIds: m.beneficiary === "employees" ? m.employeeIds : [],
+    sharePct: m.beneficiary === "restaurant" ? 0 : m.sharePct, feeBasis: m.feeBasis ?? "area", fixedFee: m.feeBasis === "fixed" ? m.fixedFee ?? 0 : 0,
+    distanceTiers: m.feeBasis === "distance" ? [...(m.distanceTiers ?? [])].sort((a, b) => a.upToKm - b.upToKm) : [], extraPerKm: m.feeBasis === "distance" ? m.extraPerKm ?? 0 : 0, employeeIds: m.beneficiary === "employees" ? m.employeeIds : [],
   };
   const problem = methodProblem(clean, all);
   if (problem) throw new JournalError(problem);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { DeliveryMethod } from "@/data/financeTypes";
-import { DRIVER, driverOf, ensureDeliveryAccounts, feeAccountText, feeSplit, methodProblem, newMethod, removeDriver, removeMethod, saveDriver, saveMethod } from "./delivery";
+import { coordsOf, distanceFee, DRIVER, driverOf, ensureDeliveryAccounts, feeAccountText, feeFor, feeSplit, methodProblem, straightKm, zoneByArea, newMethod, removeDriver, removeMethod, saveDriver, saveMethod } from "./delivery";
 import { loadDefaultChart, settingsOf } from "./ops";
 import { saveEmployee } from "./payroll";
 import { postSalesDay, postSettlement, salesLines, salesProblem, type SalesInput } from "./sales";
@@ -45,6 +45,38 @@ describe("delivery rules", () => {
     const base = { date: "2026-11-20", branchId: null, payments: [{ accountId: "c", amount: 1 }] };
     expect(salesProblem({ ...base, ...day({ delivery: [{ methodId: "a", driverId: null, amount: 100 }] }) }, methods)).toMatch(/المندوب/);
     expect(salesProblem({ ...base, ...day({ delivery: [{ methodId: "o", driverId: null, amount: 100 }] }) }, methods)).toMatch(/خارج الفاتورة/);
+  });
+});
+
+describe("the fee at the till", () => {
+  const tiers = { distanceTiers: [{ upToKm: 2, fee: 2_500_000 }, { upToKm: 4, fee: 4_000_000 }], extraPerKm: 500_000 };
+  it("by distance: the range that covers it, then the extra per started km", () => {
+    expect(distanceFee(tiers, 0.4)).toBe(2_500_000);
+    expect(distanceFee(tiers, 2)).toBe(2_500_000);
+    expect(distanceFee(tiers, 2.1)).toBe(4_000_000);
+    expect(distanceFee(tiers, 5.2)).toBe(5_000_000);
+    expect(distanceFee({ ...tiers, extraPerKm: 0 }, 5)).toBeNull();
+  });
+  it("reads coordinates from a map link or typed numbers, and measures the straight distance", () => {
+    expect(coordsOf("https://maps.google.com/?q=30.0604,31.3335")).toEqual({ lat: 30.0604, lng: 31.3335 });
+    expect(coordsOf("https://www.google.com/maps/place/x/@30.05,31.34,17z/data=!3d30.0511!4d31.3402")).toEqual({ lat: 30.0511, lng: 31.3402 });
+    expect(coordsOf("30.06، 31.33")).toEqual({ lat: 30.06, lng: 31.33 });
+    expect(coordsOf("https://maps.app.goo.gl/abc")).toBeNull();
+    expect(straightKm({ lat: 30.0604725, lng: 31.3335067 }, { lat: 30.0784725, lng: 31.3335067 })).toBeCloseTo(2.0, 1);
+  });
+  it("each provider prices by its own basis", () => {
+    expect(feeFor(m({ feeBasis: "area" }), { zone: { fee: 4_500_000 } })).toBe(4_500_000);
+    expect(feeFor(m({ feeBasis: "area" }), { zone: null })).toBeNull();
+    expect(feeFor(m({ feeBasis: "fixed", fixedFee: 3_000_000 }), {})).toBe(3_000_000);
+    expect(feeFor(m({ feeBasis: "distance", ...tiers }), { km: 3 })).toBe(4_000_000);
+    expect(feeFor(m({ feeBasis: "manual" }), {})).toBeNull();
+    expect(feeFor(m({ type: "external", company: "س", collection: "outside" }), {})).toBe(0);
+    expect(methodProblem(m({ feeBasis: "distance", distanceTiers: [] }), [])).toMatch(/رينج/);
+  });
+  it("finds the area of a typed address", () => {
+    const zones = [{ id: "a", name: { ar: "مكرم عبيد", en: "" }, active: true }, { id: "b", name: { ar: "حديقة الطفل", en: "" }, active: true }];
+    expect(zoneByArea(zones, " حديقه  الطفل ")?.id).toBe("b");
+    expect(zoneByArea(zones, "شيراتون")).toBeNull();
   });
 });
 

@@ -169,6 +169,14 @@ export interface DeliveryMethod {
   company: string;
   /** خارج الفاتورة (not recorded) · يومي من الكاشير · رسوم شهرية ثابتة; both of the last two put the fee on the invoice */
   collection: "outside" | "daily" | "monthly";
+  /** طريقة حساب رسوم التوصيل عند الكاشير: حسب منطقة عنوان الزبون (مناطق التوصيل وأسعارها)، مبلغ ثابت، أو يكتبه الكاشير */
+  feeBasis?: "area" | "distance" | "fixed" | "manual";
+  /** حسب المسافة: the fee up to each distance (km, straight line from the branch to the customer), smallest first; the first is the minimum */
+  distanceTiers?: { upToKm: number; fee: Units }[];
+  /** for every km (or part of one) beyond the last range; 0 = no delivery beyond it */
+  extraPerKm?: Units;
+  /** the fee of every order (feeBasis = fixed) */
+  fixedFee?: Units;
   /** the fixed monthly fee paid to the company (collection = monthly) */
   monthlyFee: Units;
   /** لصالح مين: the delivery company, the driver of the order, named employees, or the restaurant itself */
