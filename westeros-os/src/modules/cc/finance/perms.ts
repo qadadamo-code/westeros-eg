@@ -28,6 +28,7 @@ const BY_ROLE: Record<MfgUserType["role"], FinPerm[]> = {
   manager: ["chart.view", "journal.approve", "reports", "close.month", "branches.all"],
   chef: [],
   kitchen: [],
+  cashier: [],
 };
 /** What a type may do in الحسابات: its ticked list, else what its level allowed. */
 export const finPermsOf = (t: MfgUserType): FinPerm[] => (t.finance as FinPerm[] | undefined) ?? BY_ROLE[t.role];

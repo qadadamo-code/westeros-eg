@@ -79,6 +79,7 @@ const LEVEL_PERMS: Record<MfgUserType["role"], SupplyPerm[]> = {
   manager: ["supply.branch", "supply.handle", "purchase.handle"],
   chef: [],
   kitchen: [],
+  cashier: [],
 };
 /** the permissions in `perms` a role has: its ticked list, else what its level allowed */
 export const otherPermsOf = (t: MfgUserType): string[] => t.perms ?? LEVEL_PERMS[t.role];

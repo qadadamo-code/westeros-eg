@@ -4,6 +4,9 @@ import { useSession } from "@/auth/session";
 import { useDb, useLive } from "@/data/hooks";
 import { FINANCE_ON } from "./flag";
 import { syncStock, type SyncResult } from "./sync";
+import { syncShifts, type PosSyncResult } from "./posSync";
+import { useActor } from "./perms";
+import type { Actor } from "./journalOps";
 
 let last: SyncResult & { at: string | null; busy: boolean } = { posted: 0, problems: [], at: null, busy: false };
 const subs = new Set<() => void>();
@@ -39,4 +42,36 @@ export function useStockSync() {
     const t = setTimeout(() => void runSync(db), 1200);
     return () => clearTimeout(t);
   }, [on, start, moves, accounts, db]);
+}
+
+/* ───────── ورديات الكاشير ───────── */
+let lastShifts: PosSyncResult & { at: string | null } = { posted: 0, problems: [], at: null };
+const shiftSubs = new Set<() => void>();
+/** the result of the last run of the till's shifts, for the audit screen */
+export const useShiftSyncState = () => useSyncExternalStore((f) => { shiftSubs.add(f); return () => shiftSubs.delete(f); }, () => lastShifts);
+
+export async function runShiftSync(db: ReturnType<typeof useDb>, actor: Actor) {
+  let r: PosSyncResult;
+  try { r = await syncShifts(db, actor); } catch (e) { r = { posted: 0, problems: [e instanceof Error ? e.message : String(e)] }; }
+  lastShifts = { ...r, at: new Date().toISOString() };
+  shiftSubs.forEach((f) => f());
+  return r;
+}
+
+/** Posts the shifts the till closed, whenever one closes and a manager's or accountant's app is open. */
+export function useShiftSync() {
+  const db = useDb();
+  const { role } = useSession();
+  const actor = useActor();
+  const on = FINANCE_ON && (!role || WRITERS.has(role));
+  const start = useLive("finSettings").data[0]?.data?.startDate ?? null;
+  const closed = useLive("shifts", { where: { status: "closed" } }).data.length;
+  const accounts = useLive("finAccounts").data.length;
+  const name = actor.name;
+  useEffect(() => {
+    if (!on || !start || !closed || !accounts) return;
+    const t = setTimeout(() => void runShiftSync(db, { id: actor.id, name, canApprove: actor.canApprove }), 1500);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [on, start, closed, accounts, db, name]);
 }

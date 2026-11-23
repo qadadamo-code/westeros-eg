@@ -22,6 +22,7 @@ import Settings from "./Settings";
 import Tax from "./Tax";
 import Treasury from "./Treasury";
 import Customers from "./Customers";
+import PosAudit from "./PosAudit";
 import StaffMoves from "./StaffMoves";
 import { useAutoRates } from "./useRates";
 import { useFinance } from "./useFinance";
@@ -93,6 +94,7 @@ export default function FinancePage() {
         <Route path="sales" element={gate("finance.sales", <Sales />)} />
         <Route path="purchases" element={gate("finance.purchases", <Purchases />)} />
         <Route path="customers" element={gate("finance.sales", <Customers />)} />
+        <Route path="pos-audit" element={gate("finance.sales", <PosAudit />)} />
         <Route path="staff-moves" element={gate("finance.payroll", <StaffMoves />)} />
         <Route path="payroll" element={gate("finance.payroll", <Payroll />)} />
         {reports ? <Route path="tax" element={gate("finance.tax", <Tax />)} /> : null}

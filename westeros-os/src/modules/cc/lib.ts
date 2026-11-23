@@ -135,11 +135,17 @@ export const SCREENS: { id: string; label: string }[] = [
   { id: "cc-mfg", label: "التصنيع" },
   { id: "cc-users", label: "المستخدمين" },
   ...(FINANCE_ON ? [{ id: "cc-finance", label: "الحسابات" }, { id: "cc-delivery", label: "خدمة التوصيل" }] : []),
+  { id: "cc-pos", label: "الكاشير" },
+  { id: "cc-orders", label: "الطلبات" },
+  { id: "cc-kitchen", label: "شاشة المطبخ" },
 ];
+/** the screens of the till: a type that opens only these (and the summary) works at the cashier level */
+export const POS_SCREENS = ["cc-pos", "cc-orders", "cc-kitchen"];
 const ROLE_SCREENS: Record<MfgUserType["role"], string[]> = {
   kitchen: ["cc-summary", "cc-stores", "cc-catalog", "cc-mfg"],
   chef: ["cc-summary", "cc-stores", "cc-catalog", "cc-constants", "cc-mfg"],
-  manager: ["cc-summary", "cc-stores", "cc-catalog", "cc-constants", "cc-mfg"],
+  manager: ["cc-summary", "cc-stores", "cc-catalog", "cc-constants", "cc-mfg", ...POS_SCREENS],
+  cashier: ["cc-summary", ...POS_SCREENS],
   admin: SCREENS.map((x) => x.id),
 };
 /**
@@ -159,6 +165,11 @@ const LEVELS: MfgUserType["role"][] = ["kitchen", "chef", "manager", "admin"];
  */
 export function roleForScreens(screens: string[], current: MfgUserType["role"]): MfgUserType["role"] {
   if (screens.includes("cc-users")) return "admin";
+  // الكاشير والطلبات: the cashier level when the type opens nothing else; with other screens, the manager level does both
+  const till = screens.some((x) => x === "cc-pos" || x === "cc-orders");
+  if (till && screens.every((x) => x === "cc-summary" || POS_SCREENS.includes(x))) return "cashier";
+  if (till) return current === "admin" || current === "cashier" ? "manager" : LEVELS.indexOf(current) >= LEVELS.indexOf("manager") ? current : "manager";
+  if (current === "cashier") current = "kitchen";
   // الحسابات is read and written by the manager level and above
   if (screens.includes("cc-finance") || screens.includes("cc-delivery")) return current === "admin" ? "manager" : LEVELS.indexOf(current) >= LEVELS.indexOf("manager") ? current : "manager";
   const min: MfgUserType["role"] = screens.some((x) => x === "cc-stores" || x === "cc-catalog" || x === "cc-constants") ? "chef" : "kitchen";

@@ -24,7 +24,7 @@ const sixMonths = () => { const cur = today().slice(0, 7); return Array.from({ l
 const monthLabel = (m: string) => m.split("-").reverse().join("/");
 
 /** the period and branch filters shared by every summary */
-function useFilter(fin: Fin) {
+export function useFilter(fin: Fin) {
   const [period, setPeriod] = useState<Period>(periodOf("month", fin.settings.yearStartMonth));
   const [branch, setBranch] = useState("");
   const f = useMemo<Filter>(() => ({ from: period.from, to: period.to, branchId: branch || null }), [period, branch]);
@@ -37,7 +37,7 @@ function useFilter(fin: Fin) {
   return { f, bar };
 }
 
-function Tiles({ title, tiles }: { title: string; tiles: Tile[] }) {
+export function Tiles({ title, tiles }: { title: string; tiles: Tile[] }) {
   return (
     <section className="grid gap-2.5">
       <GroupTitle>{title}</GroupTitle>

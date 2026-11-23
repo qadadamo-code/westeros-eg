@@ -7,7 +7,7 @@ import { FINANCE_ON } from "./flag";
 import { entryRef } from "./journal";
 import { useFinPerms } from "./perms";
 import { entriesOfSource } from "./sync";
-import { useStockSync } from "./useStockSync";
+import { useShiftSync, useStockSync } from "./useStockSync";
 
 function Inner({ refIds, size }: { refIds: string[]; size?: "sm" | "md" }) {
   const nav = useNavigate();
@@ -32,5 +32,5 @@ export function SourceEntry({ refId, size }: { refId: string | string[]; size?: 
 }
 
 /** Mounted once in the shell: posts the entries of new stock movements. */
-function Sync() { useStockSync(); return null; }
+function Sync() { useStockSync(); useShiftSync(); return null; }
 export const StockSync = () => (FINANCE_ON ? <Sync /> : null);

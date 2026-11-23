@@ -75,6 +75,10 @@ const LISTED: Area[] = [
   { id: "finance.close", screen: "cc-finance", label: "الإقفال", acts: ["view"] },
   { id: "finance.settings", screen: "cc-finance", label: "الإعدادات وربط الحسابات", acts: ["view"] },
 
+  { id: "pos", screen: "cc-pos", label: "الكاشير", acts: ["view"], note: "البيع والدفع والوردية. الخصومات والإلغاء بعد الإرسال بموافقة مدير." },
+  { id: "orders", screen: "cc-orders", label: "الطلبات", acts: ["view"] },
+  { id: "kitchen", screen: "cc-kitchen", label: "شاشة المطبخ", acts: ["view"] },
+
   { id: "delivery", screen: "cc-delivery", label: "خدمة التوصيل", acts: ["view", "edit"], note: "التعديل: إضافة وتعديل وحذف طرق التوصيل والمندوبين." },
 ];
 

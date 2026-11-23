@@ -20,6 +20,7 @@
 import type { Db } from "@/data/hooks";
 import type { OrderItem } from "@/data/types";
 import { uuid } from "@/lib/id";
+import { COST_CONTROL_ONLY } from "@/costControl";
 import { ACC, postJournal, signedLines } from "@/modules/accounting/api";
 import { explodeContext, explodeLine } from "./explode";
 import { addTo, COGS_CODE, postSaleCost, safePost, type ByAccount } from "./posting";
@@ -66,7 +67,8 @@ export async function deductForItems(db: Db, lines: Line[], opts: { trigger: "se
     }
     if (!inputs.length) return 0;
     const moves = await applyMoves(db, inputs, { items: ctx.stockItems });
-    await postSaleCost(db, { id: groupId, branchId, cost: valueByAccount(moves, ctx.stockItems), memo: `Cost of sales · ${todo.length} line(s) at ${opts.trigger}` });
+    // the Cost Control version keeps its books in الحسابات (cc/finance/sync.ts posts these movements); the old ledger is the backup's
+    if (!COST_CONTROL_ONLY) await postSaleCost(db, { id: groupId, branchId, cost: valueByAccount(moves, ctx.stockItems), memo: `Cost of sales · ${todo.length} line(s) at ${opts.trigger}` });
     return moves.length;
   } catch (e) {
     await db.audit("stock.deduct.error", "orderItems", lines[0]?.id ?? null, { error: String((e as Error).message ?? e) }).catch(() => undefined);
@@ -90,7 +92,7 @@ export async function onLineVoided(db: Db, line: Pick<OrderItem, "id" | "name" |
     const wasted: ByAccount = {};
     for (const w of written.filter((x) => x.kind === "waste")) addTo(wasted, items.get(w.itemId)?.account ?? "food", -w.value);
     const rows = Object.entries(wasted).filter(([, v]) => v) as [keyof typeof COGS_CODE, number][];
-    if (rows.length)
+    if (rows.length && !COST_CONTROL_ONLY)
       await safePost(db, "void-waste", () =>
         postJournal(db, {
           branchId: moves[0].branchId, sourceType: "void-waste", sourceId: groupId, memo: `Void after send · ${line.name.en}`,

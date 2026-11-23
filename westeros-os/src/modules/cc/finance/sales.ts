@@ -37,12 +37,16 @@ export interface SalesInput {
   payments: SalesPay[];
   orders: number;
   note: string;
+  /** the tax as the receipts worked it out (a till shift): used as is instead of the rate */
+  vatAmount?: Units;
+  /** the till shift this summary was posted from (الكاشير) */
+  shiftId?: string;
 }
 export interface SalesData extends SalesInput { net: Units; vat: Units; due: Units; paid: Units; diff: Units; entryId: string | null; cancelEntryId?: string | null; by: string }
 export const salesOf = (d: FinDoc) => d.data as unknown as SalesData;
 
 /** Net of tax per head, the tax, what should have been collected and the over or short against what was. */
-export function salesTotals(d: Pick<SalesInput, "channels" | "fees" | "delivery" | "discounts" | "returns" | "tips" | "vatBp" | "inclusive" | "payments">) {
+export function salesTotals(d: Pick<SalesInput, "channels" | "fees" | "delivery" | "discounts" | "returns" | "tips" | "vatBp" | "inclusive" | "payments" | "vatAmount">) {
   const net = (x: Units) => (d.inclusive ? Math.round((x * 10_000) / (10_000 + d.vatBp)) : x);
   const channels: Record<string, Units> = Object.fromEntries(CHANNELS.map((c) => [c.key, net(d.channels[c.key] ?? 0)]));
   const deliveryFees = (d.delivery ?? []).map((l) => net(l.amount));
@@ -50,7 +54,7 @@ export function salesTotals(d: Pick<SalesInput, "channels" | "fees" | "delivery"
   const sales = Object.values(channels).reduce((s, x) => s + x, 0);
   const taxable = sales + fees - discounts - returns;
   const typed = CHANNELS.reduce((s, c) => s + (d.channels[c.key] ?? 0), 0) + d.fees + (d.delivery ?? []).reduce((s, l) => s + l.amount, 0) - d.discounts - d.returns;
-  const vat = d.inclusive ? typed - taxable : Math.round((taxable * d.vatBp) / 10_000);
+  const vat = d.vatAmount != null ? d.vatAmount : d.inclusive ? typed - taxable : Math.round((taxable * d.vatBp) / 10_000);
   const due = taxable + vat + d.tips;
   const paid = d.payments.reduce((s, p) => s + p.amount, 0);
   return { channels, fees, deliveryFees, discounts, returns, sales, taxable, vat, due, paid, diff: paid - due };
@@ -58,7 +62,7 @@ export function salesTotals(d: Pick<SalesInput, "channels" | "fees" | "delivery"
 
 export function salesProblem(v: { date: string; branchId: string | null } & SalesInput, methods: DeliveryMethod[] = []): string {
   if (!v.date) return "اختر التاريخ";
-  if ([...Object.values(v.channels), v.fees, v.discounts, v.returns, v.tips, ...(v.delivery ?? []).map((l) => l.amount)].some((x) => x < 0) || v.payments.some((p) => p.amount < 0)) return "المبالغ لا تكون بالسالب";
+  if ([...Object.values(v.channels), v.fees, v.discounts, v.returns, v.tips, ...(v.delivery ?? []).map((l) => l.amount)].some((x) => x < 0) || (!v.shiftId && v.payments.some((p) => p.amount < 0))) return "المبالغ لا تكون بالسالب";
   for (const l of v.delivery ?? []) {
     if (!l.amount) continue;
     const m = methods.find((x) => x.id === l.methodId);
@@ -84,7 +88,8 @@ export interface SalesAccounts {
 export function salesLines(v: SalesInput, ids: SalesAccounts, branchId: string | null, methods: DeliveryMethod[] = []): FinLine[] {
   const t = salesTotals(v);
   const b = { branchId };
-  const lines: FinLine[] = v.payments.filter((p) => p.amount).map((p) => ({ account: p.accountId, debit: p.amount, credit: 0, ...b }));
+  // a till shift can give back more on a method than it took (a return paid by card): that account is credited
+  const lines: FinLine[] = v.payments.filter((p) => p.amount).map((p) => ({ account: p.accountId, debit: Math.max(0, p.amount), credit: Math.max(0, -p.amount), ...b }));
   if (t.discounts) lines.push({ account: ids.discounts, debit: t.discounts, credit: 0, memo: "خصومات وعروض", ...b });
   if (t.returns) lines.push({ account: ids.returns, debit: t.returns, credit: 0, memo: "مرتجعات", ...b });
   if (t.diff < 0) lines.push({ account: ids.diff, debit: -t.diff, credit: 0, memo: "عجز خزينة", ...b });

@@ -13,6 +13,7 @@ import { postCashMove, postDrawerCount, postReturn, postSale } from "@finance/po
 import { priceBill, type Bill } from "@finance/tax";
 import { zReport, type ShiftDoc, type ZReport } from "@finance/shift";
 import type { Db } from "@/data/hooks";
+import { COST_CONTROL_ONLY } from "@/costControl";
 import { setTableStatus } from "@/data/ops";
 import { priceItems, toTaxProfile } from "@/data/pricing";
 import type { CashMoveKind, Check, LedgerEntry, Payment, PaymentMethod, Receipt, ReceiptBill, Settings, Shift } from "@/data/types";
@@ -149,6 +150,8 @@ const toRow = (e: JournalEntry, branchId: string | null): Omit<LedgerEntry, "id"
 });
 
 async function post(db: Db, branchId: string | null, fn: (l: Ledger) => JournalEntry | null) {
+  // the Cost Control version posts the till's shifts into الحسابات when they close (cc/finance/posSync.ts)
+  if (COST_CONTROL_ONLY) return null;
   try {
     const e = fn(new Ledger());
     if (e) await db.insert("ledgerEntries", toRow(e, branchId));

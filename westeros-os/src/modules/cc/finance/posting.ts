@@ -48,7 +48,7 @@ const counterKey = (m: Move, stock: number, itemKey: StockKey): string => {
   switch (m.kind) {
     case "opening": return "opening";
     case "receive": return "purchases.accrued";
-    case "sale": return itemKey === "stock.packaging" ? "cogs.packaging" : "cogs.raw";
+    case "sale": case "sale_reversal": return itemKey === "stock.packaging" ? "cogs.packaging" : "cogs.raw";
     case "waste": return m.reason === "staff_meal" ? "staff.meals" : "waste.store";
     case "staff_meal": return "staff.meals";
     case "transfer_out": case "transfer_in": return "stock.transit";
