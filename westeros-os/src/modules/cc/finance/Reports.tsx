@@ -15,13 +15,14 @@ import StockRecon from "./StockRecon";
 import { moneyAccounts } from "./treasury";
 import { isDebit, MAX_LEVEL } from "./tree";
 import TrialBalance from "./TrialBalance";
-import { Amount, BranchSelect, fmt, periodLabel, periodOf, PeriodPicker, PrintButton, printTable, today, type Period, Toolbar } from "./ui";
+import { addDays, weekOf, Amount, BranchSelect, fmt, periodLabel, periodOf, PeriodPicker, PrintButton, printTable, today, type Period, Toolbar } from "./ui";
 import { useFinance, type Fin } from "./useFinance";
 
 export const REPORTS: { id: string; label: string; hint: string; profit?: boolean }[] = [
   { id: "income", label: "قائمة الدخل", hint: "إيرادات، تكلفة، مجمل ربح، مصروفات، صافي ربح", profit: true },
   { id: "balance", label: "المركز المالي", hint: "أصول والتزامات وحقوق ملكية في تاريخ", profit: true },
   { id: "cashflow", label: "التدفقات النقدية", hint: "تشغيلي واستثماري وتمويلي" },
+  { id: "weeks", label: "أرباح وخسائر أسبوعية", hint: "آخر 8 أسابيع (سبت إلى جمعة) جنب بعض", profit: true },
   { id: "branches", label: "قائمة دخل الفروع", hint: "كل فرع في عمود والإجمالي", profit: true },
   { id: "centres", label: "تقرير مراكز التكلفة", hint: "إيرادات ومصروفات كل مركز", profit: true },
   { id: "trial", label: "ميزان المراجعة", hint: "بالأرصدة أو بالمجاميع على أي مستوى" },
@@ -41,7 +42,7 @@ export default function Reports() {
       </nav>
       <Routes>
         <Route index element={<Navigate to={list[0]?.id ?? "trial"} replace />} />
-        {perms.has("profit") ? <><Route path="income" element={<Income mode="period" />} /><Route path="balance" element={<Balance />} /><Route path="branches" element={<Income mode="branches" />} /><Route path="centres" element={<Income mode="centres" />} /></> : null}
+        {perms.has("profit") ? <><Route path="income" element={<Income mode="period" />} /><Route path="balance" element={<Balance />} /><Route path="branches" element={<Income mode="branches" />} /><Route path="weeks" element={<Income mode="weeks" />} /><Route path="centres" element={<Income mode="centres" />} /></> : null}
         <Route path="cashflow" element={<CashFlow />} />
         <Route path="trial" element={<TrialBalance />} />
         <Route path="ledger" element={<Ledger />} />
@@ -105,7 +106,7 @@ function StatementTable({ title, sub, cols, rows, extra, onOpen, file }: { title
   );
 }
 
-function Income({ mode }: { mode: "period" | "branches" | "centres" }) {
+function Income({ mode }: { mode: "period" | "branches" | "centres" | "weeks" }) {
   const fin = useFinance();
   const nav = useNavigate();
   const [period, setPeriod] = useState<Period>(periodOf("month", fin.settings.yearStartMonth));
@@ -116,6 +117,11 @@ function Income({ mode }: { mode: "period" | "branches" | "centres" }) {
   const centres = fin.centres.filter((c) => c.active);
   const base = { from: period.from, to: period.to };
   const cols = useMemo(() => {
+    if (mode === "weeks") {
+      const [cur] = weekOf(today());
+      const weeks = Array.from({ length: 8 }, (_, i) => weekOf(addDays(cur, (i - 7) * 7)));
+      return [...weeks.map(([from, to]) => ({ label: `${from.slice(8)}/${from.slice(5, 7)}–${to.slice(8)}/${to.slice(5, 7)}`, f: { from, to, branchId: branch || null } })), { label: "الإجمالي", f: { from: weeks[0][0], to: weeks[7][1], branchId: branch || null } }];
+    }
     if (mode === "branches") return [...fin.branches.map((b) => ({ label: b.name.ar, f: { ...base, branchId: b.id } })), { label: "الإجمالي", f: base }];
     if (mode === "centres") return [...centres.map((c) => ({ label: c.name.ar, f: { ...base, branchId: branch || null, centreId: c.id } })), { label: "الإجمالي", f: { ...base, branchId: branch || null } }];
     const cur = { ...base, branchId: branch || null, centreId: centre || null };
@@ -125,12 +131,12 @@ function Income({ mode }: { mode: "period" | "branches" | "centres" }) {
   const r = useMemo(() => incomeStatement(fin.accounts, fin.entries, cols.map((c) => c.f), Number(level)), [fin.accounts, fin.entries, cols, level]);
   const main = mode === "period" ? 0 : cols.length - 1;
   const extra = mode === "period" ? [{ head: "% من المبيعات", cell: (x: StRow) => pct(x.values[0], r.revenue[0]) }, ...(cols.length > 1 ? [{ head: "التغير", cell: (x: StRow) => change(x.values[0], x.values[1]) }] : [])] : [{ head: "% من المبيعات", cell: (x: StRow) => pct(x.values[main], r.revenue[main]) }];
-  const title = mode === "branches" ? "قائمة دخل الفروع" : mode === "centres" ? "تقرير مراكز التكلفة" : "قائمة الدخل";
+  const title = mode === "weeks" ? "أرباح وخسائر أسبوعية" : mode === "branches" ? "قائمة دخل الفروع" : mode === "centres" ? "تقرير مراكز التكلفة" : "قائمة الدخل";
   const open = (x: StRow, i: number) => { const f = cols[i].f as { from?: string | null; to?: string | null; branchId?: string | null }; nav(`/finance/reports/ledger?account=${x.accountId}${f.from ? `&from=${f.from}` : ""}${f.to ? `&to=${f.to}` : ""}${f.branchId ? `&branch=${f.branchId}` : ""}`); };
   return (
     <div className="grid gap-3">
       <Toolbar>
-        <PeriodPicker value={period} onChange={setPeriod} startMonth={fin.settings.yearStartMonth} />
+        {mode !== "weeks" ? <PeriodPicker value={period} onChange={setPeriod} startMonth={fin.settings.yearStartMonth} /> : null}
         {mode !== "branches" ? <BranchSelect fin={fin} value={branch} onChange={setBranch} /> : null}
         {mode === "period" && centres.length ? <Select label="مركز التكلفة" className="w-44" value={centre} onChange={(e) => setCentre(e.target.value)} options={[{ value: "", label: "كل المراكز" }, ...centres.map((c) => ({ value: c.id, label: c.name.ar }))]} /> : null}
         <Select label="التفصيل" className="w-40" value={level} onChange={(e) => setLevel(e.target.value)} options={levels} />
@@ -140,7 +146,7 @@ function Income({ mode }: { mode: "period" | "branches" | "centres" }) {
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {[["المبيعات", r.revenue[main]], ["مجمل الربح", r.gross[main]], ["المصروفات", r.expenses[main]], ["صافي الربح", r.net[main]]].map(([l, v]) => <Card key={l as string} className="p-3"><div className="text-[12.5px] text-muted">{l}</div><div className="text-[18px] font-bold"><Amount value={v as number} zero="0.00" tone="auto" /></div><div className="num text-[12.5px] text-muted" dir="ltr">{l === "المبيعات" ? "" : pct(v as number, r.revenue[main])}</div></Card>)}
       </div>
-      <StatementTable title={title} sub={`${periodLabel(period)}${branch ? ` · ${fin.branchName(branch)}` : ""}`} file={title.replace(/ /g, "-")} cols={cols.map((c) => c.label)} rows={r.rows} extra={extra} onOpen={open} />
+      <StatementTable title={title} sub={`${mode === "weeks" ? "آخر 8 أسابيع" : periodLabel(period)}${branch ? ` · ${fin.branchName(branch)}` : ""}`} file={title.replace(/ /g, "-")} cols={cols.map((c) => c.label)} rows={r.rows} extra={extra} onOpen={open} />
     </div>
   );
 }

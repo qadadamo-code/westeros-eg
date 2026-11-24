@@ -42,9 +42,17 @@ export const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/
 
 export interface Period { preset: string; from: string | null; to: string | null }
 export const PRESETS: { id: string; label: string }[] = [
-  { id: "all", label: "كل الفترات" }, { id: "today", label: "اليوم" }, { id: "month", label: "هذا الشهر" }, { id: "last_month", label: "الشهر الماضي" },
+  { id: "all", label: "كل الفترات" }, { id: "today", label: "اليوم" }, { id: "week", label: "هذا الأسبوع" }, { id: "last_week", label: "الأسبوع الماضي" }, { id: "month", label: "هذا الشهر" }, { id: "last_month", label: "الشهر الماضي" },
   { id: "quarter", label: "هذا الربع" }, { id: "year", label: "هذه السنة" }, { id: "last_year", label: "السنة الماضية" }, { id: "custom", label: "من تاريخ إلى تاريخ" },
 ];
+/** a day plus n days (YYYY-MM-DD, calendar only) */
+export const addDays = (day: string, n: number) => new Date(Date.parse(`${day}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
+/** أسبوع المطعم: Saturday to Friday, the week in Egypt */
+export function weekOf(day: string): [string, string] {
+  const dow = new Date(`${day}T00:00:00Z`).getUTCDay(); // 0 Sunday … 6 Saturday
+  const from = addDays(day, -((dow + 1) % 7));
+  return [from, addDays(from, 6)];
+}
 /** The days a preset covers. The financial year starts on `startMonth` (1 = January). */
 export function periodOf(preset: string, startMonth = 1, now = today()): Period {
   const [y, m] = now.split("-").map(Number);
@@ -57,6 +65,8 @@ export function periodOf(preset: string, startMonth = 1, now = today()): Period 
   };
   switch (preset) {
     case "today": return { preset, from: now, to: now };
+    case "week": { const [f, t] = weekOf(now); return { preset, from: f, to: t }; }
+    case "last_week": { const [f] = weekOf(now); const [ff, tt] = weekOf(addDays(f, -7)); return { preset, from: ff, to: tt }; }
     case "month": return { preset, from: `${y}-${pad(m)}-01`, to: `${y}-${pad(m)}-${pad(last(y, m))}` };
     case "last_month": { const d = new Date(y, m - 2, 1); const yy = d.getFullYear(), mm = d.getMonth() + 1; return { preset, from: `${yy}-${pad(mm)}-01`, to: `${yy}-${pad(mm)}-${pad(last(yy, mm))}` }; }
     case "quarter": { const q = Math.floor((m - 1) / 3) * 3 + 1; return { preset, from: `${y}-${pad(q)}-01`, to: `${y}-${pad(q + 2)}-${pad(last(y, q + 2))}` }; }

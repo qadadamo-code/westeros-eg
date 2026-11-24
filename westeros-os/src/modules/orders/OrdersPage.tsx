@@ -134,10 +134,25 @@ export default function OrdersPage() {
   const paid = checks.filter((c) => c.status === "paid");
   const sales = paid.reduce((a, c) => a + c.total, 0);
   const active = orders.filter((o) => o.status !== "closed" && o.status !== "void").length;
+  // the number on الطلبات in the menu counts every active order, from any day: the ones this view hides get a banner (Saqr 2026-11-24)
+  const allActive = useLive("orders", { where: { status: ["open", "sent", "ready", "served"], ...bq } }).data;
+  const shownIds = new Set(rows.map((o) => o.id));
+  const hidden = allActive.filter((o) => !shownIds.has(o.id));
+  const showActive = () => {
+    const days = allActive.map((o) => isoDay(new Date(o.openedAt))).sort();
+    setPeriod("range"); setDay(days[0] ?? isoDay(new Date())); setUntil(isoDay(new Date()));
+    setStatus("active"); setKind("all"); setChannel("all"); setQ("");
+  };
 
   return (
     <div className="grid gap-6">
       <PageHeader icon={<ClipboardList />} title={L("الطلبات", "Orders")} subtitle={L("كل الطلبات من كل القنوات — اختار الفترة من فلتر التاريخ", "Every order from every channel — pick the period in the date filter")} actions={<ViewBranchPicker noCentral />} />
+      {hidden.length ? (
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-brass/40 bg-brass/10 px-4 py-3 text-[14px]">
+          <span className="flex-1 font-semibold">{L(`فيه ${hidden.length} طلبات شغالة مش ظاهرة في الفلتر الحالي (من أيام سابقة أو فلتر تاني)`, `${hidden.length} active orders are outside the current filter`)}</span>
+          <Button size="sm" variant="brass" onClick={showActive}>{L("اعرضهم", "Show them")}</Button>
+        </div>
+      ) : null}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatTile index={0} icon={<ClipboardList />} label={L("عدد الطلبات", "Orders")} value={orders.length} sub={`${active} ${L("شغالين", "active")}`} />
         <StatTile index={1} icon={<Wallet />} tone="brass" label={L("مبيعات مقفولة", "Closed sales")} value={<AnimatedMoney value={sales} whole />} sub={`${paid.length} ${L("شيك", "checks")}`} />
