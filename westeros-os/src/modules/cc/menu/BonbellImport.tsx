@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Download } from "lucide-react";
 import { useDb, useLive } from "@/data/hooks";
+import { mainBranchOf, onMenuOf, useMenuBranch } from "./menuBranch";
 import type { MenuCategory } from "@/data/types";
 import { uuid } from "@/lib/id";
 import { UNITS_PER_MAJOR } from "@/lib/money";
@@ -15,9 +16,16 @@ import { groupRow, itemFields, planImport, type BbMenu } from "./bonbell";
 export function BonbellImport({ onClose }: { onClose: () => void }) {
   const db = useDb();
   const { toast } = useToast();
-  const cats = useLive("menuCategories", { orderBy: [{ field: "sort" }] }).data;
-  const items = useLive("menuItems", { orderBy: [{ field: "sort" }] }).data;
-  const groups = useLive("modifierGroups").data;
+  // the import fills the menu of the branch open on the screen (منيو منفصل لكل فرع)
+  const menuBranch = useMenuBranch();
+  const main = mainBranchOf(useLive("branches").data);
+  const on = onMenuOf(menuBranch, main);
+  const catsAll = useLive("menuCategories", { orderBy: [{ field: "sort" }] }).data;
+  const itemsAll = useLive("menuItems", { orderBy: [{ field: "sort" }] }).data;
+  const groupsAll = useLive("modifierGroups").data;
+  const cats = useMemo(() => catsAll.filter(on), [catsAll, menuBranch, main]); // eslint-disable-line react-hooks/exhaustive-deps
+  const items = useMemo(() => itemsAll.filter(on), [itemsAll, menuBranch, main]); // eslint-disable-line react-hooks/exhaustive-deps
+  const groups = useMemo(() => groupsAll.filter(on), [groupsAll, menuBranch, main]); // eslint-disable-line react-hooks/exhaustive-deps
   const settings = useLive("mfgSettings").data[0];
   const [menu, setMenu] = useState<BbMenu | null>(null);
   const [busy, setBusy] = useState(false);
@@ -46,7 +54,7 @@ export function BonbellImport({ onClose }: { onClose: () => void }) {
         const cur = cats.find((x) => x.id === plan.catIds[c.ref]);
         // an existing category keeps its Arabic name when Bonbell has none
         const row = { name: { ar: c.name.ar || cur?.name.ar || c.name.en, en: c.name.en }, imageUrl: c.image, active: c.visible, externalRef: c.ref, sort: ci + 1 };
-        catOf.set(c.ref, cur ? await db.update("menuCategories", cur.id, row) : await db.insert("menuCategories", { ...row, sort: ++sort, color: "#F8BB18", icon: "utensils", stationId: null }));
+        catOf.set(c.ref, cur ? await db.update("menuCategories", cur.id, row) : await db.insert("menuCategories", { ...row, sort: ++sort, color: "#F8BB18", icon: "utensils", stationId: null, branchId: menuBranch }));
       }
       // الأصناف ومجموعاتها
       let n = 0;
@@ -61,7 +69,7 @@ export function BonbellImport({ onClose }: { onClose: () => void }) {
           }
         const ids: string[] = [];
         for (const [gi, g] of p.bb.groups.entries()) {
-          const row = await db.insert("modifierGroups", { ...groupRow(g), sort: gi + 1, externalRef: `${p.bb.ref}:${gi + 1}` });
+          const row = await db.insert("modifierGroups", { ...groupRow(g), sort: gi + 1, externalRef: `${p.bb.ref}:${gi + 1}`, branchId: menuBranch });
           for (const [oi, o] of g.options.entries())
             await db.insert("modifiers", { groupId: row.id, name: { ar: o.name, en: o.name }, price: Math.round(o.price * UNITS_PER_MAJOR), isDefault: false, available: true, sort: oi + 1, minQty: o.minQty, maxQty: o.maxQty });
           ids.push(row.id);
@@ -75,7 +83,7 @@ export function BonbellImport({ onClose }: { onClose: () => void }) {
           await db.insert("menuItems", {
             cost: null, sku: null, stationId: null, tags: [], available: true, vatExempt: false, sort: n,
             channelPrices: {}, branchPrices: {}, schedule: [], allergens: [], comboOf: [],
-            ...fields,
+            ...fields, branchId: menuBranch,
           });
       }
       setDone(plan.items.length);

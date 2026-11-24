@@ -12,9 +12,9 @@ import type { MenuCategory, MenuItem, Modifier, ModifierGroup } from "@/data/typ
 import { cn } from "@/lib/cn";
 import { UNITS_PER_MAJOR } from "@/lib/money";
 import { PageHeader } from "@/shell/PageHeader";
-import { ViewBranchPicker } from "@/shell/ViewBranchPicker";
 import { useViewBranch } from "@/auth/viewBranch";
-import { Badge, Button, Card, Dialog, EmptyState, IconButton, Input, Segmented, Switch, useToast } from "@/ui";
+import { branchMenu, copyMenu, mainBranchOf, MenuBranchCtx, useMenuBranch } from "./menuBranch";
+import { Badge, Button, Card, Dialog, EmptyState, IconButton, Input, Segmented, Select, Switch, useToast } from "@/ui";
 import { ImageField } from "../ui";
 import { AreaGate, useArea } from "../useAccess";
 import { Confirm } from "../finance/ui";
@@ -48,13 +48,36 @@ function Body() {
   const db = useDb();
   const channels = channelsOf(useLive("settings").data[0]);
   const { toast } = useToast();
-  const cats = useLive("menuCategories", { orderBy: [{ field: "sort" }] }).data;
-  const items = useLive("menuItems", { orderBy: [{ field: "sort" }] }).data;
-  // كل فرع له منيو خاص بيه: with one branch picked at the top, the list shows that branch's menu
+  const catsAll = useLive("menuCategories", { orderBy: [{ field: "sort" }] }).data;
+  const itemsAll = useLive("menuItems", { orderBy: [{ field: "sort" }] }).data;
+  const groupsAll = useLive("modifierGroups", { orderBy: [{ field: "sort" }] }).data;
+  const modsAll = useLive("modifiers", { orderBy: [{ field: "sort" }] }).data;
+  // منيو منفصل لكل فرع (Saqr 2026-11-24): the screen shows and edits one branch's menu, picked at the top
+  const { branchId: working } = useSession();
   const vb = useViewBranch();
-  const branchItems = useMemo(() => (vb.value ? items.filter((i) => !(i.offBranches ?? []).includes(vb.value!)) : items), [items, vb.value]);
-  const groups = useLive("modifierGroups", { orderBy: [{ field: "sort" }] }).data;
-  const mods = useLive("modifiers", { orderBy: [{ field: "sort" }] }).data;
+  const branchRows = useLive("branches").data;
+  const tills = branchRows.filter((b) => !b.isCentral);
+  const main = mainBranchOf(branchRows);
+  const [picked, setPicked] = useState<string | null>(null);
+  const mb = [picked, vb.value, working, main].find((id) => !!id && tills.some((b) => b.id === id)) ?? main;
+  const { cats, items, groups, mods } = useMemo(() => branchMenu({ cats: catsAll, items: itemsAll, groups: groupsAll, mods: modsAll }, mb, main), [catsAll, itemsAll, groupsAll, modsAll, mb, main]);
+  const branchItems = items;
+  const others = tills.filter((b) => b.id !== mb && branchMenu({ cats: catsAll, items: itemsAll, groups: groupsAll, mods: modsAll }, b.id, main).items.length);
+  const [copyFrom, setCopyFrom] = useState("");
+  const [copying, setCopying] = useState(false);
+  const doCopy = async () => {
+    if (!copyFrom || !mb) return;
+    setCopying(true);
+    try {
+      const n = await copyMenu(db, branchMenu({ cats: catsAll, items: itemsAll, groups: groupsAll, mods: modsAll }, copyFrom, main), mb);
+      toast({ tone: "success", title: `اتنسخ ${n} صنف للفرع ده` });
+      setCopyFrom("");
+    } catch (e) {
+      toast({ tone: "error", title: "تعذر النسخ", description: err(e) });
+    } finally {
+      setCopying(false);
+    }
+  };
   const [view, setView] = useState<View>("menu");
   const [catId, setCatId] = useState<string>("");
   const [q, setQ] = useState("");
@@ -104,7 +127,7 @@ function Body() {
     if (view === "off") return branchItems.filter((i) => (!i.active || !i.available) && hit(i));
     if (n) return branchItems.filter(hit);
     return current ? branchItems.filter((i) => i.categoryId === current.id) : [];
-  }, [items, view, current, q]);
+  }, [branchItems, view, current, q]);
   const flip = async (i: MenuItem, p: Partial<MenuItem>) => {
     try {
       await db.update("menuItems", i.id, p);
@@ -121,9 +144,17 @@ function Body() {
   };
   const open = detail ? items.find((i) => i.id === detail) ?? null : null;
   return (
+    <MenuBranchCtx.Provider value={mb}>
     <div className="grid gap-5">
       <PageHeader icon={<BookOpen />} title="المنيو" subtitle="الأصناف والإضافات والملاحظات وأسعارها زي ما الكاشير بيشوفها"
-        actions={<ViewBranchPicker noCentral />} />
+        actions={tills.length > 1 ? <div className="w-48"><Select aria-label="منيو الفرع" value={mb ?? ""} onChange={(e) => setPicked(e.target.value)} options={tills.map((b) => ({ value: b.id, label: `منيو ${b.name.ar}` }))} /></div> : null} />
+      {manage && others.length ? (
+        <Card className="flex flex-wrap items-end gap-2 p-3">
+          <p className="min-w-0 flex-1 text-[13.5px] text-muted">{items.length ? "تقدر تضيف نسخة من منيو فرع تاني للفرع ده (الأصناف الموجودة بتفضل زي ما هي)." : "منيو الفرع ده فاضي. تقدر تبدأ بنسخة من منيو فرع تاني، وبعدها أي تعديل هنا ما بيأثرش على الفرع التاني."}</p>
+          <div className="w-48"><Select aria-label="انسخ من" value={copyFrom} onChange={(e) => setCopyFrom(e.target.value)} options={[{ value: "", label: "انسخ منيو من فرع…" }, ...others.map((b) => ({ value: b.id, label: b.name.ar }))]} /></div>
+          <Button size="sm" variant="brass" disabled={!copyFrom} loading={copying} onClick={() => void doCopy()}>نسخ المنيو</Button>
+        </Card>
+      ) : null}
       {!manage ? <p className="rounded-xl border border-line px-3 py-2 text-[13.5px] text-muted">للمشاهدة بس: الدور بتاعك مالوش صلاحية تعديل المنيو.</p> : null}
       {manage && codes.fix.length ? (
         <Card className="grid gap-2 border-brass/50 p-3">
@@ -233,6 +264,7 @@ function Body() {
       {item ? <ItemDialog key={item === "new" ? "new" : item.id} item={item === "new" ? null : item} cats={cats} items={items} defaultCat={current?.id ?? ""} sort={items.length + 1} onClose={() => setItem(null)} onSaved={(id) => setDetail(id)} /> : null}
       {open ? <ItemDetail item={open} cats={cats} groups={groups} mods={mods} manage={manage} canDelete={area.delete} onEdit={() => setItem(open)} onClose={() => setDetail(null)} /> : null}
     </div>
+    </MenuBranchCtx.Provider>
   );
 }
 
@@ -395,6 +427,7 @@ function Info({ label, children }: { label: string; children: React.ReactNode })
 
 function CategoryDialog({ cat, sort, count, onClose }: { cat: MenuCategory | null; sort: number; count: number; onClose: () => void }) {
   const db = useDb();
+  const menuBranch = useMenuBranch();
   const { toast } = useToast();
   const area = useArea();
   const [d, setD] = useState({ ar: cat?.name.ar ?? "", en: cat?.name.en ?? "", imageUrl: cat?.imageUrl ?? null, active: cat?.active ?? true });
@@ -405,7 +438,7 @@ function CategoryDialog({ cat, sort, count, onClose }: { cat: MenuCategory | nul
     try {
       const row = { name: { ar: d.ar.trim(), en: d.en.trim() || d.ar.trim() }, imageUrl: d.imageUrl, active: d.active };
       if (cat) await db.update("menuCategories", cat.id, row);
-      else await db.insert("menuCategories", { ...row, sort, color: "#F8BB18", icon: "utensils", stationId: null });
+      else await db.insert("menuCategories", { ...row, sort, color: "#F8BB18", icon: "utensils", stationId: null, branchId: menuBranch });
       toast({ tone: "success", title: "اتحفظت الفئة" });
       onClose();
     } catch (e) {

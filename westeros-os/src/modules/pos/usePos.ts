@@ -8,19 +8,29 @@ import { buildReceiptModel, freezeBill, type ReceiptModel, type ReceiptSource } 
 import { priceItems } from "@/data/pricing";
 import type { OrderItem } from "@/data/types";
 import { deviceCode } from "./sale";
+import { mainBranchOf, onMenuOf } from "@/modules/cc/menu/menuBranch";
 import { receiptZatca } from "@/lib/zatca/receipt";
 import type { ZatcaInvoiceRow } from "@/lib/zatca/model";
 
 export function useMenu() {
-  const cats = useLive("menuCategories", { where: { active: true }, orderBy: [{ field: "sort" }] }).data;
-  const all = useLive("menuItems", { where: { active: true }, orderBy: [{ field: "sort" }] }).data;
+  // منيو منفصل لكل فرع (Saqr 2026-11-24): the cashier sells its own branch's menu
+  const { branchId } = useSession();
+  const branchRows = useLive("branches").data;
+  const main = mainBranchOf(branchRows);
+  const on = onMenuOf(branchId, main);
+  const catsAll = useLive("menuCategories", { where: { active: true }, orderBy: [{ field: "sort" }] }).data;
+  const allRows = useLive("menuItems", { where: { active: true }, orderBy: [{ field: "sort" }] }).data;
+  const cats = useMemo(() => catsAll.filter(on), [catsAll, branchId, main]); // eslint-disable-line react-hooks/exhaustive-deps
+  const all = useMemo(() => allRows.filter(on), [allRows, branchId, main]); // eslint-disable-line react-hooks/exhaustive-deps
   // a hidden category hides all its items from the cashier, in "الكل" and in search too
   const items = useMemo(() => {
     const shown = new Set(cats.map((c) => c.id));
     return all.filter((i) => shown.has(i.categoryId));
   }, [all, cats]);
-  const groups = useLive("modifierGroups", { orderBy: [{ field: "sort" }] }).data;
-  const mods = useLive("modifiers", { orderBy: [{ field: "sort" }] }).data;
+  const groupsAll = useLive("modifierGroups", { orderBy: [{ field: "sort" }] }).data;
+  const modsAll = useLive("modifiers", { orderBy: [{ field: "sort" }] }).data;
+  const groups = useMemo(() => groupsAll.filter(on), [groupsAll, branchId, main]); // eslint-disable-line react-hooks/exhaustive-deps
+  const mods = useMemo(() => { const ids = new Set(groups.map((g) => g.id)); return modsAll.filter((m) => ids.has(m.groupId)); }, [modsAll, groups]);
   return { cats, items, groups, mods };
 }
 

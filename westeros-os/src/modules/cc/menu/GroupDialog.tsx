@@ -9,6 +9,7 @@ import type { MenuItem, Modifier, ModifierGroup } from "@/data/types";
 import { Button, Dialog, IconButton, Input, Segmented, Select, useToast } from "@/ui";
 import { listsOf } from "../lib";
 import { modFieldsOf } from "./sideOptions";
+import { useMenuBranch } from "./menuBranch";
 
 interface Row { id: string | null; sideOptionId: string; minQty: string; maxQty: string }
 const num = (s: string) => {
@@ -26,6 +27,7 @@ export function groupLimits(f: { required: boolean; multi: boolean; min: number;
 
 export function GroupDialog({ item, group, mods, onClose }: { item: MenuItem; group: ModifierGroup | null; mods: Modifier[]; onClose: () => void }) {
   const db = useDb();
+  const menuBranch = useMenuBranch();
   const { toast } = useToast();
   const settings = useLive("mfgSettings").data[0];
   const library = listsOf(settings).sideOptions ?? [];
@@ -52,7 +54,7 @@ export function GroupDialog({ item, group, mods, onClose }: { item: MenuItem; gr
     try {
       const lim = groupLimits({ required: f.required, multi: f.multi, min: Math.round(num(f.min)), max: Math.round(num(f.max)) }, valid.length);
       const row = { name: { ar: f.ar.trim() || f.en.trim(), en: f.en.trim() || f.ar.trim() }, ...lim, required: f.required, multi: f.multi };
-      const g = group ? await db.update("modifierGroups", group.id, row) : await db.insert("modifierGroups", { ...row, sort: 0 });
+      const g = group ? await db.update("modifierGroups", group.id, row) : await db.insert("modifierGroups", { ...row, sort: 0, branchId: menuBranch });
       const keep = new Set<string>();
       for (const [k, r] of valid.entries()) {
         const o = library.find((x) => x.id === r.sideOptionId)!;

@@ -13,6 +13,7 @@ import { AGE_BORDER, AGE_HEAD } from "./TicketCard";
 import { setAvailability } from "./ops";
 import { ThresholdsEditor, useCanEditSettings } from "@/lib/service-calls";
 import { kdsSettings } from "./kds";
+import { useOnWorkingMenu } from "@/modules/cc/menu/menuBranch";
 
 /* ───────── all-day ───────── */
 
@@ -211,8 +212,10 @@ export function EightySixView() {
   const db = useDb();
   const { toast } = useToast();
   const [q, setQ] = useState("");
-  const menu = useLive("menuItems", { where: { active: true }, orderBy: [{ field: "sort" }] }).data;
-  const cats = useLive("menuCategories", { where: { active: true }, orderBy: [{ field: "sort" }] }).data;
+  // the kitchen's own branch menu (منيو منفصل لكل فرع)
+  const onMenu = useOnWorkingMenu();
+  const menu = useLive("menuItems", { where: { active: true }, orderBy: [{ field: "sort" }] }).data.filter(onMenu);
+  const cats = useLive("menuCategories", { where: { active: true }, orderBy: [{ field: "sort" }] }).data.filter(onMenu);
   const out = menu.filter((m) => !m.available);
   const canEdit = useCanEditSettings();
   const settingsRow = useLive("settings").data[0];

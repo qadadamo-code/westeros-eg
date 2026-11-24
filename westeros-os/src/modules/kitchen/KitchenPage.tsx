@@ -17,6 +17,7 @@ import { applyAction, setPriority } from "./ops";
 import { TicketCard } from "./TicketCard";
 import { AllDayView, EightySixView, ExpoView } from "./views";
 import { useKitchen } from "./useKitchen";
+import { useOnWorkingMenu } from "@/modules/cc/menu/menuBranch";
 
 type View = "line" | "allday" | "expo" | "86";
 const VIEW_KEY = "sufra-os.kds.view";
@@ -286,7 +287,8 @@ export function KitchenScreen({ kiosk = false }: { kiosk?: boolean }) {
 
 const expoReady = (ts: Ticket[]) => ts.filter((t) => t.state === "ready");
 function useOutCount() {
-  return useLive("menuItems", { where: { available: false, active: true } }).data.length;
+  const onMenu = useOnWorkingMenu();
+  return useLive("menuItems", { where: { available: false, active: true } }).data.filter(onMenu).length;
 }
 
 function Stat({ label, value, tone }: { label: string; value: React.ReactNode; tone?: "danger" }) {

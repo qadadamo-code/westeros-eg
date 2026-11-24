@@ -237,6 +237,8 @@ export interface MenuCategory extends TenantRow {
   externalRef?: string | null;
   /** 0045: first number of the category's block of codes (1, 1000, 2000…); its items are numbered inside it */
   code?: number | null;
+  /** 0054: the branch whose menu this is (منيو منفصل لكل فرع); missing = the main branch's menu */
+  branchId?: string | null;
 }
 
 export type MenuTag = "spicy" | "veg" | "new" | "popular" | "chef" | "kids" | "gluten_free";
@@ -285,6 +287,8 @@ export interface MenuItem extends TenantRow {
   recommended?: boolean;
   /** id in Bonbell, for the import */
   externalRef?: string | null;
+  /** 0054: the branch whose menu this is (منيو منفصل لكل فرع); missing = the main branch's menu */
+  branchId?: string | null;
 }
 
 export interface ModifierGroup extends TenantRow {
@@ -299,6 +303,8 @@ export interface ModifierGroup extends TenantRow {
   /** false = خيار واحد, true = أكتر من خيار */
   multi?: boolean;
   externalRef?: string | null;
+  /** 0054: the branch whose menu this is (منيو منفصل لكل فرع); missing = the main branch's menu */
+  branchId?: string | null;
 }
 
 export interface Modifier extends TenantRow {
