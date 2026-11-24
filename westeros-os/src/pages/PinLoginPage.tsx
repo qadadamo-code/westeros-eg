@@ -1,18 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { AnimatePresence, motion } from "motion/react";
-import { ArrowLeft, ArrowRight, Mail, Search, WifiOff } from "lucide-react";
+import { motion } from "motion/react";
+import { Mail, WifiOff } from "lucide-react";
 import { useSession } from "@/auth/session";
-import { ROLE_LABEL, ROLE_RANK } from "@/auth/roles";
 import { useRepo } from "@/data/hooks";
-import type { Membership, Restaurant } from "@/data/types";
-import { staffId } from "@/data/seed";
+import type { Restaurant } from "@/data/types";
 import { WESTEROS_STAFF as DEMO_STAFF } from "@/data/westeros/seed";
 import { useT } from "@/i18n/i18n";
-import { matches } from "@/lib/arabic";
-import { cn } from "@/lib/cn";
 import { homeFor } from "@/modules/registry";
-import { Avatar, Badge, Button, EmptyState, Input, PinPad, Skeleton, spring, useReduced } from "@/ui";
+import { Badge, EmptyState, PinPad, spring, useReduced } from "@/ui";
 import { Mark } from "@/shell/Logo";
 import { AuthToggles, StarPattern } from "./AuthChrome";
 
@@ -31,18 +27,14 @@ function useClock() {
 export function PinLoginPage() {
   const s = useSession();
   const repo = useRepo();
-  const { t, loc, lang, dir } = useT();
+  const { t, loc, lang } = useT();
   const nav = useNavigate();
   const location = useLocation();
   const reduced = useReduced();
   const now = useClock();
-  const [roster, setRoster] = useState<Membership[] | null>(null);
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
-  const [picked, setPicked] = useState<Membership | null>(null);
-  const [q, setQ] = useState("");
   const [tries, setTries] = useState(0);
   const [cooldown, setCooldown] = useState(0);
-  const Back = dir === "rtl" ? ArrowRight : ArrowLeft;
 
   useEffect(() => {
     if (s.status !== "ready" || !s.staff) return;
@@ -54,9 +46,8 @@ export function PinLoginPage() {
   useEffect(() => {
     const rid = s.deviceRestaurantId;
     if (!rid) return;
-    repo.auth.pinRoster(rid).then(setRoster, () => setRoster([]));
     repo.list("restaurants", { where: { id: rid } }).then((r) => setRestaurant(r[0] ?? null), () => {});
-  }, [repo, s.deviceRestaurantId, s.user?.id]); // eslint-disable-line react-hooks/exhaustive-deps -- names come back once the device sign-in is read again
+  }, [repo, s.deviceRestaurantId, s.user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -64,17 +55,19 @@ export function PinLoginPage() {
     return () => clearTimeout(t);
   }, [cooldown]);
 
-  const list = useMemo(
-    () => (roster ?? []).filter((m) => matches(`${m.name} ${ROLE_LABEL[m.role].ar} ${ROLE_LABEL[m.role].en}`, q)).sort((a, b) => ROLE_RANK[a.role] - ROLE_RANK[b.role] || a.name.localeCompare(b.name, "ar")),
-    [roster, q],
-  );
-
-  const demoPin = picked && repo.kind === "local" ? DEMO_STAFF.find((d) => staffId(d.key) === picked.id)?.pin : undefined;
-
+  // PIN only (Mohammed 2026-11-24): no names to pick; the PIN says who the person is, then the welcome greets them
   const tryPin = async (pin: string) => {
-    if (!picked || cooldown) return false;
-    const m = await s.pinSignIn(picked.id, pin);
-    if (m) return true;
+    if (cooldown) return false;
+    try {
+      if (await s.pinSignIn(null, pin)) return true;
+    } catch (e) {
+      if ((e as { code?: string }).code === "pin_locked") {
+        setTries(0);
+        setCooldown(COOLDOWN_S);
+        return false;
+      }
+      throw e;
+    }
     const n = tries + 1;
     setTries(n);
     if (n >= MAX_TRIES) {
@@ -119,105 +112,44 @@ export function PinLoginPage() {
             }
           />
         ) : (
-          <AnimatePresence mode="wait" initial={false}>
-            {!picked ? (
-              <motion.section
-                key="pick"
-                initial={reduced ? { opacity: 0 } : { opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.98, transition: { duration: 0.15 } }}
-                transition={reduced ? { duration: 0 } : spring.soft}
-                className="w-full max-w-5xl"
-              >
-                <div className="mx-auto mb-8 max-w-xl text-center">
-                  <h1 className="text-[34px] leading-tight sm:text-[42px]">{t("pin.title")}</h1>
-                  <p className="mt-2 text-[15.5px] text-muted">{t("pin.subtitle")}</p>
-                  {(roster?.length ?? 0) > 8 ? (
-                    <div className="mx-auto mt-5 max-w-sm">
-                      <Input placeholder={t("pin.findName")} aria-label={t("pin.findName")} icon={<Search />} value={q} onChange={(e) => setQ(e.target.value)} />
-                    </div>
-                  ) : null}
-                </div>
-                {!roster ? (
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                    {Array.from({ length: 8 }, (_, i) => (
-                      <Skeleton key={i} className="h-40" rounded="rounded-[24px]" />
-                    ))}
-                  </div>
-                ) : !list.length ? (
-                  s.user ? (
-                    <EmptyState title={t("pin.noStaff")} />
-                  ) : s.offline ? (
-                    <EmptyState icon={<WifiOff />} title={t("pin.offline")} body={t("pin.offlineHint")} />
-                  ) : (
-                    <EmptyState
-                      icon={<Mail />}
-                      title={t("pin.deviceOut")}
-                      body={t("pin.deviceOutHint")}
-                      action={
-                        <Link to="/login" className="font-semibold text-primary underline-offset-4 hover:underline">
-                          {t("pin.emailInstead")}
-                        </Link>
-                      }
-                    />
-                  )
-                ) : (
-                  <ul className="flex flex-wrap justify-center gap-3">
-                    {list.map((m, i) => (
-                      <motion.li key={m.id} className="w-[calc(50%-6px)] sm:w-[calc(33.333%-8px)] lg:w-[calc(25%-9px)]" initial={reduced ? false : { opacity: 0, y: 18, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ delay: reduced ? 0 : 0.03 * i, ...spring.soft }}>
-                        <motion.button
-                          type="button"
-                          layoutId={reduced ? undefined : `staff-${m.id}`}
-                          onClick={() => setPicked(m)}
-                          whileHover={reduced ? undefined : { y: -3 }}
-                          whileTap={reduced ? undefined : { scale: 0.97 }}
-                          className="group flex w-full flex-col items-center gap-3 rounded-[24px] border border-line bg-surface px-3 py-5 text-center shadow-sf-sm transition-[border-color,box-shadow] hover:border-line-strong hover:shadow-sf focus-visible:border-primary"
-                        >
-                          <Avatar name={m.name} color={m.color} size="xl" />
-                          <span className="min-w-0">
-                            <span className="block truncate text-[16px] font-bold">{m.name}</span>
-                            <span className="mt-1 inline-block rounded-full bg-surface-3 px-2.5 py-0.5 text-[12px] font-semibold text-ink-2">{loc(ROLE_LABEL[m.role])}</span>
-                          </span>
-                        </motion.button>
-                      </motion.li>
-                    ))}
-                  </ul>
-                )}
-                <div className="mt-10 text-center">
-                  <Link to="/login" className="inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-[14px] font-semibold text-muted transition-colors hover:bg-surface-3 hover:text-ink">
-                    <Mail className="size-4" aria-hidden />
-                    {t("pin.emailInstead")}
-                  </Link>
-                </div>
-              </motion.section>
+          <motion.section
+            initial={reduced ? { opacity: 0 } : { opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={reduced ? { duration: 0 } : spring.soft}
+            className="flex w-full max-w-sm flex-col items-center"
+          >
+            <h1 className="mt-4 text-center text-[34px] leading-tight sm:text-[40px]">{t("pin.title")}</h1>
+            <p className="mt-2 mb-8 text-center text-[15.5px] text-muted">{t("pin.subtitle")}</p>
+            {!s.user && repo.kind !== "local" ? (
+              s.offline ? (
+                <EmptyState icon={<WifiOff />} title={t("pin.offline")} body={t("pin.offlineHint")} />
+              ) : (
+                <EmptyState
+                  icon={<Mail />}
+                  title={t("pin.deviceOut")}
+                  body={t("pin.deviceOutHint")}
+                  action={
+                    <Link to="/login" className="font-semibold text-primary underline-offset-4 hover:underline">
+                      {t("pin.emailInstead")}
+                    </Link>
+                  }
+                />
+              )
             ) : (
-              <motion.section
-                key="pin"
-                initial={reduced ? { opacity: 0 } : { opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={reduced ? { opacity: 0 } : { opacity: 0, y: 10, transition: { duration: 0.15 } }}
-                transition={reduced ? { duration: 0 } : spring.soft}
-                className="flex w-full max-w-sm flex-col items-center"
-              >
-                <Button variant="ghost" size="sm" icon={<Back className="size-4" />} onClick={() => setPicked(null)} className="mb-4 self-start">
-                  {t("pin.back")}
-                </Button>
-                <motion.div layoutId={reduced ? undefined : `staff-${picked.id}`} className="mb-3 flex flex-col items-center gap-3 rounded-[28px] px-6 py-2">
-                  <Avatar name={picked.name} color={picked.color} size="xl" className="shadow-[0_18px_40px_-16px_rgb(0_0_0/0.45)]" />
-                </motion.div>
-                <h1 className="text-center text-[26px]">{t("pin.hello", { name: picked.name.split(" ")[0] === "الشيف" ? picked.name : picked.name.split(" ")[0] })}</h1>
-                <p className="mt-1 mb-6 text-[14px] text-muted">
-                  {loc(ROLE_LABEL[picked.role])} · {t("pin.enter")}
-                </p>
-                <PinPad key={picked.id} onComplete={tryPin} disabled={cooldown > 0} error={cooldown ? t("pin.cooldown", { s: cooldown }) : null} />
-                {demoPin ? (
-                  <Badge tone="brass" className={cn("mt-6")}>
-                    {t("pin.demoHint", { pin: demoPin })}
-                  </Badge>
-                ) : null}
-              </motion.section>
+              <PinPad onComplete={tryPin} disabled={cooldown > 0} error={cooldown ? t("pin.cooldown", { s: cooldown }) : null} />
             )}
-          </AnimatePresence>
+            {repo.kind === "local" ? (
+              <Badge tone="brass" className="mt-6">
+                {t("pin.demoHint", { pin: DEMO_STAFF[0].pin })}
+              </Badge>
+            ) : null}
+            <div className={!s.user && repo.kind !== "local" && !s.offline ? "hidden" : "mt-8 text-center"}>
+              <Link to="/login" className="inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-[14px] font-semibold text-muted transition-colors hover:bg-surface-3 hover:text-ink">
+                <Mail className="size-4" aria-hidden />
+                {t("pin.emailInstead")}
+              </Link>
+            </div>
+          </motion.section>
         )}
       </main>
     </div>

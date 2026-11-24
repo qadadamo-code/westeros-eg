@@ -383,6 +383,15 @@ export class SupabaseAdapter implements Repo {
       if (error) throw error;
       return data ? rowFromDb<Membership>(data as Record<string, unknown>) : null;
     },
+    verifyAnyPin: async (restaurantId, pin) => {
+      const { data, error } = await this.client.rpc("verify_any_pin", { p_restaurant_id: restaurantId, p_pin: pin });
+      if (error) throw /pin_locked/.test(error.message) ? Object.assign(new Error("pin_locked"), { code: "pin_locked" }) : error;
+      return data ? rowFromDb<Membership>(data as Record<string, unknown>) : null;
+    },
+    setMemberPassword: async (restaurantId, membershipId, password) => {
+      const { error } = await this.client.rpc("set_member_password", { p_restaurant_id: restaurantId, p_membership_id: membershipId, p_password: password });
+      if (error) throw error;
+    },
     setPin: async (restaurantId, membershipId, pin) => {
       const { error } = await this.client.rpc("set_staff_pin", { p_restaurant_id: restaurantId, p_membership_id: membershipId, p_pin: pin });
       if (error) throw error;

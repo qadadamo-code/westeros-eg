@@ -158,12 +158,14 @@ function UserDialog({ cc, member, profile, readOnly, onClose }: { cc: Cc; member
   const twin = settings ? Object.entries(settings.chefCodes).find(([id, c]) => id !== member?.id && c === code && cc.prod.staff.some((m) => m.id === id)) : undefined;
   const codeProblem = owner || !type ? "" : !auto && typed === null ? `أكواد "${type.name}" خلصت. زود عدد المستخدمين للدور ده من خانة الأدوار.` : !Number.isInteger(code) || code < range!.from || code > range!.to ? `كود "${type.name}" لازم يكون من ${range!.from} إلى ${range!.to}` : twin ? `الكود ${code} مستخدم مع "${cc.prod.staff.find((m) => m.id === twin[0])?.name ?? "مستخدم آخر"}"` : "";
   const [pin, setPin] = useState("");
+  const [password, setPassword] = useState("");
   const [active, setActive] = useState(member?.active ?? true);
   const [busy, setBusy] = useState(false);
   // only top management sets PINs; an employee never changes their own (Mohammed 2026-11-24)
   const canPin = staff?.role === "owner" || staff?.role === "admin";
   const pinOk = pin === "" ? !!member || !canPin : PIN_RULE.test(pin);
-  const valid = !!name.trim() && pinOk && !codeProblem && (owner || !!type) && !!hireDate;
+  const pwOk = password === "" || password.length >= 8;
+  const valid = !!name.trim() && pinOk && pwOk && !codeProblem && (owner || !!type) && !!hireDate;
   const save = async () => {
     setBusy(true);
     try {
@@ -175,6 +177,7 @@ function UserDialog({ cc, member, profile, readOnly, onClose }: { cc: Cc; member
       else created.current = id = (await db.insert("memberships", { ...base, userId: null, role, color: "#F8BB18", hasPin: !!pin, active: true, lastSeenAt: null })).id;
       if (!id) throw new Error("لم يُحفظ المستخدم");
       if (pin) await db.repo.auth.setPin(db.restaurantId, id, pin);
+      if (password && member?.userId && db.repo.auth.setMemberPassword) await db.repo.auth.setMemberPassword(db.restaurantId, member.id, password);
       const card = {
         nationalId: nationalId.trim() || null, birthDate: birthDate || null, address: address.trim() || null, hireDate, contractType: contract,
         position: { ar: position.trim(), en: profile?.position.en ?? "" }, deviceUserId: device.trim() || null,
@@ -188,7 +191,7 @@ function UserDialog({ cc, member, profile, readOnly, onClose }: { cc: Cc; member
       onClose();
     } catch (e) {
       const msg = String((e as Error).message ?? e);
-      toast({ tone: "error", title: "تعذر الحفظ", description: /device_user_id/.test(msg) ? "رقم البصمة مستخدم مع موظف آخر" : /pin_taken/.test(msg) ? "الـPIN ده مستخدم مع موظف تاني، اختار PIN غيره" : /6 digits|6 أرقام/.test(msg) ? "الـPIN لازم يكون 6 أرقام" : msg });
+      toast({ tone: "error", title: "تعذر الحفظ", description: /device_user_id/.test(msg) ? "رقم البصمة مستخدم مع موظف آخر" : /pin_taken/.test(msg) ? "الـPIN ده مستخدم مع موظف تاني، اختار PIN غيره" : /6 digits|6 أرقام/.test(msg) ? "الـPIN لازم يكون 6 أرقام" : /password_short/.test(msg) ? "كلمة السر لازم 8 حروف أو أرقام على الأقل" : msg });
     } finally {
       setBusy(false);
     }
@@ -250,6 +253,9 @@ function UserDialog({ cc, member, profile, readOnly, onClose }: { cc: Cc; member
           ) : (
             <p className="text-[13px] text-muted">{member?.hasPin ? "الموظف ليه PIN. " : ""}تحديد وتغيير الـPIN للإدارة العليا بس.</p>
           )}
+          {canPin && member?.userId ? (
+            <Input label="كلمة سر جديدة للدخول بالإيميل (اتركها فاضية لو مش هتغيرها)" type="password" autoComplete="new-password" dir="ltr" value={password} onChange={(e) => setPassword(e.target.value)} error={pwOk ? undefined : "8 حروف أو أرقام على الأقل"} />
+          ) : null}
           {member && !owner && member.id !== staff?.id ? <Switch checked={active} onChange={setActive} label="الموظف نشط" description="الموظف غير النشط لا يقدر يدخل السيستم" /> : null}
         </section>
         <Input label="ملاحظات" value={notes} onChange={(e) => setNotes(e.target.value)} />

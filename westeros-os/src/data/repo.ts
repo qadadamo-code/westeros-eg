@@ -76,6 +76,10 @@ export interface AuthApi {
   updatePassword?(password: string): Promise<void>;
   /** the app was opened from a password-reset link */
   onRecovery?(cb: () => void): Unsubscribe;
+  /** PIN-only sign-in: finds the one active person with this PIN (throws code "pin_locked" after repeated misses) */
+  verifyAnyPin(restaurantId: string, pin: string): Promise<Membership | null>;
+  /** top management sets the password of a member who signs in by email */
+  setMemberPassword?(restaurantId: string, membershipId: string, password: string): Promise<void>;
   /** sets/changes a PIN (top management only, Mohammed 2026-11-24) */
   setPin(restaurantId: string, membershipId: string, pin: string): Promise<void>;
   /** staff that can sign in on this device with a PIN (no secrets) */

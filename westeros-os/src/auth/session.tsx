@@ -54,7 +54,8 @@ interface SessionApi extends SessionState {
   role: Role | null;
   can: (p: Permission) => boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  pinSignIn: (membershipId: string, pin: string) => Promise<Membership | null>;
+  /** membershipId null = PIN only (the PIN identifies the person); throws code "pin_locked" after repeated misses */
+  pinSignIn: (membershipId: string | null, pin: string) => Promise<Membership | null>;
   /** sign the acting person out of the device (back to the names screen) */
   lock: () => void;
   /** cover the screen until the same person types the PIN; nothing under it is lost */
@@ -144,10 +145,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   );
 
   const pinSignIn = useCallback(
-    async (membershipId: string, pin: string) => {
+    async (membershipId: string | null, pin: string) => {
       const rid = s.deviceRestaurantId;
       if (!rid) return null;
-      const m = await repo.auth.verifyPin(rid, membershipId, pin);
+      // null: PIN-only sign-in, the PIN itself says who the person is (PINs are unique)
+      const m = membershipId ? await repo.auth.verifyPin(rid, membershipId, pin) : await repo.auth.verifyAnyPin(rid, pin);
       if (!m) return null;
       saveJSON(PIN_KEY, { membershipId: m.id, restaurantId: rid });
       saveRaw(EMAIL_KEY, "");
