@@ -47,7 +47,7 @@ const SOURCE_LABEL: Record<Order["source"], { ar: string; en: string }> = {
 };
 const kindOf = (o: Order): Exclude<Kind, "all"> => (o.pickupAt ? "pickup" : o.mode);
 const KIND_ICON = { dine_in: Utensils, takeaway: ShoppingBag, pickup: Store, delivery: Bike };
-type Period = "today" | "yesterday" | "last30" | "month" | "lastMonth" | "last3" | "day";
+type Period = "today" | "yesterday" | "last30" | "month" | "lastMonth" | "last3" | "day" | "range";
 const PERIODS: { value: Period; ar: string; en: string }[] = [
   { value: "today", ar: "اليوم", en: "Today" },
   { value: "yesterday", ar: "أمس", en: "Yesterday" },
@@ -56,10 +56,11 @@ const PERIODS: { value: Period; ar: string; en: string }[] = [
   { value: "lastMonth", ar: "الشهر السابق", en: "Last month" },
   { value: "last3", ar: "آخر 3 شهور", en: "Last 3 months" },
   { value: "day", ar: "يوم معين", en: "A specific day" },
+  { value: "range", ar: "من تاريخ إلى تاريخ", en: "From date to date" },
 ];
 const isoDay = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 /** the business day starts at midnight, but before 5 AM "today" is still yesterday's shift */
-function periodRange(p: Period, day: string): { from: string; to: string } {
+function periodRange(p: Period, day: string, until = day): { from: string; to: string } {
   const today = startOfDay();
   if (new Date().getHours() < 5) today.setDate(today.getDate() - 1);
   const at = (y: number, m: number, d: number) => new Date(y, m, d);
@@ -73,6 +74,12 @@ function periodRange(p: Period, day: string): { from: string; to: string } {
     case "lastMonth": return span(at(y, m - 1, 1), at(y, m, 1));
     case "last3": return span(at(y, m - 2, 1), end);
     case "day": { const [yy, mm, dd] = day.split("-").map(Number); return yy ? span(at(yy, mm - 1, dd), at(yy, mm - 1, dd + 1)) : span(today, end); }
+    case "range": {
+      // من تاريخ إلى تاريخ: both days included, whichever order they were picked in
+      const [a, b] = [day, until || day].sort();
+      const [y1, m1, d1] = a.split("-").map(Number), [y2, m2, d2] = b.split("-").map(Number);
+      return y1 && y2 ? span(at(y1, m1 - 1, d1), at(y2, m2 - 1, d2 + 1)) : span(today, end);
+    }
     default: return span(today, end);
   }
 }
@@ -80,12 +87,13 @@ const channelOf = (o: Order): Exclude<Channel, "all"> => (o.mode === "delivery" 
 
 export default function OrdersPage() {
   const { L, lang } = useT();
-  // فلتر التاريخ (Saqr 2026-11-24): اليوم، أمس، آخر 30 يوم، الشهر الحالي، الشهر السابق، آخر 3 شهور، أو يوم معين
+  // فلتر التاريخ (Saqr 2026-11-24): اليوم، أمس، آخر 30 يوم، الشهر الحالي، الشهر السابق، آخر 3 شهور، أو يوم معين، أو من تاريخ إلى تاريخ
   const [period, setPeriod] = useState<Period>("today");
   const [day, setDay] = useState(() => isoDay(new Date()));
-  const range = useMemo(() => periodRange(period, day), [period, day]);
+  const [until, setUntil] = useState(() => isoDay(new Date()));
+  const range = useMemo(() => periodRange(period, day, until), [period, day, until]);
   const orders = useLive("orders", { gte: { openedAt: range.from }, lte: { openedAt: range.to }, orderBy: [{ field: "openedAt", dir: "desc" }] }).data;
-  const oneDay = period === "today" || period === "yesterday" || period === "day";
+  const oneDay = period === "today" || period === "yesterday" || period === "day" || (period === "range" && day === until);
   const checkIds = useMemo(() => [...new Set(orders.map((o) => o.checkId).filter((x): x is string => !!x))], [orders]);
   // a long period can hold thousands of orders: checks come by the same dates (no id list in the request), and the
   // item counts only for the latest 200 orders, so the request stays small
@@ -140,6 +148,14 @@ export default function OrdersPage() {
           </label>
           <div className="w-full sm:w-44"><Select aria-label={L("التاريخ", "Date")} value={period} onChange={(e) => setPeriod(e.target.value as Period)} options={PERIODS.map((x) => ({ value: x.value, label: L(x.ar, x.en) }))} /></div>
           {period === "day" ? <input type="date" value={day} max={isoDay(new Date())} onChange={(e) => setDay(e.target.value)} aria-label={L("اليوم", "Day")} className="num h-11 rounded-xl border border-line bg-surface px-3 outline-none focus:border-primary" dir="ltr" /> : null}
+          {period === "range" ? (
+            <div className="flex items-center gap-2">
+              <span className="text-[13px] text-muted">{L("من", "From")}</span>
+              <input type="date" value={day} max={isoDay(new Date())} onChange={(e) => setDay(e.target.value)} aria-label={L("من تاريخ", "From date")} className="num h-11 rounded-xl border border-line bg-surface px-3 outline-none focus:border-primary" dir="ltr" />
+              <span className="text-[13px] text-muted">{L("إلى", "To")}</span>
+              <input type="date" value={until} max={isoDay(new Date())} onChange={(e) => setUntil(e.target.value)} aria-label={L("إلى تاريخ", "To date")} className="num h-11 rounded-xl border border-line bg-surface px-3 outline-none focus:border-primary" dir="ltr" />
+            </div>
+          ) : null}
           <Segmented size="sm" label={L("الحالة", "Status")} value={status} onChange={setStatus} options={[{ value: "all", label: L("الكل", "All") }, { value: "active", label: L("شغال", "Active") }, { value: "closed", label: L("مقفول", "Closed") }, { value: "void", label: L("ملغي", "Void") }]} />
         </div>
         <div className="flex flex-wrap items-center gap-2 border-b border-line px-3 py-2.5">
