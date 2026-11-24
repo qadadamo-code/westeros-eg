@@ -1,6 +1,7 @@
 /** الحسابات: the chart of accounts and, around it, the journal, the reports and the settings. */
 import { Link, Navigate, NavLink, Route, Routes, useLocation } from "react-router-dom";
 import { PageHeader } from "@/shell/PageHeader";
+import { ViewBranchPicker } from "@/shell/ViewBranchPicker";
 import { cn } from "@/lib/cn";
 import Assets from "./Assets";
 import Budget from "./Budget";
@@ -81,7 +82,7 @@ export default function FinancePage() {
   const page = current.pages.find(at) ?? current.pages[0];
   return (
     <div className="grid gap-5">
-      <PageHeader icon={page.label === "ملخص" ? current.icon : page.icon} kicker={current.id === "home" ? undefined : `الحسابات · ${current.label}`} title={current.id === "home" ? "الحسابات" : page.label === "ملخص" ? `ملخص ${current.label}` : page.label} />
+      <PageHeader icon={page.label === "ملخص" ? current.icon : page.icon} kicker={current.id === "home" ? undefined : `الحسابات · ${current.label}`} title={current.id === "home" ? "الحسابات" : page.label === "ملخص" ? `ملخص ${current.label}` : page.label} actions={<ViewBranchPicker />} />
       <FinNav groups={groups} current={current} />
       <Routes>
         <Route index element={gate("finance.dashboard", <Dashboard />)} />

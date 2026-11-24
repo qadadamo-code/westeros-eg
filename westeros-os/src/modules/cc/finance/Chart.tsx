@@ -1,4 +1,5 @@
 /** شجرة الحسابات: the tree with balances, and everything that can be done to an account. */
+import { useViewBranchState } from "@/auth/viewBranch";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeftRight, ChevronDown, ChevronLeft, ChevronsDownUp, ChevronsUpDown, FileText, ListTree, Lock, Merge, MoreVertical, Pencil, Plus, Power, Search, Sparkles, Trash2 } from "lucide-react";
@@ -28,7 +29,7 @@ export default function Chart() {
   const [q, setQ] = useState("");
   const [type, setType] = useState("");
   const [status, setStatus] = useState("active");
-  const [branch, setBranch] = useState("");
+  const [branch, setBranch] = useViewBranchState();
   const [period, setPeriod] = useState<Period>(periodOf("all"));
   const [open, setOpen] = useState<Set<string> | null>(null);
   const [edit, setEdit] = useState<{ row: FinAccount | null; parent: string | null } | null>(null);

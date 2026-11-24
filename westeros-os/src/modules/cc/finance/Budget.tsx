@@ -1,4 +1,5 @@
 /** الموازنة التقديرية: إعداد موازنة السنة لكل حساب وشهر، ومقارنة الفعلي بها. */
+import { useViewBranchState } from "@/auth/viewBranch";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Copy, Save } from "lucide-react";
@@ -28,7 +29,7 @@ export default function Budget() {
   const thisYear = fiscalYear(today(), fin.settings.yearStartMonth);
   const [tab, setTab] = useState<"versus" | "edit">("versus");
   const [year, setYear] = useState(thisYear);
-  const [branch, setBranch] = useState("");
+  const [branch, setBranch] = useViewBranchState();
   const months = useMemo(() => monthsOfYear(year, fin.settings.yearStartMonth), [year, fin.settings.yearStartMonth]);
   const doc = useMemo(() => findBudget(docs, year, branch || null), [docs, year, branch]);
   const years = [thisYear + 1, thisYear, thisYear - 1, thisYear - 2];

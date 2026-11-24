@@ -1,4 +1,5 @@
 /** ملخص كل قسم من أقسام الحسابات: أرقام الفترة، رسم آخر ستة شهور، وأهم التفاصيل، وروابط لصفحات القسم. */
+import { useViewBranchState } from "@/auth/viewBranch";
 import { useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { Banknote, BookOpen, ChevronLeft, CircleDollarSign, Clock, ContactRound, FileWarning, HandCoins, Landmark, Package, Receipt, ReceiptText, Scale, ShoppingCart, TrendingDown, TrendingUp, Truck, Undo2, Users, Wallet } from "lucide-react";
@@ -26,7 +27,7 @@ const monthLabel = (m: string) => m.split("-").reverse().join("/");
 /** the period and branch filters shared by every summary */
 export function useFilter(fin: Fin) {
   const [period, setPeriod] = useState<Period>(periodOf("month", fin.settings.yearStartMonth));
-  const [branch, setBranch] = useState("");
+  const [branch, setBranch] = useViewBranchState();
   const f = useMemo<Filter>(() => ({ from: period.from, to: period.to, branchId: branch || null }), [period, branch]);
   const bar = (
     <Toolbar note={periodLabel(period)}>

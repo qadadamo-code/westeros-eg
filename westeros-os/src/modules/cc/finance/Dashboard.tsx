@@ -1,4 +1,5 @@
 /** مؤشرات الحسابات: أرقام الفترة مقارنة بما قبلها، التنبيهات، وحركة آخر ستة شهور. */
+import { useViewBranchState } from "@/auth/viewBranch";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Banknote, BellRing, ChevronLeft, CircleDollarSign, HandCoins, ListTree, Package, Percent, Scale, TrendingUp, Truck, Users, Utensils } from "lucide-react";
@@ -34,7 +35,7 @@ export default function Dashboard() {
   const docs = useLive("finDocs").data;
   const lists = listsOf(useLive("mfgSettings").data[0]);
   const [period, setPeriod] = useState<Period>(periodOf("month", fin.settings.yearStartMonth));
-  const [branch, setBranch] = useState("");
+  const [branch, setBranch] = useViewBranchState();
   const f = useMemo(() => ({ from: period.from, to: period.to, branchId: branch || null }), [period, branch]);
   const now = useMemo(() => kpis(fin.accounts, fin.entries, fin.settings, f), [fin.accounts, fin.entries, fin.settings, f]);
   const was = useMemo(() => kpis(fin.accounts, fin.entries, fin.settings, { ...f, ...previousPeriod(f) }), [fin.accounts, fin.entries, fin.settings, f]);

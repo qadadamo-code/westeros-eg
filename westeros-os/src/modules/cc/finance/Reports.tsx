@@ -1,4 +1,5 @@
 /** التقارير المالية: every report under one roof, each with its period, branch, level, comparison, drill-down, Excel and print. */
+import { useViewBranchState } from "@/auth/viewBranch";
 import { useMemo, useState, type ReactNode } from "react";
 import { Navigate, NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { CheckCircle2, TriangleAlert } from "lucide-react";
@@ -108,7 +109,7 @@ function Income({ mode }: { mode: "period" | "branches" | "centres" }) {
   const fin = useFinance();
   const nav = useNavigate();
   const [period, setPeriod] = useState<Period>(periodOf("month", fin.settings.yearStartMonth));
-  const [branch, setBranch] = useState("");
+  const [branch, setBranch] = useViewBranchState();
   const [centre, setCentre] = useState("");
   const [level, setLevel] = useState("3");
   const [compare, setCompare] = useState("");
@@ -149,7 +150,7 @@ function Balance() {
   const nav = useNavigate();
   const [to, setTo] = useState(today());
   const [other, setOther] = useState("");
-  const [branch, setBranch] = useState("");
+  const [branch, setBranch] = useViewBranchState();
   const [level, setLevel] = useState("3");
   const cols = [{ to, branchId: branch || null }, ...(other ? [{ to: other, branchId: branch || null }] : [])];
   const r = useMemo(() => balanceSheet(fin.accounts, fin.entries, cols, Number(level)), [fin.accounts, fin.entries, to, other, branch, level]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -176,7 +177,7 @@ function CashFlow() {
   const fin = useFinance();
   const nav = useNavigate();
   const [period, setPeriod] = useState<Period>(periodOf("month", fin.settings.yearStartMonth));
-  const [branch, setBranch] = useState("");
+  const [branch, setBranch] = useViewBranchState();
   const r = useMemo(() => cashFlow(fin.accounts, fin.entries, { from: period.from, to: period.to, branchId: branch || null }), [fin.accounts, fin.entries, period, branch]);
   return (
     <div className="grid gap-3">
@@ -224,7 +225,7 @@ function GeneralLedger() {
   const fin = useFinance();
   const nav = useNavigate();
   const [period, setPeriod] = useState<Period>(periodOf("month", fin.settings.yearStartMonth));
-  const [branch, setBranch] = useState("");
+  const [branch, setBranch] = useViewBranchState();
   const [zero, setZero] = useState(false);
   const f = { from: period.from, to: period.to, branchId: branch || null };
   const blocks = useMemo(() => fin.ix.ordered().filter((a) => a.postable).map((a) => ({ a, s: statement(a, fin.entries, f) })).filter((x) => x.s.rows.length || (zero && x.s.opening)), [fin.ix, fin.entries, period, branch, zero]); // eslint-disable-line react-hooks/exhaustive-deps

@@ -40,7 +40,12 @@ export default function Requests() {
   const { can, staff } = useSession();
   const area = useArea();
   const all = useLive("stockRequests", { orderBy: [{ field: "at", dir: "desc" }] }).data;
-  const rows = useMemo(() => all.filter((r) => r.kind === "supply"), [all]);
+  // الفرع المعروض: the requests of the branches in view, the ones they supply, and all of them for a central kitchen in view (it supplies everyone)
+  const rows = useMemo(() => {
+    const br = new Map(cc.locations.map((l) => [l.id, l.branchId]));
+    const central = cc.branches.some((b) => b.isCentral && cc.inView(b.id) && cc.viewBranch === b.id);
+    return all.filter((r) => r.kind === "supply" && (central || cc.inView(r.branchId ?? br.get(r.branchLocationId ?? "")) || (!!r.toLocationId && cc.inView(br.get(r.toLocationId)))));
+  }, [all, cc]);
   const [onlyOpen, setOnlyOpen] = useState(true);
   const shown = useMemo(() => (onlyOpen ? rows.filter(requestOpen) : rows), [rows, onlyOpen]);
   const [add, setAdd] = useState(false);

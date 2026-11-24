@@ -42,7 +42,7 @@ export default function Branches() {
         {manage && area.add ? <Button icon={<Plus />} onClick={() => setEdit("new")}>اضافة فرع</Button> : null}
       </div>
       <Card className="overflow-hidden">
-        <Table columns={columns} rows={cc.branches} rowKey={(b) => b.id} onRowClick={manage && area.edit ? (b) => setEdit(b) : undefined} empty={<EmptyState compact icon={<Store />} title="لا توجد فروع" />} />
+        <Table columns={columns} rows={cc.branches.filter((b) => cc.inView(b.id))} rowKey={(b) => b.id} onRowClick={manage && area.edit ? (b) => setEdit(b) : undefined} empty={<EmptyState compact icon={<Store />} title="لا توجد فروع" />} />
       </Card>
       {edit ? <BranchDialog key={edit === "new" ? "new" : edit.id} row={edit === "new" ? null : edit} code={edit === "new" ? nextCode : branchCode(edit, cc.branches)} cc={cc} onClose={() => setEdit(null)} /> : null}
       {del ? <DeleteBranch key={del.id} row={del} cc={cc} onClose={() => setDel(null)} /> : null}

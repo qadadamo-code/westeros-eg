@@ -49,7 +49,11 @@ export default function Purchases() {
   const { can } = useSession();
   const area = useArea();
   const all = useLive("stockRequests", { orderBy: [{ field: "at", dir: "desc" }] }).data;
-  const rows = useMemo(() => all.filter((r) => r.kind === "purchase"), [all]);
+  // الفرع المعروض: by the warehouse the purchase enters (or its branch); one with neither shows everywhere
+  const rows = useMemo(() => {
+    const br = new Map(cc.locations.map((l) => [l.id, l.branchId]));
+    return all.filter((r) => r.kind === "purchase" && cc.inView(r.toLocationId ? br.get(r.toLocationId) : r.branchId));
+  }, [all, cc]);
   const [onlyOpen, setOnlyOpen] = useState(true);
   const shown = useMemo(() => (onlyOpen ? rows.filter((r) => requestOpen(r) || r.lines.some(awaitingInvoice)) : rows), [rows, onlyOpen]);
   const [edit, setEdit] = useState<StockRequest | "new" | null>(null);

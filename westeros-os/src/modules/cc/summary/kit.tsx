@@ -119,7 +119,9 @@ export function useStockFigures(cc: Cc) {
     const byLoc = new Map<string, number>();
     const byItem = new Map<string, number>();
     const qtyByItem = new Map<string, number>();
+    const br = new Map(cc.locations.map((l) => [l.id, l.branchId]));
     for (const l of cc.levels) {
+      if (!cc.inView(br.get(l.locationId))) continue;
       byLoc.set(l.locationId, (byLoc.get(l.locationId) ?? 0) + l.value);
       byItem.set(l.itemId, (byItem.get(l.itemId) ?? 0) + l.value);
       qtyByItem.set(l.itemId, (qtyByItem.get(l.itemId) ?? 0) + l.qty);

@@ -2,6 +2,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { ArrowLeftRight, BarChart3, Boxes, Building2, ClipboardCheck, ShoppingCart, Truck, Warehouse } from "lucide-react";
 import { PageHeader } from "@/shell/PageHeader";
+import { ViewBranchPicker } from "@/shell/ViewBranchPicker";
 import { AreaGate, useTabs } from "../useAccess";
 import { RouteTabs } from "@/modules/marketing/ui";
 import Branches from "./Branches";
@@ -30,7 +31,7 @@ export default function StoresPage() {
         ]);
   return (
     <div className="grid gap-5">
-      <PageHeader icon={<Warehouse />} title="المخازن والفروع" />
+      <PageHeader icon={<Warehouse />} title="المخازن والفروع" actions={<ViewBranchPicker />} />
       <RouteTabs
         label="المخازن والفروع"
         items={tabs}

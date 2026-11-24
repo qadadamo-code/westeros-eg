@@ -35,7 +35,7 @@ export default function Counts() {
         {can("inventory.count") && area.add ? <Button icon={<Plus />} onClick={() => setAdd(true)}>اضافة عملية جرد</Button> : null}
       </div>
       <Card className="overflow-hidden">
-        <Table columns={columns} rows={counts} rowKey={(c) => c.id} onRowClick={(c) => setShow(c)} empty={<EmptyState compact icon={<ClipboardCheck />} title="لا توجد عمليات جرد" />} />
+        <Table columns={columns} rows={counts.filter((c) => cc.inView(c.branchId))} rowKey={(c) => c.id} onRowClick={(c) => setShow(c)} empty={<EmptyState compact icon={<ClipboardCheck />} title="لا توجد عمليات جرد" />} />
       </Card>
       {add ? <CountDialog cc={cc} onClose={() => setAdd(false)} onSaved={(c) => (setAdd(false), setShow(c))} /> : null}
       {show ? <CountResult cc={cc} count={show} onClose={() => setShow(null)} /> : null}
@@ -54,10 +54,10 @@ function CountDialog({ cc, onClose, onSaved }: { cc: Cc; onClose: () => void; on
   const db = useDb();
   const { toast } = useToast();
   const [at] = useState(() => nowIso());
-  const [where, setWhere] = useState(cc.warehouses[0]?.id ?? "");
+  const [where, setWhere] = useState(cc.viewWarehouses[0]?.id ?? "");
   const [lines, setLines] = useState<QtyLine[]>([]);
   const [busy, setBusy] = useState(false);
-  const loc = cc.warehouses.find((l) => l.id === where);
+  const loc = cc.viewWarehouses.find((l) => l.id === where);
   const items = useMemo(() => (loc ? cc.all.filter((i) => i.active && cc.fits(loc, i)) : []), [cc, loc]);
   const save = async () => {
     if (!loc) return;
@@ -86,7 +86,7 @@ function CountDialog({ cc, onClose, onSaved }: { cc: Cc; onClose: () => void; on
       <div className="grid gap-4">
         <div className="grid gap-3 sm:grid-cols-3">
           <ReadOnly label="التاريخ والوقت الحاليين"><span className="num">{fmtAt(at)}</span></ReadOnly>
-          <Select label="المخزن" value={where} onChange={(e) => (setWhere(e.target.value), setLines([]))} options={cc.warehouses.map((l) => ({ value: l.id, label: l.name.ar }))} />
+          <Select label="المخزن" value={where} onChange={(e) => (setWhere(e.target.value), setLines([]))} options={cc.viewWarehouses.map((l) => ({ value: l.id, label: l.name.ar }))} />
           <ReadOnly label="اسم امين المخزن">{cc.memberById.get(loc?.keeperId ?? "")?.name ?? cc.staff?.name ?? "—"}</ReadOnly>
         </div>
         <div className="grid gap-2">

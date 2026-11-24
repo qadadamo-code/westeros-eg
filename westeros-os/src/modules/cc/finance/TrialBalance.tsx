@@ -1,4 +1,5 @@
 /** ميزان المراجعة: opening, movement and closing of every account, at any level of the tree. */
+import { useViewBranchState } from "@/auth/viewBranch";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CheckCircle2, TriangleAlert } from "lucide-react";
@@ -14,7 +15,7 @@ export default function TrialBalance() {
   const fin = useFinance();
   const nav = useNavigate();
   const [period, setPeriod] = useState<Period>(periodOf("year", fin.settings.yearStartMonth));
-  const [branch, setBranch] = useState("");
+  const [branch, setBranch] = useViewBranchState();
   const [level, setLevel] = useState("leaves");
   const [mode, setMode] = useState<"full" | "balances" | "totals">("full");
   const [hideZero, setHideZero] = useState(true);

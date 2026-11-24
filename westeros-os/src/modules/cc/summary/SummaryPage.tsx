@@ -8,6 +8,7 @@ import { Link } from "react-router-dom";
 import { AlarmClock, AlertTriangle, BarChart3, ChefHat, ChevronLeft, Factory, Landmark, Package, PieChart, ShoppingCart, Truck, Users, Wallet, Warehouse } from "lucide-react";
 import { useLive } from "@/data/hooks";
 import { PageHeader } from "@/shell/PageHeader";
+import { ViewBranchPicker } from "@/shell/ViewBranchPicker";
 import { BarList } from "@/modules/marketing/ui";
 import { categoryName } from "@/modules/production/useProduction";
 import { BarChart, Card, CardHeader, Segmented, StatTile } from "@/ui";
@@ -26,7 +27,7 @@ const SCREEN_OF: Record<string, string> = { "stores.summary": "cc-stores", "mfg.
 function SummaryPageBody() {
   const cc = useCc();
   const prod = cc.prod;
-  const requests = useLive("stockRequests").data;
+  const requests = useLive("stockRequests").data.filter((r) => cc.inView(r.branchId ?? cc.locations.find((l) => l.id === (r.branchLocationId ?? r.toLocationId))?.branchId));
   const [span, setSpan] = useState<Span>("day");
   const s = useMemo(() => {
     const now = new Date();
@@ -61,13 +62,13 @@ function SummaryPageBody() {
     ...(FINANCE_ON ? [{ to: "/finance", area: "finance.dashboard", icon: <Landmark />, title: "مؤشرات الحسابات", sub: "المبيعات، المصروفات، الأرباح، الخزينة" }] : []),
   ].filter((d) => may(d.area, "view") && screenAllowed(SCREEN_OF[d.area]));
   const stock = useMemo(
-    () => prod.products.filter((p) => p.active).map((p) => ({ p, item: cc.itemById.get(p.stockItemId), qty: cc.onHand(p.stockItemId) })).filter((x) => x.item).sort((a, b) => b.qty - a.qty),
+    () => prod.products.filter((p) => p.active).map((p) => ({ p, item: cc.itemById.get(p.stockItemId), qty: cc.viewOnHand(p.stockItemId) })).filter((x) => x.item).sort((a, b) => b.qty - a.qty),
     [prod.products, cc],
   );
   const open = (k: "purchase" | "supply") => requests.filter((r) => r.kind === k && requestOpen(r)).length;
   return (
     <div className="grid gap-5">
-      <PageHeader icon={<BarChart3 />} title="الملخص" />
+      <PageHeader icon={<BarChart3 />} title="الملخص" actions={<ViewBranchPicker />} />
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatTile index={0} icon={<Factory />} label="تشغيلات اليوم" value={<span className="num">{s.todays.length}</span>} sub={money(s.todays.reduce((a, b) => a + b.totalCost, 0))} />
         <StatTile index={1} tone="brass" icon={<Wallet />} label="تكلفة انتاج الشهر" value={<span className="num">{money(s.monthCost)}</span>} />
@@ -76,7 +77,7 @@ function SummaryPageBody() {
         <StatTile index={4} tone="brass" icon={<Warehouse />} label="قيمة المخزون" value={<span className="num">{money(f.total)}</span>} sub={`خامات ${money(f.rawValue)} · مصنعات ${money(f.madeValue)}`} />
         <StatTile index={5} tone={f.low.length ? "danger" : "ok"} icon={<AlertTriangle />} label="أصناف تحت الحد الأدنى" value={<span className="num">{f.low.length}</span>} sub={`خامات رصيدها صفر: ${f.empty}`} />
         <StatTile index={6} tone="info" icon={<ChefHat />} label="المنتجات المصنعة" value={<span className="num">{prod.products.filter((p) => p.active).length}</span>} sub={`مواد خام: ${cc.raws.filter((r) => r.active).length}`} />
-        <StatTile index={7} icon={<Users />} label="الموظفين النشطين" value={<span className="num">{members.length}</span>} sub={`المخازن: ${cc.warehouses.length} · الفروع: ${cc.branches.length}`} />
+        <StatTile index={7} icon={<Users />} label="الموظفين النشطين" value={<span className="num">{members.length}</span>} sub={`المخازن: ${cc.viewWarehouses.length} · الفروع: ${cc.branches.filter((b) => cc.inView(b.id)).length}`} />
       </div>
       <Card>
         <CardHeader icon={<Factory />} title="انجاز الانتاج" subtitle="عدد التشغيلات، وتكلفتها عند الوقوف على العمود"

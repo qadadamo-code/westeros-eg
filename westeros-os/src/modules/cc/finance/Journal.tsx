@@ -1,4 +1,5 @@
 /** القيود اليومية: the journal, the entry form, and what can be done to an entry (approve, reject, reverse, copy, print). */
+import { useViewBranchState } from "@/auth/viewBranch";
 import { STOCK_REF_LABEL, STOCK_SOURCE } from "./sync";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -43,7 +44,7 @@ export default function Journal() {
   const [kind, setKind] = useState("");
   const [status, setStatus] = useState("");
   const [account, setAccount] = useState("");
-  const [branch, setBranch] = useState("");
+  const [branch, setBranch] = useViewBranchState();
   const [user, setUser] = useState("");
   const [form, setForm] = useState<{ row: FinEntry | null; seed?: Partial<FinEntry> } | null>(null);
   const [tools, setTools] = useState<"templates" | "recurring" | null>(null);

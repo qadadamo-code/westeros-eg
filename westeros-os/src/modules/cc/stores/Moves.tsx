@@ -34,7 +34,7 @@ export default function Moves() {
   const live = useLive("stockMoves", { where, orderBy: [{ field: "at", dir: "desc" }], limit: 300 });
   const moves = live.data;
   const [add, setAdd] = useState(false);
-  const rows = useMemo(() => moves.filter((m) => KIND_LABEL[m.kind]), [moves]);
+  const rows = useMemo(() => { const br = new Map(cc.locations.map((l) => [l.id, l.branchId])); return moves.filter((m) => KIND_LABEL[m.kind] && cc.inView(br.get(m.locationId))); }, [moves, cc]);
   const picked = itemId ? cc.itemById.get(itemId) : undefined;
   const filtered = !!(kind || itemId || locId);
   const locById = useMemo(() => new Map(cc.locations.map((l) => [l.id, l])), [cc.locations]);
@@ -74,7 +74,7 @@ export default function Moves() {
             <ItemPicker items={cc.all} onPick={(i) => setItemId(i.id)} placeholder="كل المخزون: اكتب الاسم أو الكود" />
           )}
         </div>
-        <Select label="المخزن" value={locId} onChange={(e) => setLocId(e.target.value)} options={[{ value: "", label: "كل المخازن" }, ...cc.locations.map((l) => ({ value: l.id, label: whName(cc, l) }))]} />
+        <Select label="المخزن" value={locId} onChange={(e) => setLocId(e.target.value)} options={[{ value: "", label: "كل المخازن" }, ...cc.locations.filter((l) => cc.inView(l.branchId)).map((l) => ({ value: l.id, label: whName(cc, l) }))]} />
       </div>
       {filtered ? (
         <div className="flex flex-wrap items-center gap-3 text-[13px] text-muted">
@@ -98,11 +98,11 @@ function MoveDialog({ cc, onClose }: { cc: Cc; onClose: () => void }) {
   const { toast } = useToast();
   const [at, setAt] = useState(nowLocal);
   const [type, setType] = useState<MoveType>("opening");
-  const [from, setFrom] = useState(cc.warehouses[0]?.id ?? "");
+  const [from, setFrom] = useState(cc.viewWarehouses[0]?.id ?? "");
   const [to, setTo] = useState("");
   const [lines, setLines] = useState<QtyLine[]>([]);
   const [busy, setBusy] = useState(false);
-  const loc = cc.warehouses.find((l) => l.id === from);
+  const loc = cc.viewWarehouses.find((l) => l.id === from);
   // *** المخزن فيه اصناف حسب نوعه
   const items = useMemo(() => (loc ? cc.all.filter((i) => i.active && cc.fits(loc, i)) : []), [cc, loc]);
   const good = lines.filter((l) => l.qty > 0);
@@ -139,7 +139,7 @@ function MoveDialog({ cc, onClose }: { cc: Cc; onClose: () => void }) {
         <div className="grid gap-3 sm:grid-cols-2">
           <Input label="التاريخ والوقت" type="datetime-local" dir="ltr" value={at} onChange={(e) => setAt(e.target.value)} />
           <Select label="نوع الحركة" value={type} onChange={(e) => setType(e.target.value as MoveType)} options={(Object.keys(TYPE_LABEL) as MoveType[]).map((t) => ({ value: t, label: TYPE_LABEL[t] }))} />
-          <Select label={type === "transfer" ? "من مخزن" : "المخزن"} value={from} onChange={(e) => (setFrom(e.target.value), setLines([]))} options={cc.warehouses.map((l) => ({ value: l.id, label: whName(cc, l) }))} />
+          <Select label={type === "transfer" ? "من مخزن" : "المخزن"} value={from} onChange={(e) => (setFrom(e.target.value), setLines([]))} options={cc.viewWarehouses.map((l) => ({ value: l.id, label: whName(cc, l) }))} />
           {type === "transfer" ? <Select label="الى مخزن" value={to} onChange={(e) => setTo(e.target.value)} options={[{ value: "", label: "اختر المخزن" }, ...cc.warehouses.filter((l) => l.id !== from).map((l) => ({ value: l.id, label: whName(cc, l) }))]} /> : null}
           <ReadOnly label="اسم امين المخزن">{cc.staff?.name ?? "—"}</ReadOnly>
         </div>

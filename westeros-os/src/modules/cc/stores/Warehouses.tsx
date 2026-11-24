@@ -46,7 +46,7 @@ export default function Warehouses() {
         {manage && area.add ? <Button icon={<Plus />} onClick={() => setEdit("new")}>انشاء مخزن</Button> : null}
       </div>
       <Card className="overflow-hidden">
-        <Table columns={columns} rows={cc.warehouses} rowKey={(l) => l.id} onRowClick={(l) => setShow(l)} empty={<EmptyState compact icon={<Warehouse />} title="لا توجد مخازن" />} />
+        <Table columns={columns} rows={cc.viewWarehouses} rowKey={(l) => l.id} onRowClick={(l) => setShow(l)} empty={<EmptyState compact icon={<Warehouse />} title="لا توجد مخازن" />} />
       </Card>
       {edit ? <WarehouseDialog key={edit === "new" ? "new" : edit.id} row={edit === "new" ? null : edit} code={edit === "new" ? nextCode : (edit.code ?? nextCode)} cc={cc} onClose={() => setEdit(null)} /> : null}
       {show ? <WarehouseView key={show.id} row={cc.locations.find((l) => l.id === show.id) ?? show} cc={cc} onClose={() => setShow(null)} /> : null}

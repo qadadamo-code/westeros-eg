@@ -1,4 +1,5 @@
 /** المبيعات: ملخص مبيعات كل يوم أو وردية بقيد واحد، وتسوية ما ينتظر التحصيل من طلبات والفيزا والمحافظ. */
+import { useViewBranchState } from "@/auth/viewBranch";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeftRight, Plus, ReceiptText, Trash2 } from "lucide-react";
@@ -28,7 +29,7 @@ export default function Sales() {
   const docs = useLive("finDocs").data;
   const [tab, setTab] = useState<Tab>("days");
   const [period, setPeriod] = useState<Period>(periodOf("month", fin.settings.yearStartMonth));
-  const [branch, setBranch] = useState("");
+  const [branch, setBranch] = useViewBranchState();
   const [add, setAdd] = useState(false);
   const [settle, setSettle] = useState<{ fromId?: string } | null>(null);
   const [show, setShow] = useState<FinDoc | null>(null);

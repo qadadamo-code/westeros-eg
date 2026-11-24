@@ -7,7 +7,9 @@ import { useFinPerms } from "./perms";
 import { indexChart } from "./tree";
 
 export function useFinance() {
-  const { branchId, branches: mine } = useSession();
+  const { branchId, branches: mine, staff } = useSession();
+  // مكان العمل: a user held to some branches sees only them, whatever the role
+  const work = staff && staff.branchIds.length ? staff.branchIds.join(",") : "";
   const accountsLive = useLive("finAccounts");
   const accounts = accountsLive.data;
   const entries = useLive("finEntries").data;
@@ -26,10 +28,10 @@ export function useFinance() {
       branchName: (id: string | null | undefined) => branchById.get(id ?? "")?.name.ar ?? "كل الفروع",
       branchId: branchId ?? mine.find((b) => b.isDefault)?.id ?? mine[0]?.id ?? null,
       /** the only branches this user may look at; null = all of them */
-      onlyBranches: everyBranch || !mine.length ? null : mine.map((b) => b.id),
+      onlyBranches: work ? work.split(",") : everyBranch || !mine.length ? null : mine.map((b) => b.id),
       /** "1101 · النقدية" */
       label: (id: string | null | undefined) => { const x = byId.get(id ?? ""); return x ? `${x.code} · ${x.name.ar}` : "—"; },
     };
-  }, [accounts, entries, centres, settingsRow, branches, accountsLive.loading, branchId, mine, everyBranch]);
+  }, [accounts, entries, centres, settingsRow, branches, accountsLive.loading, branchId, mine, everyBranch, work]);
 }
 export type Fin = ReturnType<typeof useFinance>;

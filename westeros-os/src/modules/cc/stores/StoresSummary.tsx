@@ -11,8 +11,9 @@ import { KIND_LABEL } from "./Moves";
 export default function StoresSummary() {
   const cc = useCc();
   const f = useStockFigures(cc);
-  const requests = useLive("stockRequests").data;
-  const moves = useLive("stockMoves", { orderBy: [{ field: "at", dir: "desc" }], limit: 3000 }).data;
+  const requests = useLive("stockRequests").data.filter((r) => cc.inView(r.branchId ?? cc.locations.find((l) => l.id === (r.branchLocationId ?? r.toLocationId))?.branchId));
+  const movesAll = useLive("stockMoves", { orderBy: [{ field: "at", dir: "desc" }], limit: 3000 }).data;
+  const moves = useMemo(() => { const br = new Map(cc.locations.map((l) => [l.id, l.branchId])); return movesAll.filter((m) => cc.inView(br.get(m.locationId))); }, [movesAll, cc]);
   const [span, setSpan] = useState<Span>("day");
   const flow = useMemo(
     () =>
@@ -41,7 +42,7 @@ export default function StoresSummary() {
     <div className="grid gap-5">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatTile index={0} tone="brass" icon={<Wallet />} label="قيمة المخزون" value={<span className="num">{money(f.total)}</span>} sub={`خامات ${money(f.rawValue)} · مصنعات ${money(f.madeValue)}`} />
-        <StatTile index={1} icon={<Warehouse />} label="المخازن" value={<span className="num">{cc.warehouses.length}</span>} sub={<span><Building2 className="inline size-3.5" /> الفروع: {cc.branches.length}</span>} />
+        <StatTile index={1} icon={<Warehouse />} label="المخازن" value={<span className="num">{cc.viewWarehouses.length}</span>} sub={<span><Building2 className="inline size-3.5" /> الفروع: {cc.branches.filter((b) => cc.inView(b.id)).length}</span>} />
         <StatTile index={2} tone={f.low.length ? "danger" : "ok"} icon={<AlertTriangle />} label="أصناف تحت الحد الأدنى" value={<span className="num">{f.low.length}</span>} sub={`خامات رصيدها صفر: ${f.empty}`} />
         <StatTile index={3} tone="info" icon={<Truck />} label="طلبات توريد مفتوحة" value={<span className="num">{open("supply").length}</span>} sub={<span><ShoppingCart className="inline size-3.5" /> طلبات شراء مفتوحة: {open("purchase").length}{late ? ` · متأخرة: ${late}` : ""}</span>} />
       </div>

@@ -1,4 +1,5 @@
 /** الخزينة والبنوك: الخزائن والحسابات البنكية، سندات القبض والصرف، التحويلات، المصروفات، المصروفات المقدمة، جرد الخزينة وتسوية البنك. */
+import { useViewBranchState } from "@/auth/viewBranch";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowDownToLine, ArrowLeftRight, ArrowUpFromLine, Banknote, Calculator, Paperclip, Plus, Receipt, Repeat, X } from "lucide-react";
@@ -294,7 +295,7 @@ function AddMoney({ fin, onClose }: { fin: Fin; onClose: () => void }) {
   const { toast } = useToast();
   const [kind, setKind] = useState<"cash" | "bank" | "wallet">("bank");
   const [name, setName] = useState("");
-  const [branch, setBranch] = useState("");
+  const [branch, setBranch] = useViewBranchState();
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const save = async () => {
