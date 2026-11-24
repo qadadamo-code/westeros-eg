@@ -18,6 +18,7 @@ export const FIN_PERMS = [
   { id: "budget", label: "الموازنة التقديرية" },
   { id: "close.month", label: "إقفال وفتح شهر" },
   { id: "close.year", label: "إقفال سنة" },
+  { id: "balances", label: "عرض رصيد الحساب جنبه لما يتختار في أي عملية" },
   { id: "branches.all", label: "كل الفروع (بدونها يشوف فروعه فقط في المؤشرات والتقارير والقيود)" },
 ] as const;
 export type FinPerm = (typeof FIN_PERMS)[number]["id"];
@@ -25,7 +26,7 @@ export type FinPerm = (typeof FIN_PERMS)[number]["id"];
 const ALL = FIN_PERMS.map((p) => p.id) as FinPerm[];
 const BY_ROLE: Record<MfgUserType["role"], FinPerm[]> = {
   admin: ALL,
-  manager: ["chart.view", "journal.approve", "reports", "close.month", "branches.all"],
+  manager: ["chart.view", "journal.approve", "reports", "close.month", "branches.all", "balances"],
   chef: [],
   kitchen: [],
   cashier: [],

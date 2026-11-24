@@ -33,6 +33,8 @@ export interface ReceiptSource {
   branch: { name: Localized; address: Localized; phone: string | null } | null;
   receiptNo: string | null;
   orderNumber: number | null;
+  /** كود الطلب في تطبيق التوصيل */
+  externalRef?: string | null;
   issuedAt: string;
   cashier: string | null;
   waiter: string | null;
@@ -140,6 +142,7 @@ export function buildReceiptModel(src: ReceiptSource): ReceiptModel {
     if (z.buyer.vatNumber) meta.push({ label: L("الرقم الضريبي للمشتري", "Buyer VAT No."), value: z.buyer.vatNumber, mono: true });
   }
   if (src.orderNumber != null) meta.push({ label: L("رقم الطلب", "Order"), value: `#${src.orderNumber}`, mono: true });
+  if (src.externalRef) meta.push({ label: L("كود طلب التطبيق", "App order code"), value: src.externalRef, mono: true });
   meta.push({ label: L("التاريخ", "Date"), value: formatStamp(src.issuedAt), mono: true });
   if (f.orderType) meta.push({ label: L("النوع", "Type"), value: MODE_LABEL[src.pickup ? "pickup" : src.mode] });
   if (f.table && src.tableLabels.length) meta.push({ label: L("ترابيزة", "Table"), value: src.tableLabels.join(" + "), mono: true });

@@ -275,6 +275,8 @@ export interface MenuItem extends TenantRow {
   comboOf?: ComboComponent[];
   /** hidden from these channels (e.g. not on aggregators) */
   hiddenOn?: SalesChannel[];
+  /** قنوات البيع (ids) اللي الصنف مش مفعل فيها: بيختفي من الكاشير لما الطلب عليها. 0049 */
+  offChannels?: string[];
   /* المنيو (0043_menu_options.sql) */
   /** taken off the price at the till */
   discount?: Units;
@@ -341,6 +343,8 @@ export interface Order extends TenantRow {
   source: OrderSource;
   /** the sales channel (الحسابات > المبيعات) the order was taken on: its price level, tax and service. 0046 */
   channelId?: string | null;
+  /** كود الطلب في تطبيق التوصيل (طلبات، كيتا…). 0049 */
+  externalRef?: string | null;
   status: OrderStatus;
   tableIds: string[];
   checkId: string | null;
@@ -451,6 +455,8 @@ export interface Payment extends TenantRow {
   status: PaymentStatus;
   takenBy: string | null;
   refundOf: string | null;
+  /** طريقة الدفع المعرفة في الحسابات > المبيعات > طرق الدفع. 0049 */
+  payMethodId?: string | null;
 }
 
 /* ───────────── Service ───────────── */

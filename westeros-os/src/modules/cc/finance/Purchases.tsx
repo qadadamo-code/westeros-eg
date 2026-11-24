@@ -16,7 +16,8 @@ import { useActor, useFinPerms } from "./perms";
 import { AGE_BUCKETS, daysLate, supplierBook, paySplit, PURCHASE, PURCHASE_RETURN, purchaseOf, purchaseProblem, purchaseTotals, supplierOf, type PurchaseLine } from "./purchases";
 import { paySupplier, postPurchase, postReturn, saveSupplier } from "./purchaseOps";
 import { METHODS, MONEY_LABEL, moneyAccounts } from "./treasury";
-import { AccountSelect, BranchSelect, esc, fmt, fromText, printDoc, PrintButton, printTable, toText, today, Toolbar } from "./ui";
+import { BuyMethodSelect } from "./PayMethods";
+import { AccountSelect, useBalanceHint, BranchSelect, esc, fmt, fromText, printDoc, PrintButton, printTable, toText, today, Toolbar } from "./ui";
 import { baseOf } from "./currency";
 import { useAmountCurrency } from "./AmountCurrency";
 import { useFinance, type Fin } from "./useFinance";
@@ -217,8 +218,9 @@ function InvoiceDialog({ fin, mode, suppliers, supplierId, of, request, onClose,
   const itemById = useMemo(() => new Map(items.map((i) => [i.id, i] as [string, StockItem])), [items]);
   const money = useMemo(() => moneyAccounts(fin.ix.ordered()), [fin.ix]);
   const active = suppliers.filter((s) => s.status === "active" || s.id === supplierId);
-  const [d, setD] = useState({ supplierId: supplierId ?? "", date: today(), invoiceNo: "", due: "", payment: "credit" as "credit" | "cash", moneyId: money[0]?.id ?? "", discount: "", note: request ? `طلب شراء رقم ${request.number}` : "", branchId: fin.branchId ?? "" });
+  const [d, setD] = useState({ supplierId: supplierId ?? "", date: today(), invoiceNo: "", due: "", payment: "credit" as "credit" | "cash", moneyId: money[0]?.id ?? "", payMethod: "", discount: "", note: request ? `طلب شراء رقم ${request.number}` : "", branchId: fin.branchId ?? "" });
   const [rows, setRows] = useState<Row[]>(() => (request ? request.lines.filter(awaitingInvoice).map((l) => ({ ...blank("item"), itemId: l.itemId, locationId: l.locationId ?? "", qty: String(l.receivedQty) })) : of ? purchaseOf(of).lines.filter((l) => l.type === "item").map((l) => ({ ...blank("item"), itemId: l.itemId ?? "", locationId: l.locationId ?? "", qty: String(l.qty), price: toText(l.price), vat: l.vatBp ? String(l.vatBp / 100) : "" })) : [blank("item", locs.find((l) => l.active)?.id ?? "")]));
+  const moneyHint = useBalanceHint(fin, d.payment === "cash" ? d.moneyId : null);
   const [files, setFiles] = useState<{ name: string; url: string }[]>([]);
   const [busy, setBusy] = useState(false);
   const file = useRef<HTMLInputElement>(null);
@@ -256,7 +258,8 @@ function InvoiceDialog({ fin, mode, suppliers, supplierId, of, request, onClose,
           {mode === "invoice" ? <Input label="رقم فاتورة المورد" dir="ltr" value={d.invoiceNo} onChange={(e) => setD({ ...d, invoiceNo: e.target.value })} /> : null}
           <BranchSelect fin={fin} label="الفرع" className="w-full" all={null} value={d.branchId} onChange={(v) => setD({ ...d, branchId: v })} />
           <div className="grid gap-1"><span className="text-[13px] font-semibold text-muted">{mode === "invoice" ? "الدفع" : "قيمة المرتجع"}</span><Segmented label="الدفع" value={d.payment} onChange={(p) => setD({ ...d, payment: p })} options={mode === "invoice" ? [{ value: "credit", label: "آجل" }, { value: "cash", label: "نقدي" }] : [{ value: "credit", label: "تخصم من رصيد المورد" }, { value: "cash", label: "استلمناها نقدا" }]} /></div>
-          {d.payment === "cash" ? <Select label={mode === "invoice" ? "من خزينة أو بنك" : "إلى خزينة أو بنك"} value={d.moneyId} onChange={(e) => setD({ ...d, moneyId: e.target.value })} options={[{ value: "", label: "اختر" }, ...money.map((a) => ({ value: a.id, label: `${a.name.ar} (${MONEY_LABEL[a.kind]})` }))]} /> : mode === "invoice" ? <Input label="تاريخ الاستحقاق" type="date" dir="ltr" value={due} onChange={(e) => setD({ ...d, due: e.target.value })} hint={terms ? `مدة السداد ${terms} يوم` : undefined} /> : null}
+          {d.payment === "cash" && mode === "invoice" ? <BuyMethodSelect settings={fin.settings} value={d.payMethod} onPick={(name, acc) => setD({ ...d, payMethod: name, moneyId: acc ?? d.moneyId })} /> : null}
+          {d.payment === "cash" ? <Select label={mode === "invoice" ? "من خزينة أو بنك" : "إلى خزينة أو بنك"} value={d.moneyId} hint={moneyHint} onChange={(e) => setD({ ...d, moneyId: e.target.value })} options={[{ value: "", label: "اختر" }, ...money.map((a) => ({ value: a.id, label: `${a.name.ar} (${MONEY_LABEL[a.kind]})` }))]} /> : mode === "invoice" ? <Input label="تاريخ الاستحقاق" type="date" dir="ltr" value={due} onChange={(e) => setD({ ...d, due: e.target.value })} hint={terms ? `مدة السداد ${terms} يوم` : undefined} /> : null}
         </div>
         <div className="grid gap-2">
           {rows.map((r, i) => {
@@ -358,6 +361,7 @@ function PayDialog({ fin, supplier, onClose, onSaved }: { fin: Fin; supplier: Su
   const money = useMemo(() => moneyAccounts(fin.ix.ordered()), [fin.ix]);
   const [d, setD] = useState({ date: today(), moneyId: money[0]?.id ?? "", amount: "", withhold: supplier.data.withholdBp ? String(supplier.data.withholdBp / 100) : "", discount: "", memo: "", method: METHODS[0], ref: "", branchId: fin.branchId ?? "" });
   const [busy, setBusy] = useState(false);
+  const moneyHint = useBalanceHint(fin, d.moneyId);
   const ac = useAmountCurrency(fin, baseOf(fin.settings));
   const input = { supplierId: supplier.doc.id, date: d.date, moneyId: d.moneyId, amount: ac.convert(fromText(d.amount)), paidIn: ac.paidIn(fromText(d.amount)), withholdBp: Math.round((Number(d.withhold) || 0) * 100), discount: fromText(d.discount), memo: d.memo, method: d.method, ref: d.ref, branchId: d.branchId || null };
   const s = paySplit(input);
@@ -376,13 +380,13 @@ function PayDialog({ fin, supplier, onClose, onSaved }: { fin: Fin; supplier: Su
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="rounded-xl border border-line p-3 sm:col-span-2"><div className="text-[12.5px] text-muted">الرصيد المستحق للمورد</div><div className="num text-[20px] font-bold" dir="ltr">{fmt(balance)}</div>{supplier.overdue ? <div className="text-[13px] text-danger">منه متأخر {fmt(supplier.overdue)}</div> : null}</div>
         <Input label="التاريخ" type="date" dir="ltr" value={d.date} onChange={(e) => setD({ ...d, date: e.target.value })} />
-        <Select label="من خزينة أو بنك" value={d.moneyId} onChange={(e) => setD({ ...d, moneyId: e.target.value })} options={[{ value: "", label: "اختر" }, ...money.map((a) => ({ value: a.id, label: `${a.name.ar} (${MONEY_LABEL[a.kind]})` }))]} />
+        <Select label="من خزينة أو بنك" value={d.moneyId} hint={moneyHint} onChange={(e) => setD({ ...d, moneyId: e.target.value })} options={[{ value: "", label: "اختر" }, ...money.map((a) => ({ value: a.id, label: `${a.name.ar} (${MONEY_LABEL[a.kind]})` }))]} />
         <Input label={`المبلغ المدفوع (${ac.sym(ac.cur)})`} dir="ltr" inputMode="decimal" autoFocus value={d.amount} onChange={(e) => setD({ ...d, amount: e.target.value })} hint={balance > 0 && !ac.on ? <button type="button" className="text-primary underline-offset-2 hover:underline" onClick={full}>سدد الرصيد كله</button> : undefined} />
         {ac.select}
         {ac.box(fromText(d.amount))}
         <Input label="خصم من المنبع %" dir="ltr" inputMode="decimal" placeholder="بدون" value={d.withhold} onChange={(e) => setD({ ...d, withhold: e.target.value })} hint={s.withheld ? `يخصم ${fmt(s.withheld)} ويتسجل مستحق للضرائب` : undefined} />
         <Input label="خصم مكتسب من المورد (ج.م)" dir="ltr" inputMode="decimal" placeholder="0" value={d.discount} onChange={(e) => setD({ ...d, discount: e.target.value })} />
-        <Select label="طريقة الدفع" value={d.method} onChange={(e) => setD({ ...d, method: e.target.value })} options={METHODS.map((m) => ({ value: m, label: m }))} />
+        <BuyMethodSelect settings={fin.settings} value={d.method} fallback={METHODS} onPick={(name, acc) => setD({ ...d, method: name, moneyId: acc ?? d.moneyId })} />
         <Input label="رقم مرجعي (شيك، تحويل)" dir="ltr" value={d.ref} onChange={(e) => setD({ ...d, ref: e.target.value })} />
         <BranchSelect fin={fin} label="الفرع" className="w-full" all={null} value={d.branchId} onChange={(v) => setD({ ...d, branchId: v })} />
         <div className="sm:col-span-2"><Textarea label="البيان" rows={2} value={d.memo} onChange={(e) => setD({ ...d, memo: e.target.value })} /></div>

@@ -1,6 +1,7 @@
 /** إضافة وتعديل صنف في المنيو: الاسم بالعربي والإنجليزي، السعر والخصم، وقت التحضير، الوصف، الصورة، الفئة، القنوات، ظاهر ومميز. */
 import { useState } from "react";
-import { useDb } from "@/data/hooks";
+import { useDb, useLive } from "@/data/hooks";
+import { channelsOf, soldOn, soldPatch } from "@/data/channels";
 import type { MenuCategory, MenuItem, SalesChannel } from "@/data/types";
 import { UNITS_PER_MAJOR } from "@/lib/money";
 import { Plus, Trash2 } from "lucide-react";
@@ -22,6 +23,7 @@ const num = (s: string) => {
 export function ItemDialog({ item, cats, items = [], defaultCat, sort, onClose, onSaved }: { item: MenuItem | null; cats: MenuCategory[]; items?: MenuItem[]; defaultCat: string; sort: number; onClose: () => void; onSaved?: (id: string) => void }) {
   const db = useDb();
   const { toast } = useToast();
+  const channels = channelsOf(useLive("settings").data[0]);
   const [d, setD] = useState(() => ({
     ar: item?.name.ar ?? "",
     en: item?.name.en ?? "",
@@ -34,6 +36,7 @@ export function ItemDialog({ item, cats, items = [], defaultCat, sort, onClose, 
     imageUrl: item?.imageUrl ?? null,
     categoryId: item?.categoryId ?? defaultCat ?? cats[0]?.id ?? "",
     hiddenOn: item?.hiddenOn ?? ([] as SalesChannel[]),
+    offChannels: item?.offChannels ?? ([] as string[]),
     active: item?.active ?? true,
     recommended: item?.recommended ?? false,
     // أصناف داخل الصنف (عرض أو بوكس بيشمل أصناف من المنيو): بتظهر تحته في الفاتورة وبتتحسب في مبيعاتها
@@ -57,6 +60,7 @@ export function ItemDialog({ item, cats, items = [], defaultCat, sort, onClose, 
         imageUrl: d.imageUrl,
         categoryId: d.categoryId,
         hiddenOn: d.hiddenOn,
+        offChannels: d.offChannels,
         active: d.active,
         recommended: d.recommended,
         comboOf: d.comboOf.filter((c) => c.itemId),
@@ -67,7 +71,7 @@ export function ItemDialog({ item, cats, items = [], defaultCat, sort, onClose, 
             cost: null, sku: null, stationId: null, modifierGroupIds: [], tags: [], available: true, vatExempt: false, sort,
             channelPrices: {}, branchPrices: {}, schedule: [], allergens: [], calories: fields.calories ?? null,
             ...(fields as Required<Pick<MenuItem, "name" | "description" | "price" | "prepMinutes" | "categoryId" | "active">>),
-            imageUrl: d.imageUrl, hiddenOn: d.hiddenOn, discount: fields.discount, recommended: d.recommended, comboOf: fields.comboOf ?? [],
+            imageUrl: d.imageUrl, hiddenOn: d.hiddenOn, offChannels: d.offChannels, discount: fields.discount, recommended: d.recommended, comboOf: fields.comboOf ?? [],
           });
       toast({ tone: "success", title: "اتحفظ الصنف" });
       onClose();
@@ -99,14 +103,14 @@ export function ItemDialog({ item, cats, items = [], defaultCat, sort, onClose, 
         </div>
         <ImageField value={d.imageUrl} onChange={(imageUrl) => set({ imageUrl })} />
         <div>
-          <p className="mb-2 text-[13px] font-semibold text-ink-2">بيتباع في</p>
+          <p className="mb-2 text-[13px] font-semibold text-ink-2">قنوات البيع المفعل فيها</p>
           <div className="flex flex-wrap gap-2">
-            {CHANNELS.map((c) => {
-              const on = !d.hiddenOn.includes(c.id);
+            {channels.map((c) => {
+              const on = soldOn(d, c);
               return (
-                <button key={c.id} type="button" aria-pressed={on} onClick={() => set({ hiddenOn: on ? [...d.hiddenOn, c.id] : d.hiddenOn.filter((x) => x !== c.id) })}
+                <button key={c.id} type="button" aria-pressed={on} onClick={() => set(soldPatch(d, c, !on))}
                   className={on ? "h-10 rounded-xl border border-primary bg-primary-soft px-4 text-[14px] font-semibold" : "h-10 rounded-xl border border-line px-4 text-[14px] text-muted"}>
-                  {on ? "✓ " : ""}{c.label}
+                  {on ? "✓ " : ""}{c.name}
                 </button>
               );
             })}

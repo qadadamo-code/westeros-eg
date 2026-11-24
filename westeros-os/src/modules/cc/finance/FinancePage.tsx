@@ -19,6 +19,8 @@ import { BuyingSummary, GeneralSummary, SellingSummary, StaffSummary } from "./S
 import Reports, { ReportRedirect } from "./Reports";
 import Sales from "./Sales";
 import { SalesChannels } from "./SalesChannels";
+import { PayMethods } from "./PayMethods";
+import SalesInvoice from "./SalesInvoice";
 import Settings from "./Settings";
 import Tax from "./Tax";
 import Treasury from "./Treasury";
@@ -93,6 +95,9 @@ export default function FinancePage() {
         <Route path="vouchers" element={gate("finance.treasury", <Treasury key="v" start="vouchers" />)} />
         <Route path="expenses" element={gate("finance.treasury", <Treasury key="e" start="vouchers" kind="expense" />)} />
         <Route path="sales" element={gate("finance.sales", <Sales />)} />
+        <Route path="sales-pay" element={gate("finance.sales", <PayMethods side="sales" can={perms.has("vouchers") || perms.has("settings")} />)} />
+        <Route path="buying-pay" element={gate("finance.purchases", <PayMethods side="buying" can={perms.has("vouchers") || perms.has("settings")} />)} />
+        <Route path="sales-invoice" element={gate("finance.sales", <SalesInvoice />)} />
         <Route path="channels" element={gate("finance.sales", <SalesChannels can={perms.has("vouchers") || perms.has("settings")} />)} />
         <Route path="purchases" element={gate("finance.purchases", <Purchases />)} />
         <Route path="customers" element={gate("finance.sales", <Customers />)} />

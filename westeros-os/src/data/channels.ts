@@ -8,7 +8,7 @@ import type { Units } from "@/lib/money";
 
 export type PriceLevel = 1 | 2 | 3;
 /** how the cashier treats the order: a table, a counter order, or a delivery with an address */
-export type ChannelKind = "dine_in" | "takeaway" | "delivery";
+export type ChannelKind = "dine_in" | "takeaway" | "delivery" | "aggregator";
 export interface SalesChannelDef {
   id: string;
   name: string;
@@ -20,7 +20,18 @@ export interface SalesChannelDef {
   visible: boolean;
 }
 
-export const KIND_LABEL: Record<ChannelKind, string> = { dine_in: "صالة (ترابيزات)", takeaway: "تيك أواي", delivery: "توصيل (عنوان الزبون)" };
+/** الأنواع الرئيسية (Mohammed 2026-11-24): محلي، استلام، توصيل، تطبيق توصيل (بيطلب كود الطلب في الكاشير) */
+export const KIND_LABEL: Record<ChannelKind, string> = { dine_in: "محلي (Dine in)", takeaway: "استلام (Pick up)", delivery: "توصيل (Delivery)", aggregator: "تطبيق توصيل (Aggregators)" };
+
+/** the order mode a channel's orders are taken in: an aggregator order is picked up by the app's rider */
+export const modeOf = (kind: ChannelKind): OrderMode => (kind === "aggregator" ? "takeaway" : kind);
+
+/** is the item sold on this channel: not switched off for it in جدول الأسعار, nor hidden on its kind the old way */
+export function soldOn(item: Pick<MenuItem, "offChannels" | "hiddenOn">, ch: Pick<SalesChannelDef, "id" | "kind"> | null | undefined): boolean {
+  if (!ch) return true;
+  if ((item.offChannels ?? []).includes(ch.id)) return false;
+  return !(item.hiddenOn ?? []).includes(ch.kind);
+}
 
 /** what the system did before channels existed: the tax as registered, the service on the modes it was set for */
 export function defaultChannels(tax?: Pick<TaxSettings, "vatRegistered" | "serviceRate" | "serviceModes"> | null): SalesChannelDef[] {
@@ -30,7 +41,7 @@ export function defaultChannels(tax?: Pick<TaxSettings, "vatRegistered" | "servi
     { id: "dine_in", name: "صالة", kind: "dine_in", level: 1, tax: vat, service: svc("dine_in"), visible: true },
     { id: "takeaway", name: "تيك أواي", kind: "takeaway", level: 1, tax: vat, service: svc("takeaway"), visible: true },
     { id: "delivery", name: "توصيل", kind: "delivery", level: 1, tax: vat, service: svc("delivery"), visible: true },
-    { id: "talabat", name: "طلبات", kind: "takeaway", level: 2, tax: vat, service: false, visible: true },
+    { id: "talabat", name: "طلبات", kind: "aggregator", level: 2, tax: vat, service: false, visible: true },
   ];
 }
 
@@ -42,7 +53,7 @@ export function channelFor(s: Pick<Settings, "salesChannels" | "tax"> | null | u
   const list = channelsOf(s);
   if (!order) return null;
   const mode = order.mode as string;
-  return list.find((c) => c.id === order.channelId) ?? list.find((c) => c.kind === mode) ?? null;
+  return list.find((c) => c.id === order.channelId) ?? list.find((c) => c.kind === mode) ?? list.find((c) => modeOf(c.kind) === mode) ?? null;
 }
 
 /** the item's price on a level: an empty second or third price falls back to the first */
@@ -58,4 +69,10 @@ export function taxFor(s: Pick<Settings, "salesChannels" | "tax">, order: Pick<O
   if (!ch) return s.tax;
   const mode = (order?.mode ?? "dine_in") as OrderMode;
   return { ...s.tax, vatRegistered: ch.tax && s.tax.vatRate > 0, serviceModes: ch.service ? [mode] : [] };
+}
+
+/** the change that switches an item on or off for a channel (an old kind-wide hide is lifted when it is switched on) */
+export function soldPatch(item: Pick<MenuItem, "offChannels" | "hiddenOn">, ch: Pick<SalesChannelDef, "id" | "kind">, on: boolean): Pick<MenuItem, "offChannels" | "hiddenOn"> {
+  const off = (item.offChannels ?? []).filter((x) => x !== ch.id);
+  return on ? { offChannels: off, hiddenOn: (item.hiddenOn ?? []).filter((k) => k !== ch.kind) } : { offChannels: [...off, ch.id], hiddenOn: item.hiddenOn ?? [] };
 }
