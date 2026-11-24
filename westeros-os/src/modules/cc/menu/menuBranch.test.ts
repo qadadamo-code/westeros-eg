@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { branchMenu, copyMenu, mainBranchOf } from "./menuBranch";
+import { branchMenu, mainBranchOf, syncMenu } from "./menuBranch";
 
 const base = { restaurantId: "r", createdAt: "", updatedAt: "" };
 const cats = [{ ...base, id: "c1", name: { ar: "برجر", en: "" }, sort: 1, color: "", icon: "", stationId: "s1", active: true }];
@@ -16,23 +16,30 @@ describe("menu per branch", () => {
     expect(m.mods.map((x) => x.id)).toEqual(["m1"]);
     expect(branchMenu(all, "b2", "b1").items.map((i) => i.id)).toEqual(["i2"]);
   });
-  it("copies a menu with its links pointing to the copies", async () => {
-    const rows: { c: string; r: Record<string, unknown> }[] = [];
-    const db = { insert: async (c: string, r: Record<string, unknown>) => (rows.push({ c, r }), r) } as never;
-    const n = await copyMenu(db, branchMenu(all, "b1", "b1"), "b3");
-    expect(n).toBe(1);
-    const cat = rows.find((x) => x.c === "menuCategories")!.r;
-    const grp = rows.find((x) => x.c === "modifierGroups")!.r;
-    const item = rows.find((x) => x.c === "menuItems")!.r;
-    const mod = rows.find((x) => x.c === "modifiers")!.r;
-    expect(cat.branchId).toBe("b3");
-    expect(cat.id).not.toBe("c1");
-    expect(cat.stationId).toBeNull();
-    expect(item.categoryId).toBe(cat.id);
-    expect(item.modifierGroupIds).toEqual([grp.id]);
-    expect((item.comboOf as { itemId: string }[])[0].itemId).toBe(item.id);
-    expect(mod.groupId).toBe(grp.id);
-    expect(mod.menuItemId).toBe(item.id);
-    expect(mod.id).toBeUndefined();
+  it("updates a branch from another: new items added with their options, existing ones updated, nothing doubled", async () => {
+    const rows: { op: string; c: string; id?: string; r?: Record<string, unknown> }[] = [];
+    const db = {
+      insert: async (c: string, r: Record<string, unknown>) => (rows.push({ op: "insert", c, r }), r),
+      update: async (c: string, id: string, r: Record<string, unknown>) => (rows.push({ op: "update", c, id, r }), r),
+      remove: async (c: string, id: string) => void rows.push({ op: "remove", c, id }),
+    } as never;
+    const src = { cats, items: [{ ...items[0], sku: "1001", name: { ar: "كلاسيك", en: "" }, price: 200 }, { ...base, id: "i9", categoryId: "c1", modifierGroupIds: [], sku: "1002", name: { ar: "جديد", en: "" } }], groups: [groups[0]], mods: [mods[0]] } as never;
+    const dst = { cats: [{ ...cats[0], id: "dc1", stationId: "s9" }], items: [{ ...base, id: "d1", categoryId: "dc1", modifierGroupIds: ["dg1"], sku: "1001", name: { ar: "كلاسيك", en: "" }, price: 150, stationId: "s9" }], groups: [{ ...groups[0], id: "dg1" }], mods: [] } as never;
+    const r = await syncMenu(db, src, dst, "b3");
+    expect(r).toEqual({ added: 1, updated: 1 });
+    expect(rows.filter((x) => x.c === "menuCategories" && x.op === "insert")).toHaveLength(0);
+    const upd = rows.find((x) => x.c === "menuItems" && x.op === "update")!;
+    expect(upd.id).toBe("d1");
+    expect(upd.r!.price).toBe(200);
+    expect(upd.r!.categoryId).toBe("dc1");
+    expect("stationId" in upd.r!).toBe(false);
+    const grp = rows.find((x) => x.c === "modifierGroups" && x.op === "insert")!.r!;
+    expect(upd.r!.modifierGroupIds).toEqual([grp.id]);
+    expect((upd.r!.comboOf as { itemId: string }[])[0].itemId).toBe("d1");
+    const ins = rows.filter((x) => x.c === "menuItems" && x.op === "insert");
+    expect(ins).toHaveLength(1);
+    expect(ins[0].r!.branchId).toBe("b3");
+    expect(rows.find((x) => x.c === "modifiers")!.r!.menuItemId).toBe("d1");
+    expect(rows.filter((x) => x.op === "remove").map((x) => x.id)).toEqual(["dg1"]);
   });
 });

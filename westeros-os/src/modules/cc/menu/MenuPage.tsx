@@ -13,7 +13,7 @@ import { cn } from "@/lib/cn";
 import { UNITS_PER_MAJOR } from "@/lib/money";
 import { PageHeader } from "@/shell/PageHeader";
 import { useViewBranch } from "@/auth/viewBranch";
-import { branchMenu, copyMenu, mainBranchOf, MenuBranchCtx, useMenuBranch } from "./menuBranch";
+import { branchMenu, syncMenu, mainBranchOf, MenuBranchCtx, useMenuBranch } from "./menuBranch";
 import { Badge, Button, Card, Dialog, EmptyState, IconButton, Input, Segmented, Select, Switch, useToast } from "@/ui";
 import { ImageField } from "../ui";
 import { AreaGate, useArea } from "../useAccess";
@@ -69,11 +69,11 @@ function Body() {
     if (!copyFrom || !mb) return;
     setCopying(true);
     try {
-      const n = await copyMenu(db, branchMenu({ cats: catsAll, items: itemsAll, groups: groupsAll, mods: modsAll }, copyFrom, main), mb);
-      toast({ tone: "success", title: `اتنسخ ${n} صنف للفرع ده` });
+      const r = await syncMenu(db, branchMenu({ cats: catsAll, items: itemsAll, groups: groupsAll, mods: modsAll }, copyFrom, main), { cats, items, groups, mods }, mb);
+      toast({ tone: "success", title: "اتحدث المنيو", description: `${r.added} صنف جديد، و${r.updated} صنف اتحدثت بياناته` });
       setCopyFrom("");
     } catch (e) {
-      toast({ tone: "error", title: "تعذر النسخ", description: err(e) });
+      toast({ tone: "error", title: "تعذر تحديث المنيو", description: err(e) });
     } finally {
       setCopying(false);
     }
@@ -150,9 +150,9 @@ function Body() {
         actions={tills.length > 1 ? <div className="w-48"><Select aria-label="منيو الفرع" value={mb ?? ""} onChange={(e) => setPicked(e.target.value)} options={tills.map((b) => ({ value: b.id, label: `منيو ${b.name.ar}` }))} /></div> : null} />
       {manage && others.length ? (
         <Card className="flex flex-wrap items-end gap-2 p-3">
-          <p className="min-w-0 flex-1 text-[13.5px] text-muted">{items.length ? "تقدر تضيف نسخة من منيو فرع تاني للفرع ده (الأصناف الموجودة بتفضل زي ما هي)." : "منيو الفرع ده فاضي. تقدر تبدأ بنسخة من منيو فرع تاني، وبعدها أي تعديل هنا ما بيأثرش على الفرع التاني."}</p>
-          <div className="w-48"><Select aria-label="انسخ من" value={copyFrom} onChange={(e) => setCopyFrom(e.target.value)} options={[{ value: "", label: "انسخ منيو من فرع…" }, ...others.map((b) => ({ value: b.id, label: b.name.ar }))]} /></div>
-          <Button size="sm" variant="brass" disabled={!copyFrom} loading={copying} onClick={() => void doCopy()}>نسخ المنيو</Button>
+          <p className="min-w-0 flex-1 text-[13.5px] text-muted">تحديث المنيو من فرع تاني: الأصناف الجديدة بتتضاف بكل إضافاتها وبياناتها، والأصناف الموجودة هنا (نفس الكود أو الاسم) بتتحدث بياناتها بس، من غير تكرار. الأصناف اللي في الفرع ده بس بتفضل زي ما هي.</p>
+          <div className="w-48"><Select aria-label="حدّث من" value={copyFrom} onChange={(e) => setCopyFrom(e.target.value)} options={[{ value: "", label: "حدّث المنيو من فرع…" }, ...others.map((b) => ({ value: b.id, label: b.name.ar }))]} /></div>
+          <Button size="sm" variant="brass" disabled={!copyFrom} loading={copying} onClick={() => void doCopy()}>تحديث المنيو</Button>
         </Card>
       ) : null}
       {!manage ? <p className="rounded-xl border border-line px-3 py-2 text-[13.5px] text-muted">للمشاهدة بس: الدور بتاعك مالوش صلاحية تعديل المنيو.</p> : null}
