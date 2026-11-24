@@ -17,7 +17,7 @@ import { formatMoney } from "@/lib/money";
 import { clock, startOfDay } from "@/lib/time";
 import { METHOD_LABEL, type ReceiptModel } from "@/lib/receipt/model";
 import { PageHeader } from "@/shell/PageHeader";
-import { AnimatedMoney, Badge, Button, Card, Dialog, EmptyState, Segmented, Sheet, StatTile, Table, useToast, type Tone } from "@/ui";
+import { AnimatedMoney, Badge, Button, Card, Dialog, EmptyState, Segmented, Select, Sheet, StatTile, Table, useToast, type Tone } from "@/ui";
 import { ReceiptDialog } from "../pos/components/ReceiptDialog";
 import { STATUS_LABEL } from "../pos/components/TicketPanel";
 import { ETA_LABEL } from "../pos/EtaQueue";
@@ -47,19 +47,53 @@ const SOURCE_LABEL: Record<Order["source"], { ar: string; en: string }> = {
 };
 const kindOf = (o: Order): Exclude<Kind, "all"> => (o.pickupAt ? "pickup" : o.mode);
 const KIND_ICON = { dine_in: Utensils, takeaway: ShoppingBag, pickup: Store, delivery: Bike };
+type Period = "today" | "yesterday" | "last30" | "month" | "lastMonth" | "last3" | "day";
+const PERIODS: { value: Period; ar: string; en: string }[] = [
+  { value: "today", ar: "اليوم", en: "Today" },
+  { value: "yesterday", ar: "أمس", en: "Yesterday" },
+  { value: "last30", ar: "آخر 30 يوم", en: "Last 30 days" },
+  { value: "month", ar: "الشهر الحالي", en: "This month" },
+  { value: "lastMonth", ar: "الشهر السابق", en: "Last month" },
+  { value: "last3", ar: "آخر 3 شهور", en: "Last 3 months" },
+  { value: "day", ar: "يوم معين", en: "A specific day" },
+];
+const isoDay = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+/** the business day starts at midnight, but before 5 AM "today" is still yesterday's shift */
+function periodRange(p: Period, day: string): { from: string; to: string } {
+  const today = startOfDay();
+  if (new Date().getHours() < 5) today.setDate(today.getDate() - 1);
+  const at = (y: number, m: number, d: number) => new Date(y, m, d);
+  const end = new Date(today); end.setDate(end.getDate() + 1); end.setHours(5, 0, 0, 0);
+  const span = (a: Date, b: Date) => ({ from: a.toISOString(), to: new Date(b.getTime() - 1).toISOString() });
+  const y = today.getFullYear(), m = today.getMonth(), d = today.getDate();
+  switch (p) {
+    case "yesterday": return span(at(y, m, d - 1), at(y, m, d));
+    case "last30": return span(at(y, m, d - 29), end);
+    case "month": return span(at(y, m, 1), end);
+    case "lastMonth": return span(at(y, m - 1, 1), at(y, m, 1));
+    case "last3": return span(at(y, m - 2, 1), end);
+    case "day": { const [yy, mm, dd] = day.split("-").map(Number); return yy ? span(at(yy, mm - 1, dd), at(yy, mm - 1, dd + 1)) : span(today, end); }
+    default: return span(today, end);
+  }
+}
 const channelOf = (o: Order): Exclude<Channel, "all"> => (o.mode === "delivery" ? "delivery" : o.source === "qr" ? "qr" : o.source === "online" ? "online" : "pos");
 
 export default function OrdersPage() {
   const { L, lang } = useT();
-  const since = useMemo(() => {
-    const d = startOfDay();
-    if (new Date().getHours() < 5) d.setDate(d.getDate() - 1);
-    return d.toISOString();
-  }, []);
-  const orders = useLive("orders", { gte: { openedAt: since }, orderBy: [{ field: "openedAt", dir: "desc" }] }).data;
+  // فلتر التاريخ (Saqr 2026-11-24): اليوم، أمس، آخر 30 يوم، الشهر الحالي، الشهر السابق، آخر 3 شهور، أو يوم معين
+  const [period, setPeriod] = useState<Period>("today");
+  const [day, setDay] = useState(() => isoDay(new Date()));
+  const range = useMemo(() => periodRange(period, day), [period, day]);
+  const orders = useLive("orders", { gte: { openedAt: range.from }, lte: { openedAt: range.to }, orderBy: [{ field: "openedAt", dir: "desc" }] }).data;
+  const oneDay = period === "today" || period === "yesterday" || period === "day";
   const checkIds = useMemo(() => [...new Set(orders.map((o) => o.checkId).filter((x): x is string => !!x))], [orders]);
-  const checks = useLive("checks", { where: { id: checkIds } }, { enabled: checkIds.length > 0 }).data;
-  const items = useLive("orderItems", { where: { orderId: orders.map((o) => o.id) } }, { enabled: orders.length > 0 }).data;
+  // a long period can hold thousands of orders: checks come by the same dates (no id list in the request), and the
+  // item counts only for the latest 200 orders, so the request stays small
+  const periodChecks = useLive("checks", { gte: { openedAt: range.from }, lte: { openedAt: range.to } }, { enabled: !oneDay }).data;
+  const dayChecks = useLive("checks", { where: { id: checkIds } }, { enabled: oneDay && checkIds.length > 0 }).data;
+  const checks = oneDay ? dayChecks : periodChecks;
+  const itemOrderIds = useMemo(() => orders.slice(0, 200).map((o) => o.id), [orders]);
+  const items = useLive("orderItems", { where: { orderId: itemOrderIds } }, { enabled: itemOrderIds.length > 0 }).data;
   const tables = useLive("tables").data;
   const customers = useLive("customers").data;
   const [q, setQ] = useState("");
@@ -90,9 +124,9 @@ export default function OrdersPage() {
 
   return (
     <div className="grid gap-6">
-      <PageHeader icon={<ClipboardList />} title={L("الطلبات", "Orders")} subtitle={L("كل طلبات النهارده من كل القنوات — مباشر", "Every order today from every channel — live")} />
+      <PageHeader icon={<ClipboardList />} title={L("الطلبات", "Orders")} subtitle={L("كل الطلبات من كل القنوات — اختار الفترة من فلتر التاريخ", "Every order from every channel — pick the period in the date filter")} />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatTile index={0} icon={<ClipboardList />} label={L("طلبات النهارده", "Orders today")} value={orders.length} sub={`${active} ${L("شغالين", "active")}`} />
+        <StatTile index={0} icon={<ClipboardList />} label={L("عدد الطلبات", "Orders")} value={orders.length} sub={`${active} ${L("شغالين", "active")}`} />
         <StatTile index={1} icon={<Wallet />} tone="brass" label={L("مبيعات مقفولة", "Closed sales")} value={<AnimatedMoney value={sales} whole />} sub={`${paid.length} ${L("شيك", "checks")}`} />
         <StatTile index={2} icon={<ReceiptText />} tone="info" label={L("متوسط الشيك", "Average check")} value={<AnimatedMoney value={paid.length ? Math.round(sales / paid.length) : 0} whole />} />
         <StatTile index={3} icon={<QrCode />} tone="ok" label={L("من QR وأونلاين", "From QR & online")} value={orders.filter((o) => o.source === "qr" || o.source === "online").length} />
@@ -104,6 +138,8 @@ export default function OrdersPage() {
             <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={L("رقم، ترابيزة، عميل، إيصال…", "Number, table, customer, receipt…")} aria-label={L("بحث", "Search")} className="h-11 w-full rounded-xl border border-line bg-surface ps-9 pe-3 outline-none focus:border-primary focus:shadow-[var(--sf-glow)]" />
           </label>
+          <div className="w-full sm:w-44"><Select aria-label={L("التاريخ", "Date")} value={period} onChange={(e) => setPeriod(e.target.value as Period)} options={PERIODS.map((x) => ({ value: x.value, label: L(x.ar, x.en) }))} /></div>
+          {period === "day" ? <input type="date" value={day} max={isoDay(new Date())} onChange={(e) => setDay(e.target.value)} aria-label={L("اليوم", "Day")} className="num h-11 rounded-xl border border-line bg-surface px-3 outline-none focus:border-primary" dir="ltr" /> : null}
           <Segmented size="sm" label={L("الحالة", "Status")} value={status} onChange={setStatus} options={[{ value: "all", label: L("الكل", "All") }, { value: "active", label: L("شغال", "Active") }, { value: "closed", label: L("مقفول", "Closed") }, { value: "void", label: L("ملغي", "Void") }]} />
         </div>
         <div className="flex flex-wrap items-center gap-2 border-b border-line px-3 py-2.5">
@@ -118,7 +154,7 @@ export default function OrdersPage() {
             selectedKey={openId}
             columns={[
               { key: "n", header: "#", width: "64px", cell: (o) => <span className="num font-bold">{o.number}</span> },
-              { key: "t", header: L("الوقت", "Time"), cell: (o) => <span className="num text-[13px] text-muted">{clock(o.openedAt, lang)}</span>, hideOnMobile: true },
+              { key: "t", header: L("الوقت", "Time"), cell: (o) => <span className="num text-[13px] text-muted">{oneDay ? "" : `${new Date(o.openedAt).toLocaleDateString(lang === "ar" ? "ar-EG-u-nu-latn" : "en-GB", { day: "numeric", month: "numeric" })} · `}{clock(o.openedAt, lang)}</span>, hideOnMobile: true },
               {
                 key: "k",
                 header: L("النوع", "Type"),
@@ -134,7 +170,7 @@ export default function OrdersPage() {
                 },
               },
               { key: "c", header: L("القناة", "Channel"), cell: (o) => <Badge size="sm" tone={o.source === "qr" ? "info" : o.source === "online" ? "brass" : "neutral"}>{SOURCE_LABEL[o.source][lang]}</Badge>, hideOnMobile: true },
-              { key: "i", header: L("أصناف", "Items"), align: "center", hideOnMobile: true, cell: (o) => <span className="num">{items.filter((i) => i.orderId === o.id && i.status !== "void").reduce((a, i) => a + i.qty, 0)}</span> },
+              { key: "i", header: L("أصناف", "Items"), align: "center", hideOnMobile: true, cell: (o) => <span className="num">{itemOrderIds.includes(o.id) ? items.filter((i) => i.orderId === o.id && i.status !== "void").reduce((a, i) => a + i.qty, 0) : "—"}</span> },
               { key: "s", header: L("الحالة", "Status"), cell: (o) => <Badge size="sm" dot tone={ORDER_TONE[o.status]}>{ORDER_LABEL[o.status][lang]}</Badge> },
               {
                 key: "p",
