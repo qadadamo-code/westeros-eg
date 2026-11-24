@@ -23,6 +23,8 @@ const share = (bp: number | null, amount: number, extra = "") => (bp == null ? {
 const pc = (bp: number | null) => (bp == null ? "—" : `${(bp / 100).toFixed(1)}%`);
 const delta = (now: number, was: number) => (was ? `${now >= was ? "▲" : "▼"} ${Math.abs(((now - was) / Math.abs(was)) * 100).toFixed(1)}% عن الفترة السابقة` : "");
 const points = (now: number | null, was: number | null) => (now == null || was == null ? "" : `${now >= was ? "▲" : "▼"} ${(Math.abs(now - was) / 100).toFixed(1)} نقطة عن الفترة السابقة`);
+/** التكلفة الأساسية فوق 65% من المبيعات = تنبيه (المرجع: 55 إلى 65% للمطاعم) */
+const PRIME_MAX = 6500;
 const TONE: Record<string, string> = { danger: "border-danger/40 bg-danger/10", warning: "border-brass/40 bg-brass/10", info: "border-line bg-surface-2" };
 
 export default function Dashboard() {
@@ -78,6 +80,7 @@ export default function Dashboard() {
     { g: "p", label: "مجمل الربح", value: fmt(now.gross), sub: now.grossBp == null ? "" : `${pc(now.grossBp)} من المبيعات`, icon: <CircleDollarSign />, tone: "ok", show: profit },
     { g: "p", label: "صافي الربح", value: fmt(now.net), sub: [now.netBp == null ? "" : `${pc(now.netBp)} من المبيعات`, compare ? delta(now.net, was.net) : ""].filter(Boolean).join(" · "), icon: <Scale />, tone: now.net < 0 ? "danger" : "ok", show: profit },
     { g: "p", label: "تكلفة الطعام", ...share(now.foodCostBp, now.cogs, compare ? points(now.foodCostBp, was.foodCostBp) : ""), icon: <Utensils />, tone: "brass", show: true },
+    { g: "p", label: "التكلفة الأساسية (أكل + رواتب)", ...share(now.primeBp, now.prime, now.primeBp == null ? "" : now.primeBp > PRIME_MAX ? `⚠ أعلى من الطبيعي (55 إلى 65%) · ${fmt(now.prime)}` : `الطبيعي 55 إلى 65% · ${fmt(now.prime)}`), icon: <Scale />, tone: now.primeBp != null && now.primeBp > PRIME_MAX ? "danger" : "ok", show: profit },
     { g: "c", label: "الرواتب والأجور", ...share(now.payrollBp, now.payroll), icon: <Users />, tone: "info", show: profit },
     { g: "c", label: "الإيجار", ...share(now.rentBp, now.rent), icon: <Percent />, tone: "info", show: profit },
     { g: "c", label: "الهالك وعجز الجرد", ...share(now.wasteBp, now.waste), icon: <Package />, tone: "danger", show: true },

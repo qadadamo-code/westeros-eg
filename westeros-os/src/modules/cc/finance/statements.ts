@@ -157,8 +157,10 @@ export function cashMovement(accountIds: string[], entries: FinEntry[], f: Balan
 export interface Kpis {
   sales: Units; cogs: Units; gross: Units; expenses: Units; net: Units;
   /** basis points of sales; null when there are no sales */
-  foodCostBp: number | null; payrollBp: number | null; rentBp: number | null; wasteBp: number | null; grossBp: number | null; netBp: number | null;
+  foodCostBp: number | null; primeBp: number | null; payrollBp: number | null; rentBp: number | null; wasteBp: number | null; grossBp: number | null; netBp: number | null;
   waste: Units; payroll: Units; rent: Units;
+  /** التكلفة الأساسية: تكلفة الأكل + الرواتب */
+  prime: Units;
   cash: Units; payables: Units; stock: Units;
   /** المبيعات الشهرية اللازمة لتغطية المصروفات؛ null without a gross margin */
   breakEven: Units | null;
@@ -179,8 +181,8 @@ export function kpis(accounts: FinAccount[], entries: FinEntry[], settings: Pick
   const money = accounts.filter((a) => a.postable && MONEY_KINDS.includes(a.kind)).reduce((s, a) => s + (at.get(a.code) ?? 0), 0);
   const months = f.from && f.to ? Math.max(1, Math.round((Date.parse(f.to) - Date.parse(f.from)) / (30.4 * 86_400_000))) : 1;
   return {
-    sales, cogs, gross, expenses, net: pl.net[0], waste, payroll, rent: of("exp.rent"),
-    foodCostBp: bp(cogs), payrollBp: bp(payroll), rentBp: bp(of("exp.rent")), wasteBp: bp(waste), grossBp: bp(gross), netBp: bp(pl.net[0]),
+    sales, cogs, gross, expenses, net: pl.net[0], waste, payroll, rent: of("exp.rent"), prime: cogs + payroll,
+    foodCostBp: bp(cogs), primeBp: bp(cogs + payroll), payrollBp: bp(payroll), rentBp: bp(of("exp.rent")), wasteBp: bp(waste), grossBp: bp(gross), netBp: bp(pl.net[0]),
     cash: money, payables: -(at.get(code("suppliers")) ?? 0) - (at.get(code("purchases.accrued")) ?? 0),
     stock: ["stock.raw", "stock.product", "stock.packaging", "stock.supplies"].reduce((s, k) => s + of(k, at), 0),
     breakEven: sales > 0 && gross > 0 ? Math.round(expenses / months / (gross / sales)) : null,

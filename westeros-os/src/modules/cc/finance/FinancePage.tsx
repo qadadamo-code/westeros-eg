@@ -15,7 +15,13 @@ import Payroll from "./Payroll";
 import Purchases from "./Purchases";
 import { useFinPerms } from "./perms";
 import { AreaGate } from "../useAccess";
-import { useFinSections, type FinPage as Page, type FinSection as Group } from "./sections";
+import { setFinSimple, useFinSimple, useFinSections, type FinPage as Page, type FinSection as Group } from "./sections";
+import DayClose from "./DayClose";
+import DeliveryRecon from "./DeliveryRecon";
+import MenuAnalysis from "./MenuAnalysis";
+import SupplierPrices from "./SupplierPrices";
+import { Segmented } from "@/ui";
+import { useState } from "react";
 import { BuyingSummary, GeneralSummary, SellingSummary, StaffSummary } from "./Summaries";
 import Reports, { ReportRedirect } from "./Reports";
 import Sales from "./Sales";
@@ -43,7 +49,7 @@ function FinNav({ groups, current }: { groups: Group[]; current: Group }) {
         {groups.map((g) => {
           const on = g.id === current.id;
           return (
-            <Link key={g.id} to={g.pages[0].to} aria-current={on ? "true" : undefined}
+            <Link key={g.id} to={g.pages.find((p) => !p.hidden)!.to} aria-current={on ? "true" : undefined}
               className={cn("flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-[12px] font-semibold transition-colors sm:flex-row sm:gap-2 sm:py-2.5 sm:text-[14.5px] [&_svg]:size-[18px] [&_svg]:shrink-0",
                 on ? "bg-surface text-ink shadow-sf-sm ring-1 ring-line [&_svg]:text-brass-text" : "text-muted hover:text-ink")}>
               {g.icon}<span className={cn("max-w-full truncate", g.short && "max-sm:hidden")}>{g.label}</span>{g.short ? <span className="max-w-full truncate sm:hidden">{g.short}</span> : null}
@@ -51,9 +57,9 @@ function FinNav({ groups, current }: { groups: Group[]; current: Group }) {
           );
         })}
       </nav>
-      {current.pages.length > 1 ? (
+      {current.pages.filter((p) => !p.hidden).length > 1 ? (
         <nav aria-label={current.label} className="flex flex-wrap gap-2">
-          {current.pages.map((p) => (
+          {current.pages.filter((p) => !p.hidden).map((p) => (
             <NavLink key={p.to} to={p.to} end={p.end}
               className={({ isActive }) => cn("inline-flex h-9 items-center gap-2 rounded-full border px-3 text-[13px] font-semibold transition-colors max-sm:[&_svg]:hidden sm:h-10 sm:px-4 sm:text-[14px] [&_svg]:size-4",
                 isActive ? "border-ink bg-ink text-surface" : "border-line bg-surface text-ink-2 hover:border-line-strong hover:text-ink")}>
@@ -74,15 +80,16 @@ export default function FinancePage() {
   useAutoRates(useDb(), fin.settings, !fin.loading);
   // the pages this employee may see (المستخدمين ← الأدوار), and the sections left with a page
   const groups = useFinSections();
-  const first = groups[0]?.pages[0]?.to ?? null;
+  const simple = useFinSimple();
+  const first = groups[0]?.pages.find((p) => !p.hidden)?.to ?? null;
   const gate = (area: string, el: JSX.Element) => <AreaGate id={area} fallback={first}>{el}</AreaGate>;
   const at = (p: Page) => (p.end ? pathname.replace(/\/$/, "") === p.to : pathname === p.to || pathname.startsWith(`${p.to}/`));
   if (!groups.length) return <AreaGate id="finance.dashboard">{null}</AreaGate>;
   const current = groups.find((g) => g.pages.some(at)) ?? groups[0];
-  const page = current.pages.find(at) ?? current.pages[0];
+  const page = current.pages.find(at) ?? current.pages.find((p) => !p.hidden)!;
   return (
     <div className="grid gap-5">
-      <PageHeader icon={page.label === "ملخص" ? current.icon : page.icon} kicker={current.id === "home" ? undefined : `الحسابات · ${current.label}`} title={current.id === "home" ? "الحسابات" : page.label === "ملخص" ? `ملخص ${current.label}` : page.label} actions={<ViewBranchPicker />} />
+      <PageHeader icon={page.label === "ملخص" ? current.icon : page.icon} kicker={current.id === "home" ? undefined : `الحسابات · ${current.label}`} title={current.id === "home" ? "الحسابات" : page.label === "ملخص" ? `ملخص ${current.label}` : page.label} actions={<div className="flex flex-wrap items-center gap-2"><Segmented size="sm" label="طريقة العرض" value={simple ? "simple" : "full"} onChange={(v) => setFinSimple(v === "simple")} options={[{ value: "simple", label: "مبسّط" }, { value: "full", label: "كامل للمحاسب" }]} /><ViewBranchPicker /></div>} />
       <FinNav groups={groups} current={current} />
       <Routes>
         <Route index element={gate("finance.dashboard", <Dashboard />)} />
@@ -96,8 +103,13 @@ export default function FinancePage() {
         <Route path="vouchers" element={gate("finance.treasury", <Treasury key="v" start="vouchers" />)} />
         <Route path="expenses" element={gate("finance.treasury", <Treasury key="e" start="vouchers" kind="expense" />)} />
         <Route path="sales" element={gate("finance.sales", <Sales />)} />
-        <Route path="sales-pay" element={gate("finance.sales", <PayMethods side="sales" can={perms.has("vouchers") || perms.has("settings")} />)} />
-        <Route path="buying-pay" element={gate("finance.purchases", <PayMethods side="buying" can={perms.has("vouchers") || perms.has("settings")} />)} />
+        <Route path="pay-methods" element={gate("finance.sales", <PayMethodsBoth can={perms.has("vouchers") || perms.has("settings")} />)} />
+        <Route path="sales-pay" element={<Navigate to="/finance/pay-methods" replace />} />
+        <Route path="buying-pay" element={<Navigate to="/finance/pay-methods?side=buying" replace />} />
+        <Route path="day" element={gate("finance.sales", <DayClose />)} />
+        <Route path="delivery-recon" element={gate("finance.sales", <DeliveryRecon />)} />
+        <Route path="menu-analysis" element={gate("finance.sales", <MenuAnalysis />)} />
+        <Route path="prices" element={gate("finance.purchases", <SupplierPrices />)} />
         <Route path="sales-invoice" element={gate("finance.sales", <SalesInvoice />)} />
         <Route path="channels" element={gate("finance.sales", <SalesChannels can={perms.has("vouchers") || perms.has("settings")} />)} />
         <Route path="purchases" element={gate("finance.purchases", <Purchases />)} />
@@ -116,6 +128,18 @@ export default function FinancePage() {
         {["ledger", "trial", "stock"].map((r) => <Route key={r} path={r} element={<ReportRedirect to={r} />} />)}
         <Route path="*" element={<Navigate to="/finance" replace />} />
       </Routes>
+    </div>
+  );
+}
+
+/** طرق الدفع بمكان واحد (Saqr 2026-11-25): البيع والشراء تبويبين بنفس الصفحة */
+function PayMethodsBoth({ can }: { can: boolean }) {
+  const { search } = useLocation();
+  const [side, setSide] = useState<"sales" | "buying">(new URLSearchParams(search).get("side") === "buying" ? "buying" : "sales");
+  return (
+    <div className="grid gap-4">
+      <Segmented label="طرق الدفع" value={side} onChange={(v) => setSide(v as typeof side)} options={[{ value: "sales", label: "طرق الدفع بالبيع" }, { value: "buying", label: "طرق الدفع بالشراء" }]} />
+      <PayMethods key={side} side={side} can={can} />
     </div>
   );
 }

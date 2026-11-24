@@ -1,8 +1,8 @@
 /** المبيعات: ملخص مبيعات كل يوم أو وردية بقيد واحد، وتسوية ما ينتظر التحصيل من طلبات والفيزا والمحافظ. */
 import { useViewBranchState } from "@/auth/viewBranch";
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { ArrowLeftRight, Plus, ReceiptText, Trash2 } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { ArrowLeftRight, FileSpreadsheet, Plus, ReceiptText, Trash2 } from "lucide-react";
 import { useDb, useLive } from "@/data/hooks";
 import type { FinDoc, FinEntry } from "@/data/financeTypes";
 import { cn } from "@/lib/cn";
@@ -14,7 +14,7 @@ import { useActor, useFinPerms } from "./perms";
 import { cancelDoc, CHANNELS, PAY_KEYS, postSalesDay, postSettlement, SALES_DAY, salesOf, salesProblem, salesTotals, SETTLEMENT, settlementOf, settlementProblem, settlementTotal, waitingAccounts, type SalesDeliveryFee, type SalesInput } from "./sales";
 import { DRIVER, feeSplit, methodsOf, onInvoice, shareOf } from "./delivery";
 import { netByCode } from "./statements";
-import { MONEY_LABEL, moneyAccounts } from "./treasury";
+import { MONEY_LABEL, monthEnd, moneyAccounts } from "./treasury";
 import { AccountSelect, BranchSelect, Confirm, esc, fmt, fromText, PeriodPicker, periodOf, printDoc, PrintButton, printTable, toText, today, type Period, Toolbar } from "./ui";
 import { useFinance, type Fin } from "./useFinance";
 
@@ -45,7 +45,7 @@ export default function Sales() {
   const cells = (d: FinDoc) => { const x = salesOf(d); return [d.code, fmtDay(d.date ?? ""), fin.branchName(d.branchId), d.name, x.orders || 0, x.net, x.vat, x.paid, x.diff, d.status === "posted" ? "مرحل" : "ملغي"] as const; };
   return (
     <div className="grid gap-4">
-      <Toolbar lead={<Segmented size="sm" className="max-sm:grid max-sm:w-full max-sm:grid-cols-2 max-sm:[&>button]:h-10" label="المبيعات" value={tab} onChange={setTab} options={[{ value: "days", label: "ملخصات المبيعات" }, { value: "settlements", label: "التسويات" }]} />} actions={<>{can ? <><Button icon={<Plus />} onClick={() => setAdd(true)}>مبيعات يوم</Button><Button variant="secondary" icon={<ArrowLeftRight />} onClick={() => setSettle({})}>تسوية</Button></> : null}</>}>
+      <Toolbar lead={<Segmented size="sm" className="max-sm:grid max-sm:w-full max-sm:grid-cols-2 max-sm:[&>button]:h-10" label="المبيعات" value={tab} onChange={setTab} options={[{ value: "days", label: "ملخصات المبيعات" }, { value: "settlements", label: "التسويات" }]} />} actions={<>{can ? <><Button icon={<Plus />} onClick={() => setAdd(true)}>مبيعات يوم</Button><Button variant="secondary" icon={<ArrowLeftRight />} onClick={() => setSettle({})}>تسوية</Button></> : null}<Link to="/finance/sales-invoice"><Button variant="secondary" icon={<FileSpreadsheet />}>فاتورة مبيعات</Button></Link></>}>
         <PeriodPicker value={period} onChange={setPeriod} startMonth={fin.settings.yearStartMonth} />
         <BranchSelect fin={fin} value={branch} onChange={setBranch} />
       </Toolbar>
@@ -215,10 +215,10 @@ function SettleDialog({ fin, fromId, onClose, onSaved }: { fin: Fin; fromId?: st
   const money = useMemo(() => moneyAccounts(fin.ix.ordered()).filter((a) => a.kind !== "wallet"), [fin.ix]);
   const net = useMemo(() => netByCode(fin.accounts, fin.entries, {}), [fin.accounts, fin.entries]);
   const feeOf = (id: string) => { const a = fin.byId.get(id); const key = a && a.code.startsWith((fin.settings.links["aggregator.talabat"] ?? "x").slice(0, 4)) ? "exp.talabat" : "exp.bankfees"; return fin.accounts.find((x) => x.code === fin.settings.links[key])?.id ?? ""; };
-  const [d, setD] = useState({ fromId: fromId ?? "", toId: money.find((a) => a.kind === "bank")?.id ?? money[0]?.id ?? "", date: today(), received: "", commission: "", vat: "14", feeId: fromId ? feeOf(fromId) : "", ref: "", note: "", branchId: fin.branchId ?? "" });
+  const [d, setD] = useState({ fromId: fromId ?? "", toId: money.find((a) => a.kind === "bank")?.id ?? money[0]?.id ?? "", date: today(), received: "", commission: "", vat: "14", feeId: fromId ? feeOf(fromId) : "", ref: "", note: "", branchId: fin.branchId ?? "", month: today().slice(0, 7) });
   const [busy, setBusy] = useState(false);
   const commission = fromText(d.commission);
-  const input = { fromId: d.fromId, toId: d.toId, date: d.date, received: fromText(d.received), commission, commissionVat: Math.round((commission * (Number(d.vat) || 0)) / 100), feeId: d.feeId, ref: d.ref, note: d.note, branchId: d.branchId || null };
+  const input = { fromId: d.fromId, toId: d.toId, date: d.date, received: fromText(d.received), commission, commissionVat: Math.round((commission * (Number(d.vat) || 0)) / 100), feeId: d.feeId, ref: d.ref, note: d.note, branchId: d.branchId || null, ...(d.month ? { periodFrom: `${d.month}-01`, periodTo: monthEnd(d.month) } : {}) };
   const from = fin.byId.get(d.fromId);
   const balance = from ? net.get(from.code) ?? 0 : 0;
   const total = settlementTotal(input);
@@ -239,6 +239,7 @@ function SettleDialog({ fin, fromId, onClose, onSaved }: { fin: Fin; fromId?: st
         <Input label="العمولة والرسوم المخصومة (ج.م)" dir="ltr" inputMode="decimal" placeholder="0" value={d.commission} onChange={(e) => setD({ ...d, commission: e.target.value })} />
         <Input label="ضريبة على العمولة %" dir="ltr" inputMode="decimal" value={d.vat} onChange={(e) => setD({ ...d, vat: e.target.value })} hint={input.commissionVat ? `${fmt(input.commissionVat)} تتسجل ضريبة مدخلات` : "اكتب صفر لو كشف التسوية بدون ضريبة"} />
         <AccountSelect fin={fin} label="حساب العمولة" value={d.feeId} onChange={(v) => setD({ ...d, feeId: v })} filter={(a) => a.type === "expense"} />
+        <Input label="الكشف عن مبيعات شهر" type="month" dir="ltr" value={d.month} onChange={(e) => setD({ ...d, month: e.target.value })} hint="بيحسب نسبة العمولة النهائية لهالشهر بمطابقة التوصيل" />
         <Input label="رقم كشف التسوية أو التحويل" dir="ltr" value={d.ref} onChange={(e) => setD({ ...d, ref: e.target.value })} />
         <BranchSelect fin={fin} label="الفرع" className="w-full" all="كل الفروع" value={d.branchId} onChange={(v) => setD({ ...d, branchId: v })} />
         <div className="sm:col-span-2"><Textarea label="ملاحظات" rows={2} value={d.note} onChange={(e) => setD({ ...d, note: e.target.value })} /></div>
