@@ -16,6 +16,7 @@ import { loadJSON, loadRaw, saveJSON, saveRaw } from "@/lib/storage";
 import { DEMO_RESTAURANT_ID } from "@/data/seed";
 import { can, type Permission } from "./permissions";
 import { markWelcome } from "./welcome";
+import { forgetPin, rememberPin } from "./biometric";
 import type { Role } from "./roles";
 
 const PIN_KEY = "sufra-os.pinSession";
@@ -157,6 +158,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       if (!t) return null;
       saveRaw(REST_KEY, "");
       markWelcome();
+      rememberPin(rid, m.id, m.name, pin);
       setS((p) => ({ ...p, status: "ready", ...t, staff: m, method: "pin", resting: false }));
       return m;
     },
@@ -164,6 +166,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   );
 
   const lock = useCallback(() => {
+    forgetPin();
     saveJSON(PIN_KEY, null);
     saveRaw(EMAIL_KEY, "");
     saveRaw(REST_KEY, "");
@@ -189,6 +192,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   );
 
   const signOut = useCallback(async () => {
+    forgetPin();
     saveJSON(PIN_KEY, null);
     saveRaw(EMAIL_KEY, "");
     await repo.auth.signOut();

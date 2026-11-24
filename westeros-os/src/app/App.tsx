@@ -13,6 +13,7 @@ import type { ModuleDef, ModuleRoute } from "@/modules/types";
 import { AppShell, BareLayout } from "@/shell/AppShell";
 import { LockOverlay } from "@/shell/LockOverlay";
 import { Welcome } from "@/shell/Welcome";
+import { BioOffer } from "@/shell/BioOffer";
 import { ResetPasswordPage } from "@/pages/ResetPasswordPage";
 import { RecoveryRedirect } from "@/pages/RecoveryRedirect";
 import { ComingSoon } from "@/shell/ComingSoon";
@@ -93,6 +94,7 @@ function Root() {
                   <AppRoutes />
                   <LockOverlay />
                   <Welcome />
+                  <BioOffer />
                 </CommandProvider>
               </ApprovalProvider>
             </SessionProvider>

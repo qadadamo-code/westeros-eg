@@ -93,6 +93,8 @@ export const dict = {
   "pin.cooldown": { ar: "محاولات كتير — استنى {s} ثانية", en: "Too many tries — wait {s}s" },
   "pin.back": { ar: "رجوع للأسماء", en: "Back to names" },
   "pin.emailInstead": { ar: "ادخل بالإيميل", en: "Sign in with email" },
+  "pin.bio": { ar: "ادخل بالبصمة أو الوجه", en: "Sign in with face or fingerprint" },
+  "pin.bioStale": { ar: "البصمة محتاجة تتفعل تاني. ادخل بالـPIN مرة واحدة.", en: "Face/fingerprint needs turning on again. Sign in with your PIN once." },
   "pin.clear": { ar: "امسح الكل", en: "Clear" },
   "pin.delete": { ar: "امسح رقم", en: "Delete digit" },
   "pin.findName": { ar: "دوّر على اسمك", en: "Find your name" },

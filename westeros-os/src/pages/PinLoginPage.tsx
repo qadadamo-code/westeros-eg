@@ -1,14 +1,15 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
-import { Mail, WifiOff } from "lucide-react";
+import { Fingerprint, Mail, WifiOff } from "lucide-react";
+import { bioRecords, bioSupported, bioUnlock, dropBio } from "@/auth/biometric";
 import { useSession } from "@/auth/session";
 import { useRepo } from "@/data/hooks";
 import type { Restaurant } from "@/data/types";
 import { WESTEROS_STAFF as DEMO_STAFF } from "@/data/westeros/seed";
 import { useT } from "@/i18n/i18n";
 import { homeFor } from "@/modules/registry";
-import { Badge, EmptyState, PinPad, spring, useReduced } from "@/ui";
+import { Badge, Button, EmptyState, PinPad, spring, useReduced, useToast } from "@/ui";
 import { Mark } from "@/shell/Logo";
 import { AuthToggles, StarPattern } from "./AuthChrome";
 
@@ -35,6 +36,34 @@ export function PinLoginPage() {
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [tries, setTries] = useState(0);
   const [cooldown, setCooldown] = useState(0);
+  const { toast } = useToast();
+  const [bio, setBio] = useState(false);
+  const [bioBusy, setBioBusy] = useState(false);
+
+  useEffect(() => {
+    const rid = s.deviceRestaurantId;
+    if (!rid || !bioRecords(rid).length) return setBio(false);
+    void bioSupported().then(setBio);
+  }, [s.deviceRestaurantId]);
+
+  // face / fingerprint: the device unlocks the saved PIN, then the normal PIN sign-in runs
+  const tryBio = async () => {
+    const rid = s.deviceRestaurantId;
+    if (!rid || bioBusy || cooldown) return;
+    setBioBusy(true);
+    try {
+      const got = await bioUnlock(rid);
+      if (!got) return;
+      if (await s.pinSignIn(got.memberId, got.pin)) return;
+      dropBio(rid, got.memberId);
+      setBio(bioRecords(rid).length > 0);
+      toast({ tone: "error", title: t("pin.bioStale") });
+    } catch {
+      toast({ tone: "error", title: t("pin.bioStale") });
+    } finally {
+      setBioBusy(false);
+    }
+  };
 
   useEffect(() => {
     if (s.status !== "ready" || !s.staff) return;
@@ -136,7 +165,14 @@ export function PinLoginPage() {
                 />
               )
             ) : (
-              <PinPad onComplete={tryPin} disabled={cooldown > 0} error={cooldown ? t("pin.cooldown", { s: cooldown }) : null} />
+              <>
+                {bio ? (
+                  <Button size="lg" variant="secondary" className="mb-6" icon={<Fingerprint />} loading={bioBusy} disabled={cooldown > 0} onClick={tryBio}>
+                    {t("pin.bio")}
+                  </Button>
+                ) : null}
+                <PinPad onComplete={tryPin} disabled={cooldown > 0} error={cooldown ? t("pin.cooldown", { s: cooldown }) : null} />
+              </>
             )}
             {repo.kind === "local" ? (
               <Badge tone="brass" className="mt-6">
