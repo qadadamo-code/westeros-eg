@@ -216,8 +216,9 @@ export default function Register() {
       const ch = o ? channelFor(settings, o) : null;
       if (ch) n.set(ch.id, (n.get(ch.id) ?? 0) + 1);
     }
-    return channelsOf(settings).filter((c) => n.get(c.id)).map((c) => ({ c, n: n.get(c.id)! }));
-  }, [openChecks, openOrders, settings]);
+    // every sales channel of this branch keeps its own button, with its open count (0 = none); a channel that's off here still shows while it has open orders (Saqr 2026-11-24)
+    return channelsOf(settings).filter((c) => n.get(c.id) || visibleChannels.some((v) => v.id === c.id)).map((c) => ({ c, n: n.get(c.id) ?? 0 }));
+  }, [openChecks, openOrders, settings, visibleChannels]);
   const askChannel = () => (visibleChannels.length === 1 ? startChannel(visibleChannels[0]) : visibleChannels.length ? setChOpen(true) : newTicket(kind, true));
   const channel = check ? channelFor(settings, order) : channelsOf(settings).find((c) => c.id === draft.channelId) ?? channelFor(settings, { mode: draft.mode, channelId: null });
   /** the menu of the channel: items switched off for it are gone, and each shows the channel's price */
@@ -594,17 +595,17 @@ export default function Register() {
   const itemCount = items.filter((i) => i.status !== "void").reduce((a, i) => a + i.qty, 0);
 
   return (
-    <div className="-mx-4 -mt-5 -mb-28 flex h-[calc(100dvh-8rem-env(safe-area-inset-bottom))] min-h-0 flex-col md:-mx-6 md:-mt-6 md:-mb-10 md:h-[calc(100dvh-4rem)] xl:-mx-8">
+    <div className="-mx-4 -mt-5 -mb-10 flex h-[calc(100dvh-5rem-env(safe-area-inset-bottom))] min-h-0 flex-col md:-mx-6 md:-mt-6 md:-mb-10 md:h-[calc(100dvh-4rem)] xl:-mx-8">
       {/* toolbar */}
-      <div className="flex shrink-0 items-center gap-2 border-b border-line bg-surface/70 px-3 py-2 backdrop-blur md:px-4">
+      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-line bg-surface/70 px-3 py-2 backdrop-blur md:px-4">
         <Button size="sm" variant="soft" icon={<Plus className="size-4" />} onClick={askChannel}>
           {L("طلب جديد", "New")}
         </Button>
         {channel ? <span className="rounded-full border border-brass/50 bg-brass-soft px-2.5 py-1 text-[12.5px] font-semibold text-brass-text">{channel.name}{orderRef ? <span className="num" dir="ltr"> · #{orderRef}</span> : null}</span> : null}
         {/* open orders per sales channel, each on its own (Mohammed 2026-11-23) */}
         {openByChannel.map(({ c, n }) => (
-          <button key={c.id} type="button" onClick={() => (setChFilter(c.id), setDlg("checks"))} className="hidden items-center gap-1.5 rounded-full border border-line bg-surface px-2.5 py-1 text-[12.5px] font-semibold text-ink-2 hover:bg-surface-2 sm:flex">
-            {c.name} <span className="num rounded-full bg-primary-soft px-1.5 text-primary">{n}</span>
+          <button key={c.id} type="button" onClick={() => (setChFilter(c.id), setDlg("checks"))} className={cn("flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-line bg-surface px-2.5 py-1 text-[12.5px] font-semibold hover:bg-surface-2", n ? "text-ink-2" : "text-faint")}>
+            {c.name} <span className={cn("num rounded-full px-1.5", n ? "bg-primary-soft text-primary" : "bg-surface-2")}>{n}</span>
           </button>
         ))}
         <Button size="sm" variant="secondary" icon={<ClipboardList className="size-4" />} onClick={() => (setChFilter(null), setDlg("checks"))}>

@@ -92,7 +92,7 @@ export default function Opening() {
           </table>
         </div>
       </Card>
-      <div className="sticky bottom-24 z-10 flex md:bottom-3 flex-wrap items-center gap-x-5 gap-y-2 rounded-2xl border border-line bg-surface px-4 py-3 text-[14px] shadow-lg">
+      <div className="sticky bottom-3 z-10 flex md:bottom-3 flex-wrap items-center gap-x-5 gap-y-2 rounded-2xl border border-line bg-surface px-4 py-3 text-[14px] shadow-lg">
         <span>مجموع المدين <b className="num" dir="ltr">{fmt(debit)}</b></span>
         <span>مجموع الدائن <b className="num" dir="ltr">{fmt(credit)}</b></span>
         <span className={cn("font-bold", diff ? "text-danger" : "text-ok")}>{diff ? <>الفرق <span className="num" dir="ltr">{fmt(Math.abs(diff))}</span></> : "متوازن"}</span>
