@@ -123,7 +123,7 @@ function Body() {
   return (
     <div className="grid gap-5">
       <PageHeader icon={<BookOpen />} title="المنيو" subtitle="الأصناف والإضافات والملاحظات وأسعارها زي ما الكاشير بيشوفها"
-        actions={<ViewBranchPicker />} />
+        actions={<ViewBranchPicker noCentral />} />
       {!manage ? <p className="rounded-xl border border-line px-3 py-2 text-[13.5px] text-muted">للمشاهدة بس: الدور بتاعك مالوش صلاحية تعديل المنيو.</p> : null}
       {manage && codes.fix.length ? (
         <Card className="grid gap-2 border-brass/50 p-3">

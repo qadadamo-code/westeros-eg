@@ -3,7 +3,6 @@ import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { BarChart3, BookOpenCheck, ChefHat, ClipboardList, Factory, PlusCircle, UtensilsCrossed } from "lucide-react";
 import { PageHeader } from "@/shell/PageHeader";
-import { ViewBranchPicker } from "@/shell/ViewBranchPicker";
 import { AreaGate, useTabs } from "../useAccess";
 import { RouteTabs } from "@/modules/marketing/ui";
 import { Skeleton } from "@/ui";
@@ -27,7 +26,7 @@ export default function MfgPage() {
         ]);
   return (
     <div className="grid gap-5">
-      <PageHeader icon={<Factory />} title="التصنيع" actions={<ViewBranchPicker />} />
+      <PageHeader icon={<Factory />} title="التصنيع" />
       <RouteTabs
         label="التصنيع"
         items={tabs}

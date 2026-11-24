@@ -8,8 +8,8 @@ import { useScreenAccess } from "./useScreenAccess";
 
 export const GROUPS = ["service", "manage", "admin"] as const;
 
-/** the till screens: a central-kitchen branch only manufactures, so they're hidden there (Saqr 2026-11-24) */
-export const TILL_MODULES = new Set(["cc-pos", "cc-orders", "pos", "orders"]);
+/** the till screens (cashier, orders, menu, kitchen screen): a central-kitchen branch only manufactures, so they're hidden there (Saqr 2026-11-24) */
+export const TILL_MODULES = new Set(["cc-pos", "cc-orders", "cc-menu", "cc-kitchen", "pos", "orders"]);
 export function useCentralBranch(): boolean {
   const { branchId, branches } = useSession();
   const v = useViewBranch();

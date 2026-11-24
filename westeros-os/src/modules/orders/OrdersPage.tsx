@@ -137,7 +137,7 @@ export default function OrdersPage() {
 
   return (
     <div className="grid gap-6">
-      <PageHeader icon={<ClipboardList />} title={L("الطلبات", "Orders")} subtitle={L("كل الطلبات من كل القنوات — اختار الفترة من فلتر التاريخ", "Every order from every channel — pick the period in the date filter")} actions={<ViewBranchPicker />} />
+      <PageHeader icon={<ClipboardList />} title={L("الطلبات", "Orders")} subtitle={L("كل الطلبات من كل القنوات — اختار الفترة من فلتر التاريخ", "Every order from every channel — pick the period in the date filter")} actions={<ViewBranchPicker noCentral />} />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatTile index={0} icon={<ClipboardList />} label={L("عدد الطلبات", "Orders")} value={orders.length} sub={`${active} ${L("شغالين", "active")}`} />
         <StatTile index={1} icon={<Wallet />} tone="brass" label={L("مبيعات مقفولة", "Closed sales")} value={<AnimatedMoney value={sales} whole />} sub={`${paid.length} ${L("شيك", "checks")}`} />
