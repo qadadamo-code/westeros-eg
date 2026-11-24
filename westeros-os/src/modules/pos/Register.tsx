@@ -2,7 +2,7 @@
  * The register: menu on one side, the current check on the other (bottom sheet on phones).
  * Keyboard: S search · N new · K send · H hold · P pay · D discount · X split · T transfer · O open checks.
  */
-import { channelFor, channelsOf, taxFor, type SalesChannelDef } from "@/data/channels";
+import { channelFor, channelsOf, levelPrice, modeOf, soldOn, taxFor, type SalesChannelDef } from "@/data/channels";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { onSchedule, scheduleLabel } from "@/modules/menu/rules";
 import { Link, useSearchParams } from "react-router-dom";
@@ -19,7 +19,7 @@ import { cn } from "@/lib/cn";
 import { formatMoney, type Units } from "@/lib/money";
 import { loadRaw, saveRaw } from "@/lib/storage";
 import type { ReceiptModel } from "@/lib/receipt";
-import { AnimatedMoney, Button, Dialog, useCommands, useHotkeys, useIsMobile, useReduced, useToast, spring } from "@/ui";
+import { AnimatedMoney, Button, Dialog, Input, useCommands, useHotkeys, useIsMobile, useReduced, useToast, spring } from "@/ui";
 import { MenuPanel } from "./components/MenuPanel";
 import { ModifierSheet, type ModifierChoice } from "./components/ModifierSheet";
 import { TicketPanel } from "./components/TicketPanel";
@@ -109,6 +109,9 @@ export default function Register() {
   const [editLine, setEditLine] = useState<OrderItem | null>(null);
   const [dlg, setDlg] = useState<null | "table" | "customer" | "discount" | "split" | "pay" | "checks" | "transfer" | "merge" | "moveTable" | "itemsToTable" | "guests" | "shift" | "ticket" | "promo">(null);
   const [chOpen, setChOpen] = useState(false);
+  /** تطبيق توصيل: the channel waiting for the app's order code before the order starts */
+  const [aggCh, setAggCh] = useState<SalesChannelDef | null>(null);
+  const [aggRef, setAggRef] = useState("");
   const [shares, setShares] = useState<{ amounts: Units[]; labels: string[] } | null>(null);
   const [receipt, setReceipt] = useState<{ model: ReceiptModel; etaError: string | null; title?: string } | null>(null);
   const pendingItem = useRef<{ item: MenuItem; choice: ModifierChoice | null } | null>(null);
@@ -188,11 +191,18 @@ export default function Register() {
 
   /** "طلب جديد": the cashier picks the sales channel first; the previous order's table, customer and lines are cleared. */
   const visibleChannels = channelsOf(settings).filter((c) => c.visible);
-  const startChannel = (c: SalesChannelDef) => {
+  const startChannel = (c: SalesChannelDef, ref?: string) => {
     setChOpen(false);
+    // an aggregator order needs the app's order code first (Mohammed 2026-11-24)
+    if (c.kind === "aggregator" && !ref) {
+      setAggRef("");
+      setAggCh(c);
+      return;
+    }
+    setAggCh(null);
     setActiveId(null);
     setShares(null);
-    setDraft({ ...NEW_DRAFT(c.kind), channelId: c.id });
+    setDraft({ ...NEW_DRAFT(modeOf(c.kind)), channelId: c.id, ...(c.kind === "aggregator" ? { source: "aggregator" as const, externalRef: ref ?? null } : {}) });
     if (c.kind === "dine_in") setDlg("table");
     else if (c.kind === "delivery") setDlg("customer");
   };
@@ -207,6 +217,12 @@ export default function Register() {
   }, [openChecks, openOrders, settings]);
   const askChannel = () => (visibleChannels.length === 1 ? startChannel(visibleChannels[0]) : visibleChannels.length ? setChOpen(true) : newTicket(kind, true));
   const channel = check ? channelFor(settings, order) : channelsOf(settings).find((c) => c.id === draft.channelId) ?? channelFor(settings, { mode: draft.mode, channelId: null });
+  /** the menu of the channel: items switched off for it are gone, and each shows the channel's price */
+  const channelItems = useMemo(() => {
+    const lv = channel?.level ?? 1;
+    return menu.items.filter((i) => soldOn(i, channel)).map((i) => (lv === 1 ? i : { ...i, price: levelPrice(i, lv) }));
+  }, [menu.items, channel]);
+  const orderRef = check ? order?.externalRef : draft.externalRef;
 
   /** Ensures a check exists (dine-in needs a table first). */
   const ensure = async (): Promise<{ checkId: string; orderId: string } | null> => {
@@ -579,7 +595,7 @@ export default function Register() {
         <Button size="sm" variant="soft" icon={<Plus className="size-4" />} onClick={askChannel}>
           {L("طلب جديد", "New")}
         </Button>
-        {channel ? <span className="rounded-full border border-brass/50 bg-brass-soft px-2.5 py-1 text-[12.5px] font-semibold text-brass-text">{channel.name}</span> : null}
+        {channel ? <span className="rounded-full border border-brass/50 bg-brass-soft px-2.5 py-1 text-[12.5px] font-semibold text-brass-text">{channel.name}{orderRef ? <span className="num" dir="ltr"> · #{orderRef}</span> : null}</span> : null}
         {/* open orders per sales channel, each on its own (Mohammed 2026-11-23) */}
         {openByChannel.map(({ c, n }) => (
           <button key={c.id} type="button" onClick={() => setDlg("checks")} className="hidden items-center gap-1.5 rounded-full border border-line bg-surface px-2.5 py-1 text-[12.5px] font-semibold text-ink-2 hover:bg-surface-2 sm:flex">
@@ -621,7 +637,7 @@ export default function Register() {
 
       <div className="flex min-h-0 flex-1">
         <div className="@container flex min-h-0 min-w-0 flex-1 flex-col">
-          <MenuPanel ref={searchRef} cats={menu.cats} items={menu.items} counts={counts} onPick={pick} fame={fame} />
+          <MenuPanel ref={searchRef} cats={menu.cats} items={channelItems} counts={counts} onPick={pick} fame={fame} />
         </div>
         {!isMobile ? <aside aria-label={L("الشيك", "Check")} data-pos-ticket className="w-[340px] shrink-0 border-s border-line lg:w-[380px] 2xl:w-[420px]">{ticketPanel}</aside> : null}
       </div>
@@ -683,6 +699,12 @@ export default function Register() {
             </button>
           ))}
         </div>
+      </Dialog>
+      <Dialog open={!!aggCh} onClose={() => setAggCh(null)} size="sm" title={L(`طلب ${aggCh?.name ?? ""}: اكتب كود الطلب`, `${aggCh?.name ?? ""} order: enter its code`)}
+        footer={<div className="flex justify-end gap-2"><Button variant="ghost" onClick={() => setAggCh(null)}>{L("إلغاء", "Cancel")}</Button><Button disabled={!aggRef.trim()} onClick={() => aggCh && startChannel(aggCh, aggRef.trim())}>{L("ابدأ الطلب", "Start")}</Button></div>}>
+        <form onSubmit={(e) => { e.preventDefault(); if (aggCh && aggRef.trim()) startChannel(aggCh, aggRef.trim()); }}>
+          <Input label={L("كود الطلب في التطبيق", "The app's order code")} dir="ltr" className="num" autoFocus value={aggRef} onChange={(e) => setAggRef(e.target.value)} />
+        </form>
       </Dialog>
       <TablePicker
         open={dlg === "table" || dlg === "moveTable" || dlg === "itemsToTable"}

@@ -12,6 +12,7 @@ import { changeDue, quickTenders, remaining, toPiastre, TENDERS } from "../math"
 import { MoneyKeypad } from "./bits";
 import { PayLinkPanel } from "@/modules/payments/PayLinkPanel";
 import { useLive } from "@/data/hooks";
+import { activePayMethods, tenderOf } from "@/modules/cc/finance/payMethods";
 import { normalizeGiftCode, usable } from "@/lib/promo/giftcards";
 
 const ICON: Record<PaymentMethod, typeof Banknote> = { cash: Banknote, card: CreditCard, wallet: Smartphone, instapay: QrCode, online: Link2, gift_card: Gift };
@@ -23,6 +24,19 @@ export interface TenderInput {
   tendered: Units | null;
   reference: string | null;
   splitLabel: string | null;
+  /** طريقة الدفع المعرفة في الحسابات > المبيعات > طرق الدفع */
+  payMethodId?: string | null;
+}
+
+/** a tender on the dialog: a payment method defined in الحسابات (each with its till / bank), else the plain ones */
+interface TenderOpt { key: string; label: string; method: PaymentMethod; payMethodId: string | null }
+function useTenderOpts(plain: PaymentMethod[]): TenderOpt[] {
+  const { lang } = useT();
+  const fs = useLive("finSettings").data[0];
+  return useMemo(() => {
+    const defined = activePayMethods(fs?.data, "sales");
+    return defined.length ? defined.map((m) => ({ key: m.id, label: m.name, method: tenderOf(m), payMethodId: m.id })) : plain.map((m) => ({ key: m, label: METHOD_LABEL[m][lang], method: m, payMethodId: null }));
+  }, [fs, lang, plain]);
 }
 
 export function PaymentDialog({ open, onClose, check, payments, shares, tipsEnabled, busy, onTender, onVoid, onComplete, onLinkPaid }: {
@@ -46,7 +60,10 @@ export function PaymentDialog({ open, onClose, check, payments, shares, tipsEnab
   const due = remaining(total, captured);
   const shareIdx = shares ? Math.min(captured.filter((p) => p.splitLabel).length, shares.amounts.length - 1) : -1;
   const shareDue = shares && shareIdx >= 0 ? Math.min(due, shares.amounts[shareIdx]) : due;
-  const [method, setMethod] = useState<PaymentMethod>("cash");
+  const opts = useTenderOpts(TENDERS);
+  const [sel, setSel] = useState<string>("cash");
+  const opt = opts.find((o) => o.key === sel) ?? opts[0];
+  const method: PaymentMethod = opt?.method ?? "cash";
   const [amount, setAmount] = useState<Units>(0);
   const [tip, setTip] = useState<Units>(0);
   const [ref, setRef] = useState("");
@@ -71,7 +88,7 @@ export function PaymentDialog({ open, onClose, check, payments, shares, tipsEnab
 
   const take = async () => {
     if (!canTake) return;
-    await onTender({ method, amount: apply, tip: isCash ? 0 : tip, tendered: isCash ? toPiastre(amount) : null, reference: ref.trim() || null, splitLabel: shares ? shares.labels[shareIdx] : null });
+    await onTender({ method, amount: apply, tip: isCash ? 0 : tip, tendered: isCash ? toPiastre(amount) : null, reference: ref.trim() || null, splitLabel: shares ? shares.labels[shareIdx] : null, payMethodId: opt?.payMethodId ?? null });
   };
   useHotkeys({ "mod+enter": take }, { enabled: open, inInputs: true });
 
@@ -153,13 +170,13 @@ export function PaymentDialog({ open, onClose, check, payments, shares, tipsEnab
 
         <div className="grid content-start gap-4">
           <div className="grid grid-cols-3 gap-2 sm:grid-cols-6" role="radiogroup" aria-label={L("طريقة الدفع", "Tender")}>
-            {TENDERS.map((m) => {
-              const Icon = ICON[m];
-              const on = m === method;
+            {opts.map((o) => {
+              const Icon = ICON[o.method];
+              const on = o.key === opt?.key;
               return (
-                <button key={m} type="button" role="radio" aria-checked={on} onClick={() => setMethod(m)} className={cn("flex min-h-[68px] flex-col items-center justify-center gap-1 rounded-2xl border-2 px-1 text-[12.5px] font-semibold transition-colors", on ? "border-primary bg-primary-soft text-primary" : "border-line bg-surface text-ink-2 hover:border-line-strong")}>
+                <button key={o.key} type="button" role="radio" aria-checked={on} onClick={() => setSel(o.key)} className={cn("flex min-h-[68px] flex-col items-center justify-center gap-1 rounded-2xl border-2 px-1 text-[12.5px] font-semibold transition-colors", on ? "border-primary bg-primary-soft text-primary" : "border-line bg-surface text-ink-2 hover:border-line-strong")}>
                   <Icon className="size-6" />
-                  {METHOD_LABEL[m][lang]}
+                  <span className="line-clamp-2 text-center">{o.label}</span>
                 </button>
               );
             })}
@@ -254,17 +271,19 @@ export function PaymentDialog({ open, onClose, check, payments, shares, tipsEnab
 const SPLIT_METHODS: PaymentMethod[] = ["cash", "card", "wallet", "instapay"];
 function SplitTender({ due, busy, onTender }: { due: Units; busy: boolean; onTender: (t: TenderInput) => Promise<void> }) {
   const { L, lang } = useT();
+  const opts = useTenderOpts(SPLIT_METHODS);
   const [open, setOpen] = useState(false);
   const [v, setV] = useState<Record<string, string>>({});
-  const parts = SPLIT_METHODS.map((m) => ({ m, amount: toPiastre(major(Number(v[m] || 0))) })).filter((p) => p.amount > 0);
+  const amt = (x: Record<string, string>, k: string) => toPiastre(major(Number(x[k] || 0)));
+  const parts = opts.map((o) => ({ o, amount: amt(v, o.key) })).filter((p) => p.amount > 0);
   const sum = parts.reduce((a, p) => a + p.amount, 0);
   const left = due - sum;
   const exact = Math.abs(left) < major(0.01);
-  const fill = (m: PaymentMethod) => setV((x) => ({ ...x, [m]: String(Math.max(0, (due - SPLIT_METHODS.filter((k) => k !== m).reduce((a, k) => a + toPiastre(major(Number(x[k] || 0))), 0))) / major(1)) }));
+  const fill = (k: string) => setV((x) => ({ ...x, [k]: String(Math.max(0, due - opts.filter((o) => o.key !== k).reduce((a, o) => a + amt(x, o.key), 0)) / major(1)) }));
   const go = async () => {
     // a fraction of a piastre left over goes on the last part
     if (parts.length) parts[parts.length - 1].amount += left;
-    for (const p of parts) await onTender({ method: p.m, amount: p.amount, tip: 0, tendered: p.m === "cash" ? p.amount : null, reference: null, splitLabel: null });
+    for (const p of parts) await onTender({ method: p.o.method, amount: p.amount, tip: 0, tendered: p.o.method === "cash" ? p.amount : null, reference: null, splitLabel: null, payMethodId: p.o.payMethodId });
     setV({});
     setOpen(false);
   };
@@ -277,14 +296,14 @@ function SplitTender({ due, busy, onTender }: { due: Units; busy: boolean; onTen
   return (
     <div className="grid gap-2 rounded-2xl border border-primary/40 bg-surface p-3">
       <p className="text-[13.5px] font-semibold">{L("توزيع الدفع", "Split payment")}</p>
-      {SPLIT_METHODS.map((m) => {
-        const Icon = ICON[m];
+      {opts.map((o) => {
+        const Icon = ICON[o.method];
         return (
-          <div key={m} className="flex items-center gap-2">
+          <div key={o.key} className="flex items-center gap-2">
             <Icon className="size-5 shrink-0 text-muted" />
-            <span className="w-24 shrink-0 text-[14px] font-semibold">{METHOD_LABEL[m][lang]}</span>
-            <input value={v[m] ?? ""} onChange={(e) => setV((x) => ({ ...x, [m]: e.target.value.replace(/[^\d.]/g, "") }))} inputMode="decimal" dir="ltr" aria-label={METHOD_LABEL[m][lang]} placeholder="0" className="num h-10 min-w-0 flex-1 rounded-xl border border-line bg-surface px-3 outline-none focus:border-primary" />
-            <button type="button" onClick={() => fill(m)} className="h-10 shrink-0 rounded-xl border border-line px-2.5 text-[12.5px] font-semibold text-muted hover:bg-surface-2">{L("الباقي", "Rest")}</button>
+            <span className="w-24 shrink-0 truncate text-[14px] font-semibold">{o.label}</span>
+            <input value={v[o.key] ?? ""} onChange={(e) => setV((x) => ({ ...x, [o.key]: e.target.value.replace(/[^\d.]/g, "") }))} inputMode="decimal" dir="ltr" aria-label={o.label} placeholder="0" className="num h-10 min-w-0 flex-1 rounded-xl border border-line bg-surface px-3 outline-none focus:border-primary" />
+            <button type="button" onClick={() => fill(o.key)} className="h-10 shrink-0 rounded-xl border border-line px-2.5 text-[12.5px] font-semibold text-muted hover:bg-surface-2">{L("الباقي", "Rest")}</button>
           </div>
         );
       })}

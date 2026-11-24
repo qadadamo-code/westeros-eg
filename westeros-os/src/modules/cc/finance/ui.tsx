@@ -5,6 +5,24 @@ import { cn } from "@/lib/cn";
 import { major, MONEY_MASK, moneyHidden, UNITS_PER_MAJOR, type Units } from "@/lib/money";
 import { Button, Dialog, Input, Select } from "@/ui";
 import type { Fin } from "./useFinance";
+import { useFinPerms } from "./perms";
+
+/**
+ * رصيد الحساب جنب اختياره (Mohammed 2026-11-24): the posted balance of the picked account, for users given
+ * "عرض رصيد الحساب" in المستخدمين ← الأدوار; nothing for the others.
+ */
+export function useBalanceHint(fin: Fin, accountId: string | null | undefined): ReactNode {
+  const perms = useFinPerms();
+  const show = perms.has("balances") && !!accountId;
+  const bal = useMemo(() => {
+    if (!show) return null;
+    let n = 0;
+    for (const e of fin.entries) if (e.status === "posted") for (const l of e.lines) if (l.account === accountId) n += l.debit - l.credit;
+    return n;
+  }, [show, fin.entries, accountId]);
+  if (bal == null) return undefined;
+  return <span className="num" dir="rtl">الرصيد: <b dir="ltr">{fmt(Math.abs(bal))}</b> {bal > 0 ? "مدين" : bal < 0 ? "دائن" : ""}</span>;
+}
 
 /** 1,250.00 (no currency: tables carry it in the header) */
 export const fmt = (u: Units, zero = "0.00") => (moneyHidden() ? MONEY_MASK : u === 0 ? zero : new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(u / UNITS_PER_MAJOR));
@@ -109,7 +127,8 @@ export function AccountSelect({ fin, value, onChange, label, leaf = true, filter
     { value: "", label: placeholder },
     ...fin.ix.ordered().filter((a) => (a.active || a.id === value) && (!leaf || a.postable) && (!manualOnly || a.allowManual || a.id === value) && (!filter || filter(a))).map((a) => ({ value: a.id, label: `${a.code} · ${a.name.ar}` })),
   ], [fin.ix, value, leaf, filter, placeholder, manualOnly]);
-  return <Select label={label} aria-label={typeof label === "string" ? label : placeholder} className={className} value={value} onChange={(e) => onChange(e.target.value)} options={options} />;
+  const hint = useBalanceHint(fin, leaf ? value : null);
+  return <Select label={label} aria-label={typeof label === "string" ? label : placeholder} className={className} value={value} onChange={(e) => onChange(e.target.value)} options={options} hint={hint} />;
 }
 
 const esc = (s: unknown) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);

@@ -1,7 +1,7 @@
 /** Category rail + search + item grid. Tap = add (or open modifiers), long-press/right-click = always open the sheet. */
 import { forwardRef, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Ban, Flame, Leaf, Search, Sparkles, Star, X, TrendingUp } from "lucide-react";
+import { Ban, Flame, Leaf, Percent, Search, Sparkles, Star, X, TrendingUp } from "lucide-react";
 import type { Fame } from "@/modules/menu/sold";
 import type { MenuCategory, MenuItem } from "@/data/types";
 import { useT } from "@/i18n/i18n";
@@ -24,13 +24,14 @@ export interface MenuPanelProps {
 export const MenuPanel = forwardRef<HTMLInputElement, MenuPanelProps>(function MenuPanel({ cats, items, counts, onPick, fame }, searchRef) {
   const { L, loc, lang } = useT();
   const reduced = useReduced();
-  const [cat, setCat] = useState<string | "all">("all");
+  const [cat, setCat] = useState<string | "all" | "discounts">("all");
+  const discounted = useMemo(() => items.filter((i) => (i.discount ?? 0) > 0), [items]);
   const [q, setQ] = useState("");
   const catById = useMemo(() => new Map(cats.map((c) => [c.id, c])), [cats]);
   const shown = useMemo(() => {
-    const list = q.trim() ? items.filter((i) => matches(`${i.name.ar} ${i.name.en} ${i.sku ?? ""} ${catById.get(i.categoryId)?.name.ar ?? ""}`, q)) : cat === "all" ? items : items.filter((i) => i.categoryId === cat);
+    const list = q.trim() ? items.filter((i) => matches(`${i.name.ar} ${i.name.en} ${i.sku ?? ""} ${catById.get(i.categoryId)?.name.ar ?? ""}`, q)) : cat === "all" ? items : cat === "discounts" ? discounted : items.filter((i) => i.categoryId === cat);
     return cat === "all" && !q.trim() ? [...list].sort((a, b) => (catById.get(a.categoryId)?.sort ?? 0) - (catById.get(b.categoryId)?.sort ?? 0) || a.sort - b.sort) : list;
-  }, [items, cat, q, catById]);
+  }, [items, cat, q, catById, discounted]);
   const inCat = useMemo(() => {
     const m = new Map<string, number>();
     for (const [itemId, n] of counts) {
@@ -71,6 +72,12 @@ export const MenuPanel = forwardRef<HTMLInputElement, MenuPanelProps>(function M
         <Chip active={cat === "all" && !q} onClick={() => (setCat("all"), setQ(""))}>
           {L("الكل", "All")}
         </Chip>
+        {discounted.length ? (
+          <Chip active={cat === "discounts" && !q} color="var(--sf-danger)" onClick={() => (setCat("discounts"), setQ(""))} count={discounted.length}>
+            <Percent aria-hidden />
+            {L("الخصومات", "Discounts")}
+          </Chip>
+        ) : null}
         {cats.map((c) => {
           const Icon = catIcon(c.icon);
           return (
@@ -167,6 +174,7 @@ function ItemTile({ item, cat, count, onPick, lang, fame }: { item: MenuItem; ca
         <span className="relative mt-auto flex items-end justify-between gap-2 pt-2">
           <span className="num text-[14.5px] font-semibold text-ink-2" dir="ltr">
             {formatMoney(Math.max(0, item.price - (item.discount ?? 0)), { lang, compact: true, bare: true })}
+            {item.discount && item.price ? <span className="ms-1.5 rounded-full bg-danger px-1.5 py-0.5 align-middle text-[11.5px] font-bold leading-none text-white">{Math.round((item.discount / item.price) * 100)}%</span> : null}
           </span>
           {item.modifierGroupIds.length ? <span className="rounded-full bg-surface-3 px-2 text-[11px] font-semibold text-muted">{L("اختيارات", "options")}</span> : null}
         </span>

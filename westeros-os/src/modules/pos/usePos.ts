@@ -60,6 +60,7 @@ export function useReceiptSourceBuilder() {
         restaurant: { name: restaurant.name, phone: restaurant.phone, slug: restaurant.slug },
         branch: branch ? { name: branch.name, address: branch.address, phone: branch.phone } : null,
         orderNumber: order?.number ?? null,
+        externalRef: order?.externalRef ?? null,
         waiter: order?.waiterId ? (staff.get(order.waiterId)?.name ?? null) : null,
         tableLabels: check.tableIds.map((id) => tables.find((t) => t.id === id)?.label ?? "?"),
         guests: check.guests,

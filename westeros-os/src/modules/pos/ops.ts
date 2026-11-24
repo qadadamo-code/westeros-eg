@@ -24,6 +24,8 @@ export interface TicketDraft {
   source?: OrderSource;
   /** قناة البيع اللي الطلب الجديد هيتسجل عليها */
   channelId?: string | null;
+  /** كود الطلب في تطبيق التوصيل */
+  externalRef?: string | null;
 }
 
 export interface Ticket {
@@ -52,7 +54,7 @@ export async function openTicket(db: Db, d: TicketDraft): Promise<{ check: Check
     branchId, number: await nextOrderNumber(db, branchId), mode: d.mode, source: d.source ?? "pos", status: "open", tableIds: d.mode === "dine_in" ? d.tableIds : [],
     checkId: check.id, customerId: d.customerId, guests: d.guests, openedBy: db.actorId, waiterId: null, note: "", delivery: d.mode === "delivery" ? d.delivery : null,
     deliveryStatus: d.mode === "delivery" ? "pending" : null, driverId: null, deliveryFee: d.mode === "delivery" ? d.deliveryFee : 0, openedAt: now, closedAt: null,
-    pickupAt: d.pickup ? d.pickupAt : null, ...(d.channelId ? { channelId: d.channelId } : {}),
+    pickupAt: d.pickup ? d.pickupAt : null, ...(d.channelId ? { channelId: d.channelId } : {}), ...(d.externalRef ? { externalRef: d.externalRef } : {}),
   });
   if (d.mode === "dine_in") for (const t of d.tableIds) await setTableStatus(db, t, "seated");
   await db.audit("check.open", "checks", check.id, { mode: d.mode, tables: d.tableIds });
