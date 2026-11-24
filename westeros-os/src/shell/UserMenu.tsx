@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Keyboard, Languages, Lock, LogOut, Monitor, Moon, RotateCcw, Sun, Users } from "lucide-react";
+import { Feather, Keyboard, Languages, Lock, LogOut, Monitor, Moon, RotateCcw, Sparkles, Sun, Users } from "lucide-react";
+import { liteChoice, setLiteChoice } from "@/lib/device";
 import { useSession } from "@/auth/session";
 import { ROLE_LABEL } from "@/auth/roles";
 import { useRepo } from "@/data/hooks";
@@ -16,6 +17,7 @@ export function UserMenu({ side = "bottom", align = "end", full }: { side?: "top
   const theme = useTheme();
   const { toast } = useToast();
   const [shortcuts, setShortcuts] = useState(false);
+  const [lite, setLite] = useState<"auto" | "lite" | "full">(() => { const c = liteChoice(); return c === null ? "auto" : c ? "lite" : "full"; });
   if (!s.staff) return null;
   const staff = s.staff;
   return (
@@ -67,6 +69,21 @@ export function UserMenu({ side = "bottom", align = "end", full }: { side?: "top
                   { value: "light", label: t("shell.themeLight"), icon: <Sun /> },
                   { value: "dark", label: t("shell.themeDark"), icon: <Moon /> },
                   { value: "system", label: t("shell.themeSystem"), icon: <Monitor /> },
+                ]}
+              />
+            </div>
+            {/* light mode (src/lib/device.ts): the heavy glass effects off on modest devices, chosen per device */}
+            <div className="px-2 pb-2">
+              <Segmented
+                block
+                size="sm"
+                label={lang === "ar" ? "شكل العرض" : "Display"}
+                value={lite}
+                onChange={(v: "auto" | "lite" | "full") => { setLite(v); setLiteChoice(v === "auto" ? null : v === "lite"); }}
+                options={[
+                  { value: "auto", label: lang === "ar" ? "تلقائي" : "Auto", icon: <Monitor /> },
+                  { value: "lite", label: lang === "ar" ? "خفيف" : "Light", icon: <Feather /> },
+                  { value: "full", label: lang === "ar" ? "كامل" : "Full", icon: <Sparkles /> },
                 ]}
               />
             </div>

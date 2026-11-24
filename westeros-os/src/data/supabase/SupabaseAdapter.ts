@@ -12,7 +12,7 @@ import { createClient, isAuthRetryableFetchError, type RealtimeChannel, type Sup
 import { uuid } from "@/lib/id";
 import { nowIso } from "@/lib/time";
 import { loadJSON, saveJSON } from "@/lib/storage";
-import { runQuery } from "../query";
+import { applyChange, runQuery } from "../query";
 import type { AuthApi, AuthUser, ChangeEvent, GuestApi, HistoryApi, Insertable, Patch, Query, Repo, SyncStatus, Unsubscribe } from "../repo";
 import { TABLE_NAMES, type CollectionName, type Membership, type Restaurant, type RowOf } from "../types";
 
@@ -56,6 +56,13 @@ export class SupabaseAdapter implements Repo {
   private channels = new Map<string, { ch: RealtimeChannel; refs: number }>();
   private syncListeners = new Set<(s: SyncStatus) => void>();
   private outbox: OutboxOp[] = loadJSON<OutboxOp[]>(OUTBOX_KEY, []);
+  /**
+   * The last answer to each query, kept current by every change event. A screen opened again shows these rows at
+   * once (peek) while a fresh read runs in the background, instead of an empty page until the network answers.
+   */
+  private results = new Map<string, { c: CollectionName; q: Query<AnyRow> | undefined; rows: AnyRow[] }>();
+  /** reads already on their way: the same query asked by several parts of a screen goes to the server once */
+  private inflight = new Map<string, Promise<AnyRow[]>>();
   private flushing = false;
   private status: SyncStatus;
 
@@ -96,6 +103,13 @@ export class SupabaseAdapter implements Repo {
     for (const cb of this.syncListeners) cb(this.status);
   }
   private emit(e: ChangeEvent) {
+    if (e.row && e.id !== "*" && !e.rollback) {
+      for (const r of this.results.values()) {
+        if (r.c === e.collection) r.rows = applyChange(r.rows, e.type, e.id, e.row as unknown as AnyRow, r.q);
+      }
+    } else if (e.rollback) {
+      for (const [k, r] of this.results) if (r.c === e.collection) this.results.delete(k);
+    }
     const rid = (e.row as AnyRow | undefined)?.restaurantId ?? null;
     for (const l of this.listeners) {
       if (l.cols && !l.cols.has(e.collection)) continue;
@@ -110,7 +124,34 @@ export class SupabaseAdapter implements Repo {
 
   /* ───────── reads ───────── */
 
+  /** The last known answer to exactly this query, without waiting; throws when there is none yet. */
+  peek<C extends CollectionName>(c: C, q?: Query<RowOf<C>>): RowOf<C>[] {
+    const hit = this.results.get(JSON.stringify([c, q ?? null]));
+    if (!hit) throw new Error("not cached");
+    return hit.rows as unknown as RowOf<C>[];
+  }
+
   async list<C extends CollectionName>(c: C, q?: Query<RowOf<C>>): Promise<RowOf<C>[]> {
+    const key = JSON.stringify([c, q ?? null]);
+    const running = this.inflight.get(key);
+    if (running) return running as unknown as Promise<RowOf<C>[]>;
+    const p = this.fetchList(c, q).then(
+      (rows) => {
+        this.inflight.delete(key);
+        // a read that met no server (offline fallback) must not replace the remembered answer with a partial one
+        if (rows.fresh) this.results.set(key, { c, q: q as Query<AnyRow> | undefined, rows: rows.rows as unknown as AnyRow[] });
+        return rows.rows;
+      },
+      (e) => {
+        this.inflight.delete(key);
+        throw e;
+      },
+    );
+    this.inflight.set(key, p as unknown as Promise<AnyRow[]>);
+    return p;
+  }
+
+  private async fetchList<C extends CollectionName>(c: C, q?: Query<RowOf<C>>): Promise<{ rows: RowOf<C>[]; fresh: boolean }> {
     const build = () => {
       let req = this.table(c).select(c === "memberships" ? MEMBERSHIP_COLS : "*");
       if (q?.where)
@@ -129,7 +170,8 @@ export class SupabaseAdapter implements Repo {
     const fail = (error: unknown) => {
       if (isNetworkError(error)) {
         this.setStatus({ online: false });
-        return runQuery(this.cacheOf(c).values() as Iterable<RowOf<C>>, q);
+        const known = this.results.get(JSON.stringify([c, q ?? null]));
+        return { rows: (known ? known.rows : runQuery(this.cacheOf(c).values() as Iterable<RowOf<C>>, q)) as RowOf<C>[], fresh: false };
       }
       throw error;
     };
@@ -151,7 +193,7 @@ export class SupabaseAdapter implements Repo {
     const rows = data.map((r) => rowFromDb<AnyRow>(r));
     this.remember(c, rows);
     this.setStatus({ online: true, lastSyncAt: nowIso(), error: null });
-    return rows as unknown as RowOf<C>[];
+    return { rows: rows as unknown as RowOf<C>[], fresh: true };
   }
 
   async get<C extends CollectionName>(c: C, id: string): Promise<RowOf<C> | null> {
@@ -248,10 +290,48 @@ export class SupabaseAdapter implements Repo {
     return (out ?? row) as unknown as RowOf<C>;
   }
 
+  /**
+   * Many rows in a few requests (500 per request) instead of one request per row. Offline, or with writes still
+   * queued, the rows go through the outbox one by one as before so their order is kept.
+   */
   async insertMany<C extends CollectionName>(c: C, rows: Insertable<RowOf<C>>[]): Promise<RowOf<C>[]> {
-    const out: RowOf<C>[] = [];
-    for (const r of rows) out.push(await this.insert(c, r));
-    return out;
+    if (!rows.length) return [];
+    if (!this.status.online || this.outbox.length || rows.length === 1) {
+      const out: RowOf<C>[] = [];
+      for (const r of rows) out.push(await this.insert(c, r));
+      return out;
+    }
+    const now = nowIso();
+    const full = rows.map((input) => ({ createdAt: now, updatedAt: now, ...(input as object), id: (input as { id?: string }).id ?? uuid() }) as AnyRow);
+    for (const row of full) {
+      this.cacheOf(c).set(row.id, row);
+      this.emit({ collection: c, type: "insert", id: row.id, row: row as never, optimistic: true, origin: "local" });
+    }
+    const sel = c === "memberships" ? MEMBERSHIP_COLS : "*";
+    const out: AnyRow[] = [];
+    for (let i = 0; i < full.length; i += 500) {
+      const part = full.slice(i, i + 500);
+      const { data, error } = await this.table(c).insert(part.map(rowToDb)).select(sel);
+      if (error) {
+        if (isNetworkError(error)) {
+          // the server never answered: keep these and the rest in the outbox, in order
+          this.setStatus({ online: false });
+          for (const row of full.slice(i)) this.enqueue({ op: "insert", c, id: row.id, data: row, at: now });
+          return [...out, ...full.slice(i)] as unknown as RowOf<C>[];
+        }
+        for (const row of full.slice(i)) this.emit({ collection: c, type: "insert", id: row.id, origin: "local", rollback: true });
+        this.setStatus({ error: String(error.message ?? error) });
+        throw error;
+      }
+      for (const raw of (data ?? []) as unknown as Record<string, unknown>[]) {
+        const row = rowFromDb<AnyRow>(raw);
+        this.cacheOf(c).set(row.id, row);
+        this.emit({ collection: c, type: "insert", id: row.id, row: row as never, origin: "local" });
+        out.push(row);
+      }
+    }
+    this.setStatus({ lastSyncAt: nowIso(), error: null });
+    return out as unknown as RowOf<C>[];
   }
 
   async update<C extends CollectionName>(c: C, id: string, patch: Patch<RowOf<C>>): Promise<RowOf<C>> {

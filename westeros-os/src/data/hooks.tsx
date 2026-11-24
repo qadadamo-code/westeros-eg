@@ -146,8 +146,12 @@ export function useLive<C extends CollectionName>(c: C, q?: Query<RowOf<C>>, opt
     const cols = [c, ...(opts.also ?? [])];
     const off = repo.subscribe(cols, opts.unscoped ? null : restaurantId, (e: ChangeEvent) => {
       if (e.collection === c && e.row && e.id !== "*" && !e.rollback) {
-        // instant (optimistic) patch, then a consistent refetch
+        // instant (optimistic) patch
         setState((s) => ({ ...s, data: applyChange(s.data as never[], e.type, e.id, e.row as never, query as never) as RowOf<C>[] }));
+        // A write made here comes back as the full saved row: the patch above is already the truth, so reading the
+        // whole table again after every save only slowed saving down (and multiplied by every screen watching it).
+        // Rows from other devices (realtime) may arrive without their large columns, so those still get a re-read.
+        if (e.origin === "local") return;
       }
       refetchSoon();
     });

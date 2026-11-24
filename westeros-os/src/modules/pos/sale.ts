@@ -24,7 +24,7 @@ import { nowIso } from "@/lib/time";
 import { freezeBill, toFinanceBill, toFinancePayments } from "@/lib/receipt/bill";
 import { etaConfig, etaSettingsOf, issueEtaReceipt, EtaValidationError } from "@/lib/receipt/eta";
 // KSA: ZATCA documents instead of ETA e-receipts (country switch in src/lib/zatca/settings.ts)
-import { buildZatcaDocument, type IssuedZatca } from "@/lib/zatca/issue";
+import type { IssuedZatca } from "@/lib/zatca/issue";
 import { taxRegime } from "@/lib/zatca/settings";
 import type { ZatcaBuyer, ZatcaInvoiceRow } from "@/lib/zatca/model";
 import { loadTicket } from "./ops";
@@ -118,6 +118,7 @@ async function issueDocument(
   if (regime === "zatca") {
     try {
       const [original] = x.refundOf ? await db.list("zatcaInvoices", { where: { receiptId: x.refundOf.id } }) : [];
+      const { buildZatcaDocument } = await import("@/lib/zatca/issue");
       zatcaDoc = await buildZatcaDocument(db, {
         settings, restaurant, branch, branchId: x.branchId, device: x.device, kind: x.kind, bill: x.bill, frozen: x.frozen, payments: x.payments, receiptNo, issuedAt,
         checkId: x.checkId, original: original ?? null, reason: x.reason, buyer: x.buyer ?? null,

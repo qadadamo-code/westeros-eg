@@ -3,9 +3,11 @@ import { useEffect, useMemo, useState } from "react";
 import { LOGO_GOLD, LOGO_PATHS, LOGO_VIEWBOX } from "@/shell/logoPaths";
 import { GlassIconReveal } from "./GlassIconReveal";
 
-const KEY = "westeros.splash";
-const PLAY_MS = 3900;
-const FADE_MS = 600;
+import { SPLASH_KEY as KEY } from "./splashGate";
+
+// short: the app is ready behind it, so a long show only feels like waiting
+const PLAY_MS = 2200;
+const FADE_MS = 400;
 
 function seen() {
   try {

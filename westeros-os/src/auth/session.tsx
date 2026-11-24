@@ -13,7 +13,7 @@ import { useRepo, ScopeProvider } from "@/data/hooks";
 import type { AuthUser } from "@/data/repo";
 import type { Branch, Membership, Restaurant } from "@/data/types";
 import { loadJSON, loadRaw, saveJSON, saveRaw } from "@/lib/storage";
-import { DEMO_RESTAURANT_ID } from "@/data/seed";
+import { DEMO_RESTAURANT_ID } from "@/data/seedIds";
 import { can, type Permission } from "./permissions";
 import { markWelcome } from "./welcome";
 import { forgetPin, rememberPin } from "./biometric";

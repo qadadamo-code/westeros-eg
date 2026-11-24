@@ -6,7 +6,7 @@ import { bioRecords, bioSupported, bioUnlock, dropBio } from "@/auth/biometric";
 import { useSession } from "@/auth/session";
 import { useRepo } from "@/data/hooks";
 import type { Restaurant } from "@/data/types";
-import { WESTEROS_STAFF as DEMO_STAFF } from "@/data/westeros/seed";
+import { WESTEROS_STAFF as DEMO_STAFF } from "@/data/westeros/staff";
 import { useT } from "@/i18n/i18n";
 import { homeFor } from "@/modules/registry";
 import { Badge, Button, EmptyState, PinPad, spring, useReduced, useToast } from "@/ui";
