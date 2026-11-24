@@ -98,6 +98,7 @@ export const dict = {
   "pin.findName": { ar: "دوّر على اسمك", en: "Find your name" },
   "pin.demoHint": { ar: "PIN التجربة: {pin}", en: "Demo PIN: {pin}" },
   "pin.needsDevice": { ar: "الجهاز ده محتاج مدير يسجّل دخول مرة واحدة الأول", en: "A manager needs to sign this device in once first" },
+  "pin.submitShort": { ar: "دخول (PIN قديم أقل من 6 أرقام)", en: "Enter (older PIN under 6 digits)" },
   "pin.noStaff": { ar: "مفيش حد ليه PIN لسه", en: "Nobody has a PIN yet" },
   "pin.offline": { ar: "مفيش اتصال بالنت دلوقتي", en: "No connection right now" },
   "pin.offlineHint": { ar: "الجهاز لسه داخل، أول ما النت يرجع الأسماء هتظهر لوحدها", en: "This device is still signed in; names come back as soon as the connection does" },

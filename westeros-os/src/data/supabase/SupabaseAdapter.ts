@@ -50,6 +50,7 @@ function isNetworkError(e: unknown) {
 export class SupabaseAdapter implements Repo {
   readonly kind = "supabase" as const;
   readonly client: SupabaseClient;
+  private recovering = false;
   private cache = new Map<CollectionName, Map<string, AnyRow>>();
   private listeners = new Set<{ cols: Set<string> | null; rid: string | null; cb: (e: ChangeEvent) => void }>();
   private channels = new Map<string, { ch: RealtimeChannel; refs: number }>();
@@ -60,6 +61,10 @@ export class SupabaseAdapter implements Repo {
 
   constructor(url: string, anonKey: string) {
     this.client = createClient(url, anonKey, { auth: { persistSession: true, autoRefreshToken: true } });
+    // a reset link is read while the client starts, before the app listens: remember it
+    this.client.auth.onAuthStateChange((e) => {
+      if (e === "PASSWORD_RECOVERY") this.recovering = true;
+    });
     const online = typeof navigator === "undefined" ? true : navigator.onLine;
     this.status = { mode: "cloud", online, pending: this.outbox.length, peers: 0, lastSyncAt: null, error: null };
     if (typeof window !== "undefined") {
@@ -340,6 +345,22 @@ export class SupabaseAdapter implements Repo {
     signOut: async () => {
       // local: signing out one phone or PC must not sign out every other device on the same account (the default is global)
       await this.client.auth.signOut({ scope: "local" });
+    },
+    sendPasswordReset: async (email, redirectTo) => {
+      const { error } = await this.client.auth.resetPasswordForEmail(email, { redirectTo });
+      if (error) throw error;
+    },
+    updatePassword: async (password) => {
+      const { error } = await this.client.auth.updateUser({ password });
+      if (error) throw error;
+    },
+    onRecovery: (cb) => {
+      if (this.recovering) {
+        this.recovering = false;
+        queueMicrotask(cb);
+      }
+      const { data } = this.client.auth.onAuthStateChange((e) => e === "PASSWORD_RECOVERY" && cb());
+      return () => data.subscription.unsubscribe();
     },
     onChange: (cb) => {
       const { data } = this.client.auth.onAuthStateChange((_e, session) => cb(this.toUser(session?.user)));

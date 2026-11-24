@@ -362,7 +362,8 @@ export class LocalAdapter implements Repo {
     },
     setPin: async (restaurantId, membershipId, pin) => {
       await this.readyP;
-      if (!/^\d{4,6}$/.test(pin)) throw new Error("PIN must be 4–6 digits");
+      if (!/^\d{6}$/.test(pin)) throw new Error("PIN must be 6 digits");
+      for (const [id, h] of this.pins) if (id !== membershipId && h === hashPin(restaurantId, id, pin)) throw new Error("pin_taken");
       const hash = hashPin(restaurantId, membershipId, pin);
       this.pins.set(membershipId, hash);
       await this.kv.put(PINS, membershipId, { id: membershipId, hash });

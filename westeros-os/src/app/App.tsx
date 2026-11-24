@@ -12,6 +12,9 @@ import { modules } from "@/modules/registry";
 import type { ModuleDef, ModuleRoute } from "@/modules/types";
 import { AppShell, BareLayout } from "@/shell/AppShell";
 import { LockOverlay } from "@/shell/LockOverlay";
+import { Welcome } from "@/shell/Welcome";
+import { ResetPasswordPage } from "@/pages/ResetPasswordPage";
+import { RecoveryRedirect } from "@/pages/RecoveryRedirect";
 import { ComingSoon } from "@/shell/ComingSoon";
 import { ModuleCtx } from "@/shell/ModuleContext";
 import { ErrorBoundary } from "@/shell/ErrorBoundary";
@@ -35,9 +38,12 @@ const routesFor = (layout: "shell" | "bare" | "guest") =>
 
 function AppRoutes() {
   return (
+    <>
+    <RecoveryRedirect />
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/login/pin" element={<PinLoginPage />} />
+      <Route path="/login/reset" element={<ResetPasswordPage />} />
       {routesFor("guest")}
       <Route
         element={
@@ -60,6 +66,7 @@ function AppRoutes() {
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>
+    </>
   );
 }
 
@@ -85,6 +92,7 @@ function Root() {
                 <CommandProvider>
                   <AppRoutes />
                   <LockOverlay />
+                  <Welcome />
                 </CommandProvider>
               </ApprovalProvider>
             </SessionProvider>

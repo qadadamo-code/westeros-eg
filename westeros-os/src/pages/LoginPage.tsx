@@ -25,6 +25,23 @@ export function LoginPage() {
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resetNote, setResetNote] = useState<{ ok: boolean; text: string } | null>(null);
+  const [resetBusy, setResetBusy] = useState(false);
+  // forgot password: Supabase emails a link that opens /login/reset, where the new password is set
+  const forgot = async () => {
+    setResetNote(null);
+    if (!/^\S+@\S+\.\S+$/.test(email.trim())) return setResetNote({ ok: false, text: "اكتب إيميلك فوق الأول، وبعدين اضغط نسيت كلمة السر" });
+    if (!repo.auth.sendPasswordReset) return setResetNote({ ok: false, text: "استرجاع كلمة السر مش متاح في النسخة التجريبية" });
+    setResetBusy(true);
+    try {
+      await repo.auth.sendPasswordReset(email.trim(), `${window.location.origin}${import.meta.env.BASE_URL}login/reset`);
+      setResetNote({ ok: true, text: "بعتنالك رابط على الإيميل ده. افتحه واكتب كلمة سر جديدة." });
+    } catch {
+      setResetNote({ ok: false, text: "معرفناش نبعت الرابط دلوقتي. استنى شوية وجرّب تاني." });
+    } finally {
+      setResetBusy(false);
+    }
+  };
   const Arrow = dir === "rtl" ? ArrowLeft : ArrowRight;
 
   useEffect(() => {
@@ -122,6 +139,12 @@ export function LoginPage() {
                   </IconButton>
                 }
               />
+              <div className="-mt-1 flex flex-col items-end gap-1">
+                <button type="button" onClick={forgot} disabled={resetBusy} className="text-[13.5px] font-semibold text-primary underline-offset-4 hover:underline disabled:opacity-50">
+                  {resetBusy ? "بنبعت الرابط..." : "نسيت كلمة السر؟"}
+                </button>
+                {resetNote ? <p role="status" className={cn("w-full text-[13px]", resetNote.ok ? "text-ok" : "text-danger")}>{resetNote.text}</p> : null}
+              </div>
               <Button type="submit" size="lg" block loading={busy} iconEnd={busy ? null : <Arrow className="size-5" />} className="mt-2">
                 {busy ? t("login.submitting") : t("login.submit")}
               </Button>

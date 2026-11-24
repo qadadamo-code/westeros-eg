@@ -7,14 +7,20 @@ import { useT } from "@/i18n/i18n";
 import { useHotkeys } from "./hotkeys";
 import { useReduced } from "./motion";
 
+/** New PINs are 6 digits (Mohammed 2026-11-24). Older 4–5 digit PINs still sign in with the "دخول" key / Enter. */
+export const PIN_LENGTH = 6;
+export const PIN_RULE = /^\d{6}$/;
+const OLD_MIN = 4;
+
 /**
  * Big touch PIN pad (72px keys). Calls onComplete when `length` digits are in; parent answers true/false.
  * Wrong → shake + clear. Hardware keyboard (incl. Arabic-Indic digits) works too.
  */
-export function PinPad({ length = 4, onComplete, disabled, error, size = "lg" }: { length?: number; onComplete: (pin: string) => Promise<boolean> | boolean; disabled?: boolean; error?: string | null; size?: "md" | "lg" }) {
+export function PinPad({ length = PIN_LENGTH, onComplete, disabled, error, size = "lg" }: { length?: number; onComplete: (pin: string) => Promise<boolean> | boolean; disabled?: boolean; error?: string | null; size?: "md" | "lg" }) {
   const [pin, setPin] = useState("");
   const [busy, setBusy] = useState(false);
   const [state, setState] = useState<"idle" | "ok" | "bad">("idle");
+  const [go, setGo] = useState(false);
   const controls = useAnimationControls();
   const reduced = useReduced();
   const { t } = useT();
@@ -22,12 +28,15 @@ export function PinPad({ length = 4, onComplete, disabled, error, size = "lg" }:
   const push = (d: string) => {
     if (disabled || busy || state === "ok") return;
     setState("idle");
+    setGo(false);
     setPin((p) => (p.length < length ? p + d : p));
   };
-  const back = () => !busy && setPin((p) => p.slice(0, -1));
+  const back = () => !busy && (setGo(false), setPin((p) => p.slice(0, -1)));
+  const short = pin.length >= OLD_MIN && pin.length < length;
+  const submit = () => !disabled && !busy && short && setGo(true);
 
   useEffect(() => {
-    if (pin.length !== length) return;
+    if (!(pin.length === length || (go && pin.length >= OLD_MIN))) return;
     let alive = true;
     setBusy(true);
     Promise.resolve(onComplete(pin)).then((ok) => {
@@ -37,16 +46,16 @@ export function PinPad({ length = 4, onComplete, disabled, error, size = "lg" }:
       else {
         setState("bad");
         if (!reduced) void controls.start({ x: [0, -14, 12, -9, 7, -3, 0], transition: { duration: 0.42 } });
-        setTimeout(() => alive && setPin(""), 380);
+        setTimeout(() => alive && (setGo(false), setPin("")), 380);
       }
     });
     return () => {
       alive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pin]);
+  }, [pin, go]);
 
-  const keys: Record<string, () => void> = { backspace: back, delete: () => setPin("") };
+  const keys: Record<string, () => void> = { backspace: back, delete: () => setPin(""), enter: submit };
   for (let i = 0; i <= 9; i++) keys[String(i)] = () => push(String(i));
   "٠١٢٣٤٥٦٧٨٩".split("").forEach((d) => (keys[d] = () => push(latinDigits(d))));
   useHotkeys(keys, { inInputs: true });
@@ -89,6 +98,11 @@ export function PinPad({ length = 4, onComplete, disabled, error, size = "lg" }:
           <Delete className="size-7" />
         </PadKey>
       </div>
+      {short ? (
+        <button type="button" onClick={submit} disabled={disabled || busy} className="mt-3 min-h-11 w-full rounded-full text-[14px] font-semibold text-primary transition-colors hover:bg-surface-3 disabled:opacity-40">
+          {t("pin.submitShort")}
+        </button>
+      ) : null}
     </div>
   );
 }
