@@ -20,13 +20,17 @@ import { ZReportView } from "./components/ZReportView";
 import { ReasonPicker } from "./components/LineSheet";
 import { buildZ, cashMove, closeShift, setDeviceCode, zToUnits, type ZReportU } from "./sale";
 import { useShift, useStaffNames } from "./usePos";
+import { denomsOf } from "@/modules/cc/finance/currency";
+import { ShiftBranch } from "./components/ShiftBranch";
 
-const DENOMS = [200, 100, 50, 20, 10, 5, 1, 0.5, 0.25];
+// فئات العملة من ثوابت النظام > الحسابات (Saqr 2026-11-24), biggest first
 
 /** Blind count by denomination. */
 function CountDialog({ open, onClose, onDone }: { open: boolean; onClose: () => void; onDone: (u: Units) => void }) {
   const { L, lang } = useT();
   const [n, setN] = useState<Record<string, string>>({});
+  const fs = useLive("finSettings").data[0];
+  const DENOMS = useMemo(() => [...denomsOf(fs?.data ?? {})].sort((a, b) => b - a), [fs]);
   useEffect(() => {
     if (open) setN({});
   }, [open]);
@@ -179,9 +183,12 @@ export default function ShiftPage() {
               </Button>
             </>
           ) : (
-            <Button variant="brass" icon={<Wallet className="size-4" />} onClick={() => setDlg("open")}>
-              {L("افتح وردية", "Open shift")}
-            </Button>
+            <>
+              <ShiftBranch />
+              <Button variant="brass" icon={<Wallet className="size-4" />} onClick={() => setDlg("open")}>
+                {L("افتح وردية", "Open shift")}
+              </Button>
+            </>
           )
         }
       />

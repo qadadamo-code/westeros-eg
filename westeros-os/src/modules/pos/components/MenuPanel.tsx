@@ -1,7 +1,7 @@
 /** Category rail + search + item grid. Tap = add (or open modifiers), long-press/right-click = always open the sheet. */
 import { forwardRef, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Ban, Flame, Leaf, Percent, Search, Sparkles, Star, X, TrendingUp } from "lucide-react";
+import { Ban, Leaf, Percent, Search, Sparkles, Star, X, TrendingUp } from "lucide-react";
 import type { Fame } from "@/modules/menu/sold";
 import type { MenuCategory, MenuItem } from "@/data/types";
 import { useT } from "@/i18n/i18n";
@@ -160,15 +160,15 @@ function ItemTile({ item, cat, count, onPick, lang, fame }: { item: MenuItem; ca
             </span>
           )}
           <span className="absolute inset-x-1.5 top-1.5 flex flex-wrap items-start gap-1 pe-8 [&>span]:shadow-sf-sm">
-            {item.discount && item.price ? <span className="num rounded-full bg-danger px-2 py-0.5 text-[11.5px] font-bold leading-4 text-white" dir="ltr">-{Math.round((item.discount / item.price) * 100)}%</span> : null}
+            {/* Saqr 2026-11-24: the discount mark is just %, no value; no spicy mark */}
+            {item.discount && item.price ? <span className="num rounded-full bg-danger px-2 py-0.5 text-[11.5px] font-bold leading-4 text-white" aria-label={L("عليه خصم", "Discounted")}>%</span> : null}
             {fame ? (
               <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold leading-4 [&_svg]:size-3", fame === "top" ? "bg-brass text-black" : "bg-info text-white")}>
-                {fame === "top" ? <Flame /> : <TrendingUp />} {fame === "top" ? L("الأكثر طلباً", "Best seller") : L("تريند", "Trending")}
+                {fame === "top" ? null : <TrendingUp />} {fame === "top" ? L("الأكثر طلباً", "Best seller") : L("تريند", "Trending")}
               </span>
             ) : null}
             {item.tags.includes("popular") && !fame ? <span className="inline-flex items-center gap-1 rounded-full bg-brass px-2 py-0.5 text-[11px] font-bold leading-4 text-black [&_svg]:size-3"><Star className="fill-current" /> {L("مميز", "Popular")}</span> : null}
             {item.tags.includes("chef") ? <span className="inline-flex items-center rounded-full bg-surface/90 px-1.5 py-0.5 text-brass-text [&_svg]:size-3.5"><Sparkles aria-label={L("اختيار الشيف", "Chef's pick")} /></span> : null}
-            {item.tags.includes("spicy") ? <span className="inline-flex items-center rounded-full bg-surface/90 px-1.5 py-0.5 text-danger [&_svg]:size-3.5"><Flame aria-label={L("حرّاق", "Spicy")} /></span> : null}
             {item.tags.includes("veg") ? <span className="inline-flex items-center rounded-full bg-surface/90 px-1.5 py-0.5 text-ok [&_svg]:size-3.5"><Leaf aria-label={L("نباتي", "Vegetarian")} /></span> : null}
           </span>
           {off ? (

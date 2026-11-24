@@ -33,6 +33,7 @@ import { PaymentDialog, type TenderInput } from "./components/PaymentDialog";
 import { ReceiptDialog } from "./components/ReceiptDialog";
 import { BuyerDialog } from "@/modules/settings/zatca/BuyerDialog";
 import { OpenChecksDialog, TransferDialog, useCheckRows } from "./components/Checks";
+import { ShiftBranch } from "./components/ShiftBranch";
 import { OpenShiftDialog } from "./components/OpenShiftDialog";
 import { Stepper } from "./components/bits";
 import { discountPct, lineDiscountUnits } from "./math";
@@ -85,6 +86,8 @@ export default function Register() {
   const zones = useLive("zones", { orderBy: [{ field: "sort" }] }).data;
   const customers = useLive("customers").data;
   const rows = useCheckRows(openChecks, openOrders, openItems, tables, customers);
+  // a sales-channel button opens only that channel's open invoices (Saqr 2026-11-24)
+  const [chFilter, setChFilter] = useState<string | null>(null);
 
   const order = orders[0] ?? null;
   const live = check && (check.status === "open" || check.status === "bill_requested");
@@ -600,14 +603,15 @@ export default function Register() {
         {channel ? <span className="rounded-full border border-brass/50 bg-brass-soft px-2.5 py-1 text-[12.5px] font-semibold text-brass-text">{channel.name}{orderRef ? <span className="num" dir="ltr"> · #{orderRef}</span> : null}</span> : null}
         {/* open orders per sales channel, each on its own (Mohammed 2026-11-23) */}
         {openByChannel.map(({ c, n }) => (
-          <button key={c.id} type="button" onClick={() => setDlg("checks")} className="hidden items-center gap-1.5 rounded-full border border-line bg-surface px-2.5 py-1 text-[12.5px] font-semibold text-ink-2 hover:bg-surface-2 sm:flex">
+          <button key={c.id} type="button" onClick={() => (setChFilter(c.id), setDlg("checks"))} className="hidden items-center gap-1.5 rounded-full border border-line bg-surface px-2.5 py-1 text-[12.5px] font-semibold text-ink-2 hover:bg-surface-2 sm:flex">
             {c.name} <span className="num rounded-full bg-primary-soft px-1.5 text-primary">{n}</span>
           </button>
         ))}
-        <Button size="sm" variant="secondary" icon={<ClipboardList className="size-4" />} onClick={() => setDlg("checks")}>
+        <Button size="sm" variant="secondary" icon={<ClipboardList className="size-4" />} onClick={() => (setChFilter(null), setDlg("checks"))}>
           {L("المفتوح", "Open")} <span className="num rounded-full bg-primary-soft px-1.5 text-[12px] text-primary">{rows.length}</span>
         </Button>
         <div className="flex-1" />
+        <ShiftBranch />
         {shift ? (
           <Link to="/pos/shift" className="hidden items-center gap-2 rounded-full border border-line bg-surface px-3 py-1.5 text-[13px] font-semibold text-ink-2 hover:bg-surface-2 sm:flex">
             <span className="size-2 rounded-full bg-ok" /> {L("وردية", "Shift")} · <span className="num">{device}</span>
@@ -817,7 +821,7 @@ export default function Register() {
           ) : null
         }
       />
-      <OpenChecksDialog open={dlg === "checks"} onClose={() => setDlg(null)} rows={rows} activeId={activeId} onPick={(c) => (setActiveId(c.id), setDlg(null))} />
+      <OpenChecksDialog open={dlg === "checks"} onClose={() => (setDlg(null), setChFilter(null))} rows={chFilter ? rows.filter((r) => channelFor(settings, r.order)?.id === chFilter) : rows} title={chFilter ? `${L("المفتوح", "Open")}: ${channelsOf(settings).find((c) => c.id === chFilter)?.name ?? ""}` : undefined} activeId={activeId} onPick={(c) => (setActiveId(c.id), setDlg(null), setChFilter(null))} />
       <OpenChecksDialog
         open={dlg === "merge"}
         onClose={() => setDlg(null)}
