@@ -9,6 +9,7 @@ import { useDb, useLive } from "@/data/hooks";
 import { channelsOf, KIND_LABEL, type ChannelKind, type PriceLevel, type SalesChannelDef } from "@/data/channels";
 import { uuid } from "@/lib/id";
 import { Button, Card, IconButton, Input, Select, Switch, useToast } from "@/ui";
+import { BranchChips } from "./ui";
 
 const err = (e: unknown) => String((e as Error)?.message ?? e);
 
@@ -61,7 +62,7 @@ export function SalesChannels({ can }: { can: boolean }) {
             <thead>
               <tr className="border-b border-line text-[12.5px] text-muted">
                 <th className="p-2 text-start">القناة</th><th className="p-2 text-start">النوع في الكاشير</th><th className="p-2 text-start">السعر</th>
-                <th className="p-2 text-start">ضريبة</th><th className="p-2 text-start">سيرفيس</th><th className="p-2 text-start">ظاهرة في الكاشير</th><th />
+                <th className="p-2 text-start">ضريبة</th><th className="p-2 text-start">سيرفيس</th><th className="p-2 text-start">ظاهرة في الكاشير</th><th className="p-2 text-start">الفروع</th><th />
               </tr>
             </thead>
             <tbody>
@@ -73,6 +74,7 @@ export function SalesChannels({ can }: { can: boolean }) {
                   <td className="p-2"><Switch checked={c.tax} disabled={!can} onChange={(v) => void edit(c, { tax: v })} label="ضريبة" /></td>
                   <td className="p-2"><Switch checked={c.service} disabled={!can} onChange={(v) => void edit(c, { service: v })} label="سيرفيس" /></td>
                   <td className="p-2"><Switch checked={c.visible} disabled={!can} onChange={(v) => void edit(c, { visible: v })} label="ظاهرة" /></td>
+                  <td className="p-2"><BranchChips off={c.offBranches} disabled={!can} onChange={(off) => void edit(c, { offBranches: off })} /></td>
                   <td className="p-2 text-end">
                     <div className="flex items-center justify-end gap-1">
                       {c.kind === "dine_in" ? <Link to="/floor?design=1" className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-line px-2.5 text-[12.5px] font-semibold hover:bg-surface-2"><LayoutGrid className="size-4" /> شكل الصالة</Link> : null}

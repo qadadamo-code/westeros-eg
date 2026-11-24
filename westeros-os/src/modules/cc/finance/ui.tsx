@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ChevronDown, Ellipsis, ListFilter, Printer } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { useLive } from "@/data/hooks";
 import { major, MONEY_MASK, moneyHidden, UNITS_PER_MAJOR, type Units } from "@/lib/money";
 import { Button, Dialog, Input, Select } from "@/ui";
 import type { Fin } from "./useFinance";
@@ -199,4 +200,24 @@ export function sheetDay(s: string | undefined): string | null {
   const n = Number(t);
   if (Number.isFinite(n) && n > 30000 && n < 80000) return new Date(Math.round((n - 25569) * 86400000)).toISOString().slice(0, 10);
   return null;
+}
+
+/** الفروع اللي الإعداد شغال فيها (Saqr 2026-11-24): a toggle per branch (not the central kitchen); writes the branches it's off in */
+export function BranchChips({ off, onChange, disabled }: { off?: string[]; onChange: (off: string[]) => void; disabled?: boolean }) {
+  const branches = useLive("branches").data.filter((b) => !b.isCentral);
+  if (branches.length < 2) return <span className="text-[12.5px] text-muted">كل الفروع</span>;
+  const o = off ?? [];
+  return (
+    <div className="flex flex-wrap gap-1">
+      {branches.map((b) => {
+        const on = !o.includes(b.id);
+        return (
+          <button key={b.id} type="button" disabled={disabled} aria-pressed={on} onClick={() => onChange(on ? [...o, b.id] : o.filter((x) => x !== b.id))}
+            className={on ? "h-8 rounded-lg border border-primary bg-primary-soft px-2.5 text-[12.5px] font-semibold" : "h-8 rounded-lg border border-line px-2.5 text-[12.5px] text-muted"}>
+            {on ? "✓ " : ""}{b.name.ar}
+          </button>
+        );
+      })}
+    </div>
+  );
 }

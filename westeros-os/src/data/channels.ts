@@ -18,7 +18,12 @@ export interface SalesChannelDef {
   service: boolean;
   /** shown on the cashier's new-order list */
   visible: boolean;
+  /** الفروع (ids) اللي القناة مش شغالة فيها: كل فرع له إعداداته (Saqr 2026-11-24); empty = every branch */
+  offBranches?: string[];
 }
+
+/** is this setting (channel, payment method) on in the branch: switched off only for the branches listed */
+export const onInBranch = (x: { offBranches?: string[] }, branchId: string | null | undefined) => !branchId || !(x.offBranches ?? []).includes(branchId);
 
 /** الأنواع الرئيسية (Mohammed 2026-11-24): محلي، استلام، توصيل، تطبيق توصيل (بيطلب كود الطلب في الكاشير) */
 export const KIND_LABEL: Record<ChannelKind, string> = { dine_in: "محلي (Dine in)", takeaway: "استلام (Pick up)", delivery: "توصيل (Delivery)", aggregator: "تطبيق توصيل (Aggregators)" };

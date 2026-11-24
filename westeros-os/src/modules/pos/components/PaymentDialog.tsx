@@ -13,6 +13,8 @@ import { MoneyKeypad } from "./bits";
 import { PayLinkPanel } from "@/modules/payments/PayLinkPanel";
 import { useLive } from "@/data/hooks";
 import { activePayMethods, tenderOf } from "@/modules/cc/finance/payMethods";
+import { useSession } from "@/auth/session";
+import { onInBranch } from "@/data/channels";
 import { normalizeGiftCode, usable } from "@/lib/promo/giftcards";
 
 const ICON: Record<PaymentMethod, typeof Banknote> = { cash: Banknote, card: CreditCard, wallet: Smartphone, instapay: QrCode, online: Link2, gift_card: Gift };
@@ -33,10 +35,12 @@ interface TenderOpt { key: string; label: string; method: PaymentMethod; payMeth
 function useTenderOpts(plain: PaymentMethod[]): TenderOpt[] {
   const { lang } = useT();
   const fs = useLive("finSettings").data[0];
+  const { branchId } = useSession();
   return useMemo(() => {
-    const defined = activePayMethods(fs?.data, "sales");
+    // كل فرع له طرق دفع خاصة بيه (Saqr 2026-11-24)
+    const defined = activePayMethods(fs?.data, "sales").filter((m) => onInBranch(m, branchId));
     return defined.length ? defined.map((m) => ({ key: m.id, label: m.name, method: tenderOf(m), payMethodId: m.id })) : plain.map((m) => ({ key: m, label: METHOD_LABEL[m][lang], method: m, payMethodId: null }));
-  }, [fs, lang, plain]);
+  }, [fs, lang, plain, branchId]);
 }
 
 export function PaymentDialog({ open, onClose, check, payments, shares, tipsEnabled, busy, onTender, onVoid, onComplete, onLinkPaid }: {

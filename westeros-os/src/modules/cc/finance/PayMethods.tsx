@@ -12,6 +12,7 @@ import { saveSettings } from "./ops";
 import { BASE_LABEL, payMethodProblem, payMethodsOf, type PaySide } from "./payMethods";
 import { MONEY_LABEL, moneyAccounts } from "./treasury";
 import { useFinance } from "./useFinance";
+import { BranchChips } from "./ui";
 
 const err = (e: unknown) => String((e as Error)?.message ?? e);
 
@@ -56,7 +57,7 @@ export function PayMethods({ side, can }: { side: PaySide; can: boolean }) {
           <table className="w-full min-w-[640px] text-[13.5px]">
             <thead>
               <tr className="border-b border-line text-[12.5px] text-muted">
-                <th className="p-2 text-start">الطريقة</th>{side === "sales" ? <th className="p-2 text-start">نوعها في الكاشير</th> : null}<th className="p-2 text-start">الخزينة أو البنك</th><th className="p-2 text-start">مفعلة</th><th />
+                <th className="p-2 text-start">الطريقة</th>{side === "sales" ? <th className="p-2 text-start">نوعها في الكاشير</th> : null}<th className="p-2 text-start">الخزينة أو البنك</th><th className="p-2 text-start">مفعلة</th>{side === "sales" ? <th className="p-2 text-start">الفروع</th> : null}<th />
               </tr>
             </thead>
             <tbody>
@@ -66,6 +67,7 @@ export function PayMethods({ side, can }: { side: PaySide; can: boolean }) {
                   {side === "sales" ? <td className="p-2"><Select aria-label="النوع" disabled={!can} value={m.base ?? "card"} onChange={(e) => edit(m, { base: e.target.value as PayMethodDef["base"] })} options={baseOptions} /></td> : null}
                   <td className="p-2"><Select aria-label="الحساب" disabled={!can} value={m.accountId} onChange={(e) => edit(m, { accountId: e.target.value })} options={accountOptions} /></td>
                   <td className="p-2"><Switch checked={m.active} disabled={!can} onChange={(v) => edit(m, { active: v })} label="مفعلة" /></td>
+                  {side === "sales" ? <td className="p-2"><BranchChips off={m.offBranches} disabled={!can} onChange={(off) => edit(m, { offBranches: off })} /></td> : null}
                   <td className="p-2 text-end">{can ? <IconButton size="sm" label="حذف الطريقة" onClick={() => void save(list.filter((x) => x.id !== m.id))}><Trash2 /></IconButton> : null}</td>
                 </tr>
               ))}

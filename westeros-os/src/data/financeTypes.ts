@@ -169,6 +169,8 @@ export interface PayMethodDef {
   base?: "cash" | "card" | "wallet" | "instapay";
   accountId: string;
   active: boolean;
+  /** البيع: الفروع (ids) اللي الطريقة مش ظاهرة في كاشيرها (Saqr 2026-11-24); empty = every branch */
+  offBranches?: string[];
 }
 
 /** طريقة توصيل: who delivers, how the fee is collected, and whose share of the fee is it. */

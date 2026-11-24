@@ -2,7 +2,7 @@
  * The register: menu on one side, the current check on the other (bottom sheet on phones).
  * Keyboard: S search · N new · K send · H hold · P pay · D discount · X split · T transfer · O open checks.
  */
-import { channelFor, channelsOf, levelPrice, modeOf, soldOn, taxFor, type SalesChannelDef } from "@/data/channels";
+import { channelFor, channelsOf, levelPrice, modeOf, onInBranch, soldOn, taxFor, type SalesChannelDef } from "@/data/channels";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { onSchedule, scheduleLabel } from "@/modules/menu/rules";
 import { Link, useSearchParams } from "react-router-dom";
@@ -190,7 +190,7 @@ export default function Register() {
   };
 
   /** "طلب جديد": the cashier picks the sales channel first; the previous order's table, customer and lines are cleared. */
-  const visibleChannels = channelsOf(settings).filter((c) => c.visible);
+  const visibleChannels = channelsOf(settings).filter((c) => c.visible && onInBranch(c, session.branchId));
   const startChannel = (c: SalesChannelDef, ref?: string) => {
     setChOpen(false);
     // an aggregator order needs the app's order code first (Mohammed 2026-11-24)
