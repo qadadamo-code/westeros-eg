@@ -20,6 +20,19 @@ self.addEventListener("fetch", (e) => {
   }
   // Hashed assets, icons, images: cache first.
   if (/\/app\/(assets|icons|img)\//.test(url.pathname)) {
-    e.respondWith(caches.match(req).then((hit) => hit || fetch(req).then((res) => { if (res.ok) { const copy = res.clone(); caches.open(VERSION).then((c) => c.put(req, copy)); } return res; })));
+    e.respondWith(caches.match(req).then((hit) => hit || fetch(req).then((res) => { if (res.ok) { const copy = res.clone(); caches.open(VERSION).then((c) => c.put(req, copy)).then(trim); } return res; })));
   }
 });
+// Every update of the app brings new file names; without a limit the old ones piled up on the device forever.
+// Keep the newest files only (the cache lists entries oldest first).
+const MAX_FILES = 600; // a little over one whole build (about 420 files)
+let trimming = false;
+function trim() {
+  if (trimming) return;
+  trimming = true;
+  caches.open(VERSION).then((c) => c.keys().then((keys) => {
+    const files = keys.filter((k) => /\/app\/(assets|icons|img)\//.test(new URL(k.url).pathname));
+    return Promise.all(files.slice(0, Math.max(0, files.length - MAX_FILES)).map((k) => c.delete(k)));
+  })).finally(() => { trimming = false; });
+}
+self.addEventListener("activate", () => trim());

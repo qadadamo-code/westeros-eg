@@ -3,7 +3,6 @@
  * in-browser LocalAdapter with the demo seed.
  */
 import type { Repo } from "./repo";
-import { LocalAdapter } from "./local/LocalAdapter";
 
 export * from "./types";
 export type * from "./repo";
@@ -25,7 +24,7 @@ export async function createRepo(): Promise<Repo> {
     const { SupabaseAdapter } = await import("./supabase/SupabaseAdapter");
     instance = new SupabaseAdapter(cfg.url, cfg.key);
   } else {
-    const { buildWesterosSeed } = await import("./westeros/seed");
+    const [{ buildWesterosSeed }, { LocalAdapter }] = await Promise.all([import("./westeros/seed"), import("./local/LocalAdapter")]);
     instance = new LocalAdapter({ name: "westeros-os", sessionKey: "westeros-os.session", buildSeed: buildWesterosSeed, seedVersion: "westeros-1" });
   }
   await instance.ready();

@@ -258,3 +258,12 @@
   background: radial-gradient(closest-side, color-mix(in srgb, var(--sf-brass) 22%, transparent), transparent);
 }
 .sf-gold-text { background: linear-gradient(100deg, var(--sf-ink) 20%, var(--sf-brass-text) 60%, var(--sf-brass)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+/* ── Light mode (src/lib/device.ts): modest devices drop the frosted-glass blur, which costs GPU time on every
+   scroll and repaint; panels become solid instead of see-through so text stays just as readable. ── */
+.sf-lite *, .sf-lite *::before, .sf-lite *::after {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+.sf-lite .sf-glass { background: var(--sf-surface); }
+.sf-lite .sf-ambient::after { display: none; }

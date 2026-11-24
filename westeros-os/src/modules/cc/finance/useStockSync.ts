@@ -35,7 +35,9 @@ export function useStockSync() {
   const { role } = useSession();
   const on = FINANCE_ON && (!role || WRITERS.has(role));
   const start = useLive("finSettings").data[0]?.data?.startDate ?? null;
-  const moves = useLive("stockMoves").data.length;
+  // only the newest movement is watched: downloading every movement on every app open just to count them grew
+  // slower each day; a new movement changes this id and starts a run
+  const moves = useLive("stockMoves", { orderBy: [{ field: "createdAt", dir: "desc" }], limit: 1 }).data[0]?.id ?? null;
   const accounts = useLive("finAccounts").data.length;
   useEffect(() => {
     if (!on || !start || !moves || !accounts) return;

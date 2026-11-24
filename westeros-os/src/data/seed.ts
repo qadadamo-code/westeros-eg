@@ -51,8 +51,8 @@ export const hashPin = (restaurantId: string, membershipId: string, pin: string)
 const L = (ar: string, en: string): Localized => ({ ar, en });
 const id = (k: string) => seedId(`sufra-zamalek:${k}`);
 
-export const DEMO_RESTAURANT_ID = id("restaurant");
-export const DEMO_BRANCH_ID = id("branch:zamalek");
+import { DEMO_BRANCH_ID, DEMO_RESTAURANT_ID, staffId, userId } from "./seedIds";
+export { DEMO_BRANCH_ID, DEMO_RESTAURANT_ID, staffId, userId };
 
 /** Demo staff — documented in README. */
 export const DEMO_STAFF: { key: string; name: string; role: Role; pin: string; email?: string; color: string; phone: string }[] = [
@@ -74,8 +74,6 @@ export const DEMO_STAFF: { key: string; name: string; role: Role; pin: string; e
   { key: "platform", name: "فريق منصة سُفرة", role: "platform_admin", pin: "0000", email: "platform@sufra.demo", color: "#16211e", phone: "01005550199" },
 ];
 
-export const staffId = (key: string) => id(`staff:${key}`);
-export const userId = (key: string) => id(`user:${key}`);
 
 export function buildSeed(now: Date = new Date()): Seed {
   const T = (minutesAgo: number) => new Date(now.getTime() - minutesAgo * 60_000).toISOString();
