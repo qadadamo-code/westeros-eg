@@ -18,7 +18,7 @@ export function BottomNav() {
   const nav = useNavigate();
   const { pathname } = useLocation();
   // the drop rests on the open screen, or on "More" for a screen that is not on the bar
-  const at = mobile.findIndex((m) => matchPath({ path: `${m.nav!.path}/*` }, pathname) || (m.nav!.path === "/" && pathname === "/"));
+  const at = mobile.findIndex((m) => [m.nav!.path, ...(m.nav!.activePaths ?? [])].some((p) => matchPath({ path: `${p}/*` }, pathname)) || (m.nav!.path === "/" && pathname === "/"));
   const current = more || at < 0 ? mobile.length : at;
   return (
     <>
@@ -56,7 +56,7 @@ export function BottomNav() {
             <div key={g.group}>
               <p className="mb-2 text-[12px] font-semibold text-faint">{t(`nav.group.${g.group}` as TKey)}</p>
               <div className="grid grid-cols-3 gap-2">
-                {g.items.map((m) => {
+                {g.items.flatMap((m) => m.nav!.members ?? [m]).map((m) => {
                   const Icon = m.icon;
                   return (
                     <button

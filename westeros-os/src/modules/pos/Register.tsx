@@ -220,8 +220,10 @@ export default function Register() {
   /** the menu of the channel: items switched off for it are gone, and each shows the channel's price */
   const channelItems = useMemo(() => {
     const lv = channel?.level ?? 1;
-    return menu.items.filter((i) => soldOn(i, channel)).map((i) => (lv === 1 ? i : { ...i, price: levelPrice(i, lv) }));
-  }, [menu.items, channel]);
+    // كل فرع له منيو خاص بيه: items switched off for this branch are gone too
+    const br = session.branchId;
+    return menu.items.filter((i) => soldOn(i, channel) && !(br && (i.offBranches ?? []).includes(br))).map((i) => (lv === 1 ? i : { ...i, price: levelPrice(i, lv) }));
+  }, [menu.items, channel, session.branchId]);
   const orderRef = check ? order?.externalRef : draft.externalRef;
 
   /** Ensures a check exists (dine-in needs a table first). */

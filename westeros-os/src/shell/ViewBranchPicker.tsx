@@ -5,7 +5,7 @@ import { Badge, Select } from "@/ui";
 
 /** the branch picker at the top of each main section: "كل الفروع" or one branch; fixed for a one-branch user */
 export function ViewBranchPicker() {
-  const { branches } = useSession();
+  const { branches, branchId, switchBranch } = useSession();
   const v = useViewBranch();
   const list = v.allowed ? branches.filter((b) => v.allowed!.includes(b.id)) : branches;
   if (v.locked || list.length < 2) {
@@ -14,7 +14,7 @@ export function ViewBranchPicker() {
   }
   return (
     <div className="w-48">
-      <Select aria-label="الفرع" value={v.value ?? ""} onChange={(e) => v.set(e.target.value || null)} options={[{ value: "", label: v.allowed ? "كل فروعي" : "كل الفروع" }, ...list.map((b) => ({ value: b.id, label: b.name.ar }))]} />
+      <Select aria-label="الفرع" value={v.value ?? ""} onChange={(e) => { const id = e.target.value || null; v.set(id); if (id && id !== branchId) switchBranch(id); }} options={[{ value: "", label: v.allowed ? "كل فروعي" : "كل الفروع" }, ...list.map((b) => ({ value: b.id, label: b.name.ar }))]} />
     </div>
   );
 }

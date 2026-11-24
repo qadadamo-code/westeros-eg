@@ -12,6 +12,8 @@ import type { MenuCategory, MenuItem, Modifier, ModifierGroup } from "@/data/typ
 import { cn } from "@/lib/cn";
 import { UNITS_PER_MAJOR } from "@/lib/money";
 import { PageHeader } from "@/shell/PageHeader";
+import { ViewBranchPicker } from "@/shell/ViewBranchPicker";
+import { useViewBranch } from "@/auth/viewBranch";
 import { Badge, Button, Card, Dialog, EmptyState, IconButton, Input, Segmented, Switch, useToast } from "@/ui";
 import { ImageField } from "../ui";
 import { AreaGate, useArea } from "../useAccess";
@@ -48,6 +50,9 @@ function Body() {
   const { toast } = useToast();
   const cats = useLive("menuCategories", { orderBy: [{ field: "sort" }] }).data;
   const items = useLive("menuItems", { orderBy: [{ field: "sort" }] }).data;
+  // كل فرع له منيو خاص بيه: with one branch picked at the top, the list shows that branch's menu
+  const vb = useViewBranch();
+  const branchItems = useMemo(() => (vb.value ? items.filter((i) => !(i.offBranches ?? []).includes(vb.value!)) : items), [items, vb.value]);
   const groups = useLive("modifierGroups", { orderBy: [{ field: "sort" }] }).data;
   const mods = useLive("modifiers", { orderBy: [{ field: "sort" }] }).data;
   const [view, setView] = useState<View>("menu");
@@ -94,11 +99,11 @@ function Body() {
   const rows = useMemo(() => {
     const n = q.trim().toLowerCase();
     const hit = (i: MenuItem) => !n || i.name.ar.toLowerCase().includes(n) || i.name.en.toLowerCase().includes(n) || (i.sku ?? "") === n;
-    if (view === "recommended") return items.filter((i) => i.recommended && hit(i));
-    if (view === "discount") return items.filter((i) => (i.discount ?? 0) > 0 && hit(i));
-    if (view === "off") return items.filter((i) => (!i.active || !i.available) && hit(i));
-    if (n) return items.filter(hit);
-    return current ? items.filter((i) => i.categoryId === current.id) : [];
+    if (view === "recommended") return branchItems.filter((i) => i.recommended && hit(i));
+    if (view === "discount") return branchItems.filter((i) => (i.discount ?? 0) > 0 && hit(i));
+    if (view === "off") return branchItems.filter((i) => (!i.active || !i.available) && hit(i));
+    if (n) return branchItems.filter(hit);
+    return current ? branchItems.filter((i) => i.categoryId === current.id) : [];
   }, [items, view, current, q]);
   const flip = async (i: MenuItem, p: Partial<MenuItem>) => {
     try {
@@ -118,7 +123,7 @@ function Body() {
   return (
     <div className="grid gap-5">
       <PageHeader icon={<BookOpen />} title="المنيو" subtitle="الأصناف والإضافات والملاحظات وأسعارها زي ما الكاشير بيشوفها"
-/>
+        actions={<ViewBranchPicker />} />
       {!manage ? <p className="rounded-xl border border-line px-3 py-2 text-[13.5px] text-muted">للمشاهدة بس: الدور بتاعك مالوش صلاحية تعديل المنيو.</p> : null}
       {manage && codes.fix.length ? (
         <Card className="grid gap-2 border-brass/50 p-3">
@@ -160,7 +165,7 @@ function Body() {
                       <span className={cn("min-w-0 flex-1 text-[13.5px] font-semibold leading-tight", !c.active && "text-faint line-through")}>
                         {c.name.ar}
                         {c.name.en && c.name.en !== c.name.ar ? <span className="block text-[11.5px] font-medium text-muted" dir="ltr">{c.name.en}</span> : null}
-                        <span className="num block text-[11.5px] font-medium text-muted">{items.filter((i) => i.categoryId === c.id).length} صنف{c.code != null ? ` · أكواد ${blockRange(c.code).from}–${blockRange(c.code).to}` : ""}</span>
+                        <span className="num block text-[11.5px] font-medium text-muted">{branchItems.filter((i) => i.categoryId === c.id).length} صنف{c.code != null ? ` · أكواد ${blockRange(c.code).from}–${blockRange(c.code).to}` : ""}</span>
                       </span>
                     </button>
                     {manage ? (

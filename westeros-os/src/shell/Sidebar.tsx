@@ -15,6 +15,8 @@ import { UserMenu } from "./UserMenu";
 
 export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
   const { t, loc, dir } = useT();
+  const { pathname } = useLocation();
+  const under = (m: ModuleDef) => !!m.nav!.activePaths?.some((p) => pathname === p || pathname.startsWith(`${p}/`));
   const { grouped } = useNav();
   const reduced = useReduced();
   const ToggleIcon = collapsed ? (dir === "rtl" ? PanelLeftClose : PanelLeftOpen) : dir === "rtl" ? PanelLeftOpen : PanelLeftClose;
@@ -47,15 +49,16 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
                     <NavLink
                       to={m.nav!.path}
                       title={collapsed ? loc(m.title) : undefined}
-                      className={({ isActive }) =>
-                        cn(
+                      className={({ isActive: hit }) => {
+                        const isActive = hit || under(m);
+                        return cn(
                           "group relative flex h-11 items-center gap-3 rounded-xl px-3 text-[14.5px] font-semibold transition-colors",
                           collapsed && "justify-center px-0",
                           isActive ? "text-ink" : "text-ink-2 hover:bg-surface-3/70 hover:text-ink",
-                        )
-                      }
+                        );
+                      }}
                     >
-                      {({ isActive }) => (
+                      {({ isActive: hit }) => { const isActive = hit || under(m); return (
                         <>
                           {isActive ? (
                             <motion.span layoutId="nav-active" className="absolute inset-0 rounded-xl bg-[linear-gradient(100deg,color-mix(in_srgb,var(--sf-brass)_26%,transparent),color-mix(in_srgb,var(--sf-brass)_8%,transparent))] ring-1 ring-brass/30" transition={reduced ? { duration: 0 } : spring.layout}>
@@ -66,7 +69,7 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
                           {!collapsed ? <span className="relative min-w-0 flex-1 truncate">{loc(m.title)}</span> : null}
                           <NavBadge module={m} className={cn("relative", collapsed && "absolute -top-0.5 end-2")} />
                         </>
-                      )}
+                      ); }}
                     </NavLink>
                     {m.nav!.useSub && !collapsed ? <SubNav m={m} /> : null}
                   </li>
@@ -88,7 +91,7 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
 function SubNav({ m }: { m: ModuleDef }) {
   const items = m.nav!.useSub!();
   const { pathname } = useLocation();
-  const here = pathname === m.nav!.path || pathname.startsWith(`${m.nav!.path}/`);
+  const here = [m.nav!.path, ...(m.nav!.activePaths ?? [])].some((p) => pathname === p || pathname.startsWith(`${p}/`));
   const [open, setOpen] = useState<boolean | null>(null);
   const shown = open ?? here;
   const lit = (p: { to: string; end: boolean }) => (p.end ? pathname.replace(/\/$/, "") === p.to : pathname === p.to || pathname.startsWith(`${p.to}/`));
@@ -109,6 +112,7 @@ function SubNav({ m }: { m: ModuleDef }) {
                 <NavLink to={it.to} end className={cn("flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-[13.5px] font-semibold transition-colors", on ? "bg-brass-soft text-ink" : "text-ink-2 hover:bg-surface-3/70 hover:text-ink")} aria-current={on ? "page" : undefined}>
                   <Icon className={cn("size-4 shrink-0", on && "text-brass-text")} aria-hidden />
                   <span className="min-w-0 flex-1 truncate">{it.label}</span>
+                  {it.module ? <NavBadge module={it.module} /> : null}
                 </NavLink>
               </li>
             );

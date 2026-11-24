@@ -8,6 +8,8 @@ import { motion } from "motion/react";
 import { Bike, ClipboardList, Globe, Printer, QrCode, ReceiptText, RotateCcw, Search, ShoppingBag, Store, Trash2, Utensils, Wallet } from "lucide-react";
 import { useApproval } from "@/auth/approval";
 import { useSession } from "@/auth/session";
+import { useViewBranch } from "@/auth/viewBranch";
+import { ViewBranchPicker } from "@/shell/ViewBranchPicker";
 import { useDb, useLive } from "@/data/hooks";
 import type { Order, OrderStatus, Payment, PaymentMethod, Receipt } from "@/data/types";
 import { useT } from "@/i18n/i18n";
@@ -92,12 +94,15 @@ export default function OrdersPage() {
   const [day, setDay] = useState(() => isoDay(new Date()));
   const [until, setUntil] = useState(() => isoDay(new Date()));
   const range = useMemo(() => periodRange(period, day, until), [period, day, until]);
-  const orders = useLive("orders", { gte: { openedAt: range.from }, lte: { openedAt: range.to }, orderBy: [{ field: "openedAt", dir: "desc" }] }).data;
+  // التشغيل (Saqr 2026-11-24): the orders of the branch picked at the top; كل الفروع for a user of every branch
+  const view = useViewBranch();
+  const bq = view.ids ? { branchId: view.ids } : {};
+  const orders = useLive("orders", { where: bq, gte: { openedAt: range.from }, lte: { openedAt: range.to }, orderBy: [{ field: "openedAt", dir: "desc" }] }).data;
   const oneDay = period === "today" || period === "yesterday" || period === "day" || (period === "range" && day === until);
   const checkIds = useMemo(() => [...new Set(orders.map((o) => o.checkId).filter((x): x is string => !!x))], [orders]);
   // a long period can hold thousands of orders: checks come by the same dates (no id list in the request), and the
   // item counts only for the latest 200 orders, so the request stays small
-  const periodChecks = useLive("checks", { gte: { openedAt: range.from }, lte: { openedAt: range.to } }, { enabled: !oneDay }).data;
+  const periodChecks = useLive("checks", { where: bq, gte: { openedAt: range.from }, lte: { openedAt: range.to } }, { enabled: !oneDay }).data;
   const dayChecks = useLive("checks", { where: { id: checkIds } }, { enabled: oneDay && checkIds.length > 0 }).data;
   const checks = oneDay ? dayChecks : periodChecks;
   const itemOrderIds = useMemo(() => orders.slice(0, 200).map((o) => o.id), [orders]);
@@ -132,7 +137,7 @@ export default function OrdersPage() {
 
   return (
     <div className="grid gap-6">
-      <PageHeader icon={<ClipboardList />} title={L("الطلبات", "Orders")} subtitle={L("كل الطلبات من كل القنوات — اختار الفترة من فلتر التاريخ", "Every order from every channel — pick the period in the date filter")} />
+      <PageHeader icon={<ClipboardList />} title={L("الطلبات", "Orders")} subtitle={L("كل الطلبات من كل القنوات — اختار الفترة من فلتر التاريخ", "Every order from every channel — pick the period in the date filter")} actions={<ViewBranchPicker />} />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatTile index={0} icon={<ClipboardList />} label={L("عدد الطلبات", "Orders")} value={orders.length} sub={`${active} ${L("شغالين", "active")}`} />
         <StatTile index={1} icon={<Wallet />} tone="brass" label={L("مبيعات مقفولة", "Closed sales")} value={<AnimatedMoney value={sales} whole />} sub={`${paid.length} ${L("شيك", "checks")}`} />

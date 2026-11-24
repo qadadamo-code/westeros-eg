@@ -277,6 +277,8 @@ export interface MenuItem extends TenantRow {
   hiddenOn?: SalesChannel[];
   /** قنوات البيع (ids) اللي الصنف مش مفعل فيها: بيختفي من الكاشير لما الطلب عليها. 0049 */
   offChannels?: string[];
+  /** الفروع (ids) اللي الصنف مش متاح فيها: كل فرع له منيو خاص بيه (Saqr 2026-11-24). 0053 */
+  offBranches?: string[];
   /* المنيو (0043_menu_options.sql) */
   /** taken off the price at the till */
   discount?: Units;

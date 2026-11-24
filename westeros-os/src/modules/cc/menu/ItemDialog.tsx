@@ -24,6 +24,7 @@ export function ItemDialog({ item, cats, items = [], defaultCat, sort, onClose, 
   const db = useDb();
   const { toast } = useToast();
   const channels = channelsOf(useLive("settings").data[0]);
+  const branches = useLive("branches").data.filter((b) => !b.isCentral);
   const [d, setD] = useState(() => ({
     ar: item?.name.ar ?? "",
     en: item?.name.en ?? "",
@@ -37,6 +38,7 @@ export function ItemDialog({ item, cats, items = [], defaultCat, sort, onClose, 
     categoryId: item?.categoryId ?? defaultCat ?? cats[0]?.id ?? "",
     hiddenOn: item?.hiddenOn ?? ([] as SalesChannel[]),
     offChannels: item?.offChannels ?? ([] as string[]),
+    offBranches: item?.offBranches ?? ([] as string[]),
     active: item?.active ?? true,
     recommended: item?.recommended ?? false,
     // أصناف داخل الصنف (عرض أو بوكس بيشمل أصناف من المنيو): بتظهر تحته في الفاتورة وبتتحسب في مبيعاتها
@@ -61,6 +63,7 @@ export function ItemDialog({ item, cats, items = [], defaultCat, sort, onClose, 
         categoryId: d.categoryId,
         hiddenOn: d.hiddenOn,
         offChannels: d.offChannels,
+        offBranches: d.offBranches,
         active: d.active,
         recommended: d.recommended,
         comboOf: d.comboOf.filter((c) => c.itemId),
@@ -71,7 +74,7 @@ export function ItemDialog({ item, cats, items = [], defaultCat, sort, onClose, 
             cost: null, sku: null, stationId: null, modifierGroupIds: [], tags: [], available: true, vatExempt: false, sort,
             channelPrices: {}, branchPrices: {}, schedule: [], allergens: [], calories: fields.calories ?? null,
             ...(fields as Required<Pick<MenuItem, "name" | "description" | "price" | "prepMinutes" | "categoryId" | "active">>),
-            imageUrl: d.imageUrl, hiddenOn: d.hiddenOn, offChannels: d.offChannels, discount: fields.discount, recommended: d.recommended, comboOf: fields.comboOf ?? [],
+            imageUrl: d.imageUrl, hiddenOn: d.hiddenOn, offChannels: d.offChannels, offBranches: d.offBranches, discount: fields.discount, recommended: d.recommended, comboOf: fields.comboOf ?? [],
           });
       toast({ tone: "success", title: "اتحفظ الصنف" });
       onClose();
@@ -116,6 +119,22 @@ export function ItemDialog({ item, cats, items = [], defaultCat, sort, onClose, 
             })}
           </div>
         </div>
+        {branches.length > 1 ? (
+          <div>
+            <p className="mb-2 text-[13px] font-semibold text-ink-2">الفروع اللي الصنف متاح فيها</p>
+            <div className="flex flex-wrap gap-2">
+              {branches.map((b) => {
+                const on = !d.offBranches.includes(b.id);
+                return (
+                  <button key={b.id} type="button" aria-pressed={on} onClick={() => set({ offBranches: on ? [...d.offBranches, b.id] : d.offBranches.filter((x) => x !== b.id) })}
+                    className={on ? "h-10 rounded-xl border border-primary bg-primary-soft px-4 text-[14px] font-semibold" : "h-10 rounded-xl border border-line px-4 text-[14px] text-muted"}>
+                    {on ? "✓ " : ""}{b.name.ar}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
         <div>
           <p className="mb-1 text-[13px] font-semibold text-ink-2">أصناف داخل الصنف ده</p>
           <p className="mb-2 text-[12.5px] text-muted">لو الصنف عرض أو بوكس بيشمل أصناف من المنيو، ضيفها هنا: هتظهر تحته في الفاتورة وهتتحسب في مبيعات كل صنف. ولو الزبون بيختار (زي برجرين من 4)، خليها مجموعة خيارات، والخيار الجانبي يكون مربوط بالصنف.</p>

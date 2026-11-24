@@ -38,7 +38,11 @@ export interface ModuleNav {
   /** live badge count (hook — runs inside the shell, may use useLive) */
   useBadge?: () => number | null;
   /** قائمة فرعية منسدلة تحت العنصر (hook — runs inside the shell): each item opens `to`, and is lit on any of `paths` */
-  useSub?: () => { to: string; label: string; Icon: LucideIcon; paths: { to: string; end: boolean }[] }[];
+  useSub?: () => { to: string; label: string; Icon: LucideIcon; paths: { to: string; end: boolean }[]; module?: ModuleDef }[];
+  /** a menu that holds other menus (التشغيل): lit on any of these paths */
+  activePaths?: string[];
+  /** the menus it holds, each still its own module (routes, permissions, badges) */
+  members?: ModuleDef[];
 }
 
 export interface ModuleDef {
