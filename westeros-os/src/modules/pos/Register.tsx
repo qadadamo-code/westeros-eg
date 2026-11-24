@@ -41,7 +41,7 @@ import { addLine, discardTicket, loadTicket, mergeChecks, moveCheckToTable, move
 import { closeCheck, takePayment, voidPayment } from "./sale";
 import { PromoDialog } from "@/modules/marketing/pos/PromoDialog";
 import { redeemGiftCard, refundGiftCard } from "@/modules/marketing/ops";
-import { useMenu, useReceiptSourceBuilder, useSettings, useShift } from "./usePos";
+import { useMenu, useReceiptSourceBuilder, useSettings, useShift, useStaffNames } from "./usePos";
 
 const ACTIVE_KEY = "sufra-os.pos.active";
 type Kind = "dine_in" | "takeaway" | "pickup" | "delivery";
@@ -85,7 +85,8 @@ export default function Register() {
   const tables = useLive("tables", { where: { active: true }, orderBy: [{ field: "label" }] }).data;
   const zones = useLive("zones", { orderBy: [{ field: "sort" }] }).data;
   const customers = useLive("customers").data;
-  const rows = useCheckRows(openChecks, openOrders, openItems, tables, customers);
+  const staffNames = useStaffNames();
+  const rows = useCheckRows(openChecks, openOrders, openItems, tables, customers, (id) => (id ? staffNames.get(id)?.name ?? "" : ""));
   // a sales-channel button opens only that channel's open invoices (Saqr 2026-11-24)
   const [chFilter, setChFilter] = useState<string | null>(null);
 
@@ -603,10 +604,15 @@ export default function Register() {
         </Button>
         {channel ? <span className="rounded-full border border-brass/50 bg-brass-soft px-2.5 py-1 text-[12.5px] font-semibold text-brass-text">{channel.name}{orderRef ? <span className="num" dir="ltr"> · #{orderRef}</span> : null}</span> : null}
         {/* open orders per sales channel, each on its own (Mohammed 2026-11-23) */}
-        {openByChannel.map(({ c, n }) => (
-          <button key={c.id} type="button" onClick={() => (setChFilter(c.id), setDlg("checks"))} className={cn("flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-line bg-surface px-2.5 py-1 text-[12.5px] font-semibold hover:bg-surface-2", n ? "text-ink-2" : "text-faint")}>
-            {c.name} <span className={cn("num rounded-full px-1.5", n ? "bg-primary-soft text-primary" : "bg-surface-2")}>{n}</span>
+        {/* قناة فيها طلبات = زر بيفتح طلباتها؛ قناة فاضية = للعرض بس (Saqr 2026-11-24) */}
+        {openByChannel.map(({ c, n }) => n ? (
+          <button key={c.id} type="button" onClick={() => (setChFilter(c.id), setDlg("checks"))} className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-line-strong bg-surface px-2.5 py-1 text-[12.5px] font-semibold text-ink-2 shadow-sf-sm hover:bg-surface-2">
+            {c.name} <span className="num rounded-full bg-primary-soft px-1.5 text-primary">{n}</span>
           </button>
+        ) : (
+          <span key={c.id} className="flex shrink-0 items-center gap-1.5 whitespace-nowrap px-1.5 py-1 text-[12.5px] font-semibold text-faint">
+            {c.name} <span className="num">0</span>
+          </span>
         ))}
         <Button size="sm" variant="secondary" icon={<ClipboardList className="size-4" />} onClick={() => (setChFilter(null), setDlg("checks"))}>
           {L("المفتوح", "Open")} <span className="num rounded-full bg-primary-soft px-1.5 text-[12px] text-primary">{rows.length}</span>
@@ -822,7 +828,7 @@ export default function Register() {
           ) : null
         }
       />
-      <OpenChecksDialog open={dlg === "checks"} onClose={() => (setDlg(null), setChFilter(null))} rows={chFilter ? rows.filter((r) => channelFor(settings, r.order)?.id === chFilter) : rows} title={chFilter ? `${L("المفتوح", "Open")}: ${channelsOf(settings).find((c) => c.id === chFilter)?.name ?? ""}` : undefined} activeId={activeId} onPick={(c) => (setActiveId(c.id), setDlg(null), setChFilter(null))} />
+      <OpenChecksDialog open={dlg === "checks"} onClose={() => (setDlg(null), setChFilter(null))} rows={chFilter ? rows.filter((r) => channelFor(settings, r.order)?.id === chFilter) : rows} title={chFilter ? `${L("المفتوح", "Open")}: ${channelsOf(settings).find((c) => c.id === chFilter)?.name ?? ""}` : undefined} plain={!!chFilter} activeId={activeId} onPick={(c) => (setActiveId(c.id), setDlg(null), setChFilter(null))} />
       <OpenChecksDialog
         open={dlg === "merge"}
         onClose={() => setDlg(null)}

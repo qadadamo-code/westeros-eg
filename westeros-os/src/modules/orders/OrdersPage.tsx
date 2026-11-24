@@ -2,7 +2,8 @@
  * Orders: everything today (business day) from every channel — POS, waiter, QR, online, phone, delivery —
  * with filters, search, a detail drawer (items trail, payments, receipts + ETA), reprint and manager-approved refunds.
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { closePaidOrders } from "../kitchen/ops";
 import { useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import { Bike, ClipboardList, Globe, Printer, QrCode, ReceiptText, RotateCcw, Search, ShoppingBag, Store, Trash2, Utensils, Wallet } from "lucide-react";
@@ -89,6 +90,8 @@ const channelOf = (o: Order): Exclude<Channel, "all"> => (o.mode === "delivery" 
 
 export default function OrdersPage() {
   const { L, lang } = useT();
+  const db = useDb();
+  const { can } = useSession();
   // فلتر التاريخ (Saqr 2026-11-24): اليوم، أمس، آخر 30 يوم، الشهر الحالي، الشهر السابق، آخر 3 شهور، أو يوم معين، أو من تاريخ إلى تاريخ
   const [period, setPeriod] = useState<Period>("today");
   const [day, setDay] = useState(() => isoDay(new Date()));
@@ -136,6 +139,9 @@ export default function OrdersPage() {
   const active = orders.filter((o) => o.status !== "closed" && o.status !== "void").length;
   // the number on الطلبات in the menu counts every active order, from any day: the ones this view hides get a banner (Saqr 2026-11-24)
   const allActive = useLive("orders", { where: { status: ["open", "sent", "ready", "served"], ...bq } }).data;
+  // paid orders left active close themselves (Saqr 2026-11-24)
+  const activeKey = allActive.map((o) => `${o.id}:${o.status}:${o.checkId}`).join(",");
+  useEffect(() => { if (allActive.length && can("pos.use")) void closePaidOrders(db, allActive).catch(() => undefined); }, [activeKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const shownIds = new Set(rows.map((o) => o.id));
   const hidden = allActive.filter((o) => !shownIds.has(o.id));
   const showActive = () => {

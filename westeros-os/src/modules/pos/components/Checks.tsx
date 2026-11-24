@@ -15,6 +15,10 @@ export interface CheckRow {
   order: Order | null;
   tables: string;
   customer: string;
+  /** رقم هاتف الزبون */
+  phone?: string;
+  /** الموظف اللي فتح الطلب */
+  staff?: string;
   items: number;
 }
 
@@ -36,27 +40,36 @@ export function CheckCard({ row, active, onClick, disabled }: { row: CheckRow; a
       onClick={onClick}
       className={cn("flex min-h-[104px] flex-col rounded-2xl border bg-surface p-3 text-start shadow-sf-sm transition-colors hover:border-line-strong disabled:opacity-40", active ? "border-primary ring-2 ring-primary/30" : "border-line")}
     >
-      <span className="flex items-center gap-2">
-        <span className="grid size-9 place-items-center rounded-xl bg-surface-3 text-ink-2">
+      {/* اختصار الفاتورة (Saqr 2026-11-24): الزبون أو الموظف وتحته الهاتف، رقم الفاتورة واضح، القيمة، عدد الأصناف، وقت الطلب ومدته، والطاولة أو كود تطبيق التوصيل */}
+      <span className="flex items-start gap-2">
+        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-surface-3 text-ink-2">
           <Icon className="size-[18px]" />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[15.5px] font-semibold">{row.tables ? `${L("ترابيزة", "Table")} ${row.tables}` : row.customer || (mode === "delivery" ? L("دليفري", "Delivery") : mode === "pickup" ? L("استلام", "Pickup") : L("تيك أواي", "Takeaway"))}</span>
-          <span className="num block text-[12px] text-muted">#{row.order?.number ?? "—"} · {row.items} {L("صنف", "items")}</span>
+          <span className="block truncate text-[15.5px] font-semibold">{row.customer || row.staff || (mode === "delivery" ? L("دليفري", "Delivery") : mode === "pickup" ? L("استلام", "Pickup") : mode === "dine_in" ? L("صالة", "Dine-in") : L("تيك أواي", "Takeaway"))}</span>
+          {row.phone ? <span className="num block text-[12.5px] text-muted" dir="ltr">{row.phone}</span> : row.customer && row.staff ? <span className="block truncate text-[12.5px] text-muted">{row.staff}</span> : null}
         </span>
-        {row.check.status === "bill_requested" ? <Badge tone="brass" size="sm" dot pulse>{L("الحساب", "Bill")}</Badge> : null}
+        <span className="num shrink-0 rounded-lg bg-ink px-2 py-0.5 text-[15px] font-bold text-surface" dir="ltr">#{row.order?.number ?? "—"}</span>
       </span>
-      <span className="mt-auto flex items-end justify-between pt-2">
-        <span className={cn("flex items-center gap-1 text-[12px] font-semibold", age > 90 ? "text-danger" : age > 45 ? "text-warn" : "text-muted")}>
-          <Clock className="size-3.5" /> {ago(row.check.openedAt, lang)}
+      {row.tables || row.order?.externalRef || row.check.status === "bill_requested" ? (
+        <span className="mt-2 flex flex-wrap items-center gap-1.5">
+          {row.tables ? <Badge size="sm" tone="primary">{L("طاولة", "Table")} {row.tables}</Badge> : null}
+          {row.order?.externalRef ? <Badge size="sm" tone="brass">{L("كود الطلب", "Order code")} <span className="num" dir="ltr">{row.order.externalRef}</span></Badge> : null}
+          {row.check.status === "bill_requested" ? <Badge tone="brass" size="sm" dot pulse>{L("الحساب", "Bill")}</Badge> : null}
         </span>
-        <span className="num text-[16px] font-semibold">{formatMoney(row.check.total, { lang })}</span>
+      ) : null}
+      <span className="mt-auto flex items-end justify-between gap-2 pt-2">
+        <span className="grid gap-0.5 text-[12px]">
+          <span className="text-muted"><span className="num">{row.items}</span> {L("صنف", "items")} · <span className="num">{new Intl.DateTimeFormat(lang === "ar" ? "ar-EG-u-nu-latn" : "en-GB", { hour: "2-digit", minute: "2-digit" }).format(new Date(row.check.openedAt))}</span></span>
+          <span className={cn("flex items-center gap-1 font-semibold", age > 90 ? "text-danger" : age > 45 ? "text-warn" : "text-muted")}><Clock className="size-3.5" /> {ago(row.check.openedAt, lang)}</span>
+        </span>
+        <span className="num text-[17px] font-bold">{formatMoney(row.check.total, { lang })}</span>
       </span>
     </motion.button>
   );
 }
 
-export function useCheckRows(checks: Check[], orders: Order[], items: OrderItem[], tables: DiningTable[], customers: { id: string; name: string; phone: string }[]): CheckRow[] {
+export function useCheckRows(checks: Check[], orders: Order[], items: OrderItem[], tables: DiningTable[], customers: { id: string; name: string; phone: string }[], staffName: (id: string | null) => string = () => ""): CheckRow[] {
   return useMemo(() => {
     const tl = new Map(tables.map((t) => [t.id, t.label]));
     return checks
@@ -69,32 +82,34 @@ export function useCheckRows(checks: Check[], orders: Order[], items: OrderItem[
           order: os[0] ?? null,
           tables: c.tableIds.map((id) => tl.get(id) ?? "?").join("+"),
           customer: cust ? cust.name || cust.phone : "",
+          phone: cust?.name && cust.phone ? cust.phone : "",
+          staff: staffName(os[0]?.openedBy ?? null),
           items: items.filter((i) => ids.has(i.orderId) && i.status !== "void").reduce((a, i) => a + i.qty, 0),
         };
       })
       .sort((a, b) => a.check.openedAt.localeCompare(b.check.openedAt));
-  }, [checks, orders, items, tables, customers]);
+  }, [checks, orders, items, tables, customers]); // eslint-disable-line react-hooks/exhaustive-deps
 }
 
-export function OpenChecksDialog({ open, onClose, rows, activeId, onPick, title, exclude }: { open: boolean; onClose: () => void; rows: CheckRow[]; activeId: string | null; onPick: (c: Check) => void; title?: string; exclude?: string | null }) {
+export function OpenChecksDialog({ open, onClose, rows, activeId, onPick, title, exclude, plain }: { open: boolean; onClose: () => void; rows: CheckRow[]; activeId: string | null; onPick: (c: Check) => void; title?: string; exclude?: string | null; /** one channel's orders: no search and no type filter (Saqr 2026-11-24) */ plain?: boolean }) {
   const { L } = useT();
   const [q, setQ] = useState("");
   const [f, setF] = useState<"all" | "dine_in" | "takeaway" | "delivery">("all");
   useEffect(() => {
     if (open) setQ("");
   }, [open]);
-  const shown = rows.filter((r) => r.check.id !== exclude && (f === "all" || r.order?.mode === f) && (!q || matches(`${r.tables} ${r.customer} ${r.order?.number ?? ""}`, q)));
+  const shown = rows.filter((r) => r.check.id !== exclude && (plain || ((f === "all" || r.order?.mode === f) && (!q || matches(`${r.tables} ${r.customer} ${r.phone ?? ""} ${r.order?.number ?? ""} ${r.order?.externalRef ?? ""}`, q)))));
   return (
     <Dialog open={open} onClose={onClose} size="xl" title={title ?? L("الشيكات المفتوحة", "Open checks")}>
-      <div className="flex flex-wrap items-center gap-2">
+      {plain ? null : <div className="flex flex-wrap items-center gap-2">
         <label className="relative min-w-48 flex-1">
           <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={L("ترابيزة، رقم، عميل…", "Table, number, customer…")} aria-label={L("بحث", "Search")} className="h-11 w-full rounded-xl border border-line bg-surface ps-9 pe-3 outline-none focus:border-primary" data-autofocus />
         </label>
         <Segmented size="sm" label={L("النوع", "Type")} value={f} onChange={setF} options={[{ value: "all", label: L("الكل", "All") }, { value: "dine_in", label: L("صالة", "Dine-in") }, { value: "takeaway", label: L("تيك أواي", "Takeaway") }, { value: "delivery", label: L("دليفري", "Delivery") }]} />
-      </div>
+      </div>}
       {shown.length ? (
-        <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className={cn("grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3", !plain && "mt-4")}>
           {shown.map((r) => (
             <CheckCard key={r.check.id} row={r} active={r.check.id === activeId} onClick={() => onPick(r.check)} />
           ))}

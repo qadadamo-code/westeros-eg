@@ -213,7 +213,8 @@ export async function closeCheck(db: Db, checkId: string, opts: { shift: Shift |
   const now = nowIso();
   await db.update("checks", checkId, { status: "paid", closedAt: now, receiptNo: receipt.receiptNo, etaUuid: receipt.etaUuid, paid: frozen.payable });
   for (const o of t.orders) {
-    const open = t.items.some((i) => i.orderId === o.id && ["new", "sent", "preparing"].includes(i.status));
+    // still cooking = sent to the kitchen and not ready; a line never sent (new) doesn't keep a paid order open (Saqr 2026-11-24)
+    const open = t.items.some((i) => i.orderId === o.id && ["sent", "preparing"].includes(i.status));
     if (o.mode === "dine_in" || !open) await db.update("orders", o.id, { status: "closed", closedAt: now });
   }
   for (const tid of t.check.tableIds) {
