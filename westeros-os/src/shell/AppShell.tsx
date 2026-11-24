@@ -12,11 +12,10 @@ import { useScreenAccess } from "./useScreenAccess";
 import { Skeleton, useCommands, useHotkeys, useReduced } from "@/ui";
 import { Languages, Lock, Moon } from "lucide-react";
 import { useTheme } from "@/theme/theme";
-import { BottomNav } from "./BottomNav";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { ShortcutsDialog } from "./ShortcutsDialog";
 import { NumCalc } from "./NumCalc";
-import { Sidebar } from "./Sidebar";
+import { MobileMenu, Sidebar } from "./Sidebar";
 import { TopBar, useShellTitle } from "./TopBar";
 import { OpsShellExtras } from "@/modules/ops/shell";
 import { COST_CONTROL_ONLY } from "@/costControl";
@@ -116,7 +115,7 @@ export function AppShell() {
       <Sidebar collapsed={collapsed} onToggle={toggle} />
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar title={title} />
-        <main id="main" tabIndex={-1} className="flex-1 px-4 pt-5 pb-28 outline-none md:px-6 md:pt-6 md:pb-10 xl:px-8">
+        <main id="main" tabIndex={-1} className="flex-1 px-4 pt-5 pb-10 outline-none md:px-6 md:pt-6 md:pb-10 xl:px-8">
           {/* keyed entrance only: an exit animation would re-render the NEW route inside the old wrapper */}
           <motion.div key={loc.pathname.split("/")[1]} initial={reduced ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ type: "spring", stiffness: 380, damping: 34 }}>
               <ErrorBoundary lang={lang} resetKey={loc.pathname}>
@@ -127,7 +126,7 @@ export function AppShell() {
           </motion.div>
         </main>
       </div>
-      <BottomNav />
+      <MobileMenu />
       {/* walkie-talkie runtime + floating PTT button + alert toasts (src/modules/ops) */}
       <OpsShellExtras />
       <ShortcutsDialog open={help} onClose={() => setHelp(false)} />

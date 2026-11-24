@@ -1,9 +1,10 @@
 /** 5- التصنيع: 5.1 طرق التصنيع (the four methods and their batch records), 5.2 الوصفات, the manufactured products and sale items, and the summary. */
 import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
-import { BarChart3, BookOpenCheck, ChefHat, ClipboardList, Factory, PlusCircle, UtensilsCrossed } from "lucide-react";
+import { Factory } from "lucide-react";
 import { PageHeader } from "@/shell/PageHeader";
-import { AreaGate, useTabs } from "../useAccess";
+import { AreaGate } from "../useAccess";
+import { useMfgTabs } from "./tabs";
 import { RouteTabs } from "@/modules/marketing/ui";
 import { Skeleton } from "@/ui";
 import Recipes from "./Recipes";
@@ -15,15 +16,7 @@ const NewBatchPage = lazy(() => import("@/modules/production/NewBatchPage"));
 const BatchesPage = lazy(() => import("@/modules/production/BatchesPage"));
 
 export default function MfgPage() {
-  // the tabs this employee may see (المستخدمين ← الأدوار)
-  const { tabs, first } = useTabs([
-          { to: "/manufacturing", end: true, label: "تصنيع صنف", icon: <PlusCircle />, area: "mfg.make" },
-          { to: "/manufacturing/recipes", label: "الوصفات", icon: <BookOpenCheck />, area: "mfg.recipes" },
-          { to: "/manufacturing/log", label: "سجل التشغيلات", icon: <ClipboardList />, area: "mfg.log" },
-          { to: "/manufacturing/products", label: "المنتجات المصنعة", icon: <ChefHat />, area: "catalog.products" },
-          { to: "/manufacturing/sale", label: "أصناف البيع", icon: <UtensilsCrossed />, area: "catalog.sale" },
-          { to: "/manufacturing/summary", label: "الملخص", icon: <BarChart3 />, area: "mfg.summary" },
-        ]);
+  const { tabs, first } = useMfgTabs();
   return (
     <div className="grid gap-5">
       <PageHeader icon={<Factory />} title="التصنيع" />

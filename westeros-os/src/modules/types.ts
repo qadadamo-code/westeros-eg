@@ -39,6 +39,8 @@ export interface ModuleNav {
   useBadge?: () => number | null;
   /** قائمة فرعية منسدلة تحت العنصر (hook — runs inside the shell): each item opens `to`, and is lit on any of `paths` */
   useSub?: () => { to: string; label: string; Icon: LucideIcon; paths: { to: string; end: boolean }[]; module?: ModuleDef }[];
+  /** the phone menu only: the screen's tabs, opened straight from the menu sheet (Saqr 2026-11-24) */
+  useMobileSub?: () => { to: string; label: string; icon: import("react").ReactNode; end?: boolean }[];
   /** a menu that holds other menus (التشغيل): lit on any of these paths */
   activePaths?: string[];
   /** the menus it holds, each still its own module (routes, permissions, badges) */

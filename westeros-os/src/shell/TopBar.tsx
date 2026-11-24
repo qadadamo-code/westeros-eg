@@ -1,4 +1,5 @@
-import { Languages, Moon, Search, Sun } from "lucide-react";
+import { Languages, Menu, Moon, Search, Sun } from "lucide-react";
+import { openMobileMenu } from "./Sidebar";
 import { useT } from "@/i18n/i18n";
 import { useTheme } from "@/theme/theme";
 import { IconButton, Kbd, MOD_LABEL, useCommandPalette } from "@/ui";
@@ -23,6 +24,9 @@ export function TopBar({ title }: { title?: string }) {
       <div className="sf-glass flex h-[60px] items-center gap-2 rounded-[22px] px-3 md:px-5">
         {/* phone: brand + branch */}
         <div className="flex min-w-0 items-center gap-2.5 md:hidden">
+          <IconButton label="القائمة" onClick={openMobileMenu} className="-ms-1">
+            <Menu />
+          </IconButton>
           <Mark className="size-8" />
           <div className="min-w-0 leading-tight">
             <p className="truncate text-[15px] font-bold">{title}</p>
