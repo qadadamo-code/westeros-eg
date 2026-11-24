@@ -84,6 +84,10 @@ export interface AuthApi {
   setMemberEmail?(restaurantId: string, membershipId: string, email: string): Promise<void>;
   /** sets/changes a PIN (top management only, Mohammed 2026-11-24) */
   setPin(restaurantId: string, membershipId: string, pin: string): Promise<void>;
+  /** a new device joins with the person's mobile number + PIN (no email); returns a one-time sign-in */
+  linkDevice?(phone: string, pin: string): Promise<{ ok: boolean; reason?: "email"; email?: string; password?: string; restaurant_id?: string; membership_id?: string; name?: string }>;
+  /** anyone changes their own PIN by typing the current one */
+  changeMyPin?(restaurantId: string, membershipId: string, oldPin: string, newPin: string): Promise<void>;
   /** staff that can sign in on this device with a PIN (no secrets) */
   pinRoster(restaurantId: string): Promise<Membership[]>;
 }

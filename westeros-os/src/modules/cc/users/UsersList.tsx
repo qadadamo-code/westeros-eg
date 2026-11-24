@@ -221,7 +221,7 @@ function UserDialog({ cc, member, profile, readOnly, onClose }: { cc: Cc; member
           <div className="grid gap-3 sm:grid-cols-2">
             <Input label="الاسم" value={name} onChange={(e) => setName(e.target.value)} />
             <Input label="المسمى الوظيفي" placeholder="مثلاً: شيف صوصات" value={position} onChange={(e) => setPosition(e.target.value)} />
-            <Input label="رقم الموبايل" inputMode="tel" dir="ltr" value={phone} onChange={(e) => setPhone(e.target.value)} />
+            <Input label="رقم الموبايل" hint="الموظف بيكتبه مع الـPIN أول مرة يدخل من أي موبايل" inputMode="tel" dir="ltr" value={phone} onChange={(e) => setPhone(e.target.value)} />
             <Input label={member?.userId ? "الإيميل (بيدخل بيه السيستم)" : "الإيميل"} type="email" dir="ltr" value={email} onChange={(e) => setEmail(e.target.value)} disabled={emailLocked} hint={emailLocked ? "تغيير إيميل الدخول للإدارة العليا بس" : undefined} error={emailBad ? "الإيميل مكتوب غلط" : undefined} />
             <Input label="الرقم القومي" inputMode="numeric" dir="ltr" maxLength={14} value={nationalId} onChange={(e) => setNationalId(e.target.value.replace(/\D/g, ""))} />
             <Input label="تاريخ الميلاد" type="date" dir="ltr" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />

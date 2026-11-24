@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Feather, Keyboard, Languages, Lock, LogOut, Monitor, Moon, RotateCcw, Sparkles, Sun, Users } from "lucide-react";
+import { Feather, KeyRound, Keyboard, Languages, Lock, LogOut, Monitor, Moon, RotateCcw, Sparkles, Sun, Timer, Users } from "lucide-react";
+import { ChangePinDialog, LockTimeDialog } from "./AccountDialogs";
 import { liteChoice, setLiteChoice } from "@/lib/device";
 import { useSession } from "@/auth/session";
 import { ROLE_LABEL } from "@/auth/roles";
@@ -17,6 +18,7 @@ export function UserMenu({ side = "bottom", align = "end", full }: { side?: "top
   const theme = useTheme();
   const { toast } = useToast();
   const [shortcuts, setShortcuts] = useState(false);
+  const [dialog, setDialog] = useState<"pin" | "lockTime" | null>(null);
   const [lite, setLite] = useState<"auto" | "lite" | "full">(() => { const c = liteChoice(); return c === null ? "auto" : c ? "lite" : "full"; });
   if (!s.staff) return null;
   const staff = s.staff;
@@ -99,6 +101,16 @@ export function UserMenu({ side = "bottom", align = "end", full }: { side?: "top
                 {t("shell.lock")}
               </MenuItem>
             ) : null}
+            {staff.hasPin && repo.auth.changeMyPin ? (
+              <MenuItem icon={<KeyRound />} onClick={() => (close(), setDialog("pin"))}>
+                {lang === "ar" ? "تغيير الـPIN" : "Change PIN"}
+              </MenuItem>
+            ) : null}
+            {s.deviceRestaurantId ? (
+              <MenuItem icon={<Timer />} onClick={() => (close(), setDialog("lockTime"))}>
+                {lang === "ar" ? "وقت قفل الشاشة" : "Auto-lock time"}
+              </MenuItem>
+            ) : null}
             {s.deviceRestaurantId ? (
               <MenuItem icon={<Users />} onClick={() => (close(), s.lock())}>
                 {t("shell.switchUser")}
@@ -131,6 +143,8 @@ export function UserMenu({ side = "bottom", align = "end", full }: { side?: "top
         )}
       </Popover>
       <ShortcutsDialog open={shortcuts} onClose={() => setShortcuts(false)} />
+      {dialog === "pin" ? <ChangePinDialog onClose={() => setDialog(null)} /> : null}
+      {dialog === "lockTime" ? <LockTimeDialog onClose={() => setDialog(null)} /> : null}
     </>
   );
 }

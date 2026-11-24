@@ -476,6 +476,15 @@ export class SupabaseAdapter implements Repo {
       const { error } = await this.client.rpc("set_member_email", { p_restaurant_id: restaurantId, p_membership_id: membershipId, p_email: email });
       if (error) throw error;
     },
+    linkDevice: async (phone, pin) => {
+      const { data, error } = await this.client.rpc("link_device", { p_phone: phone, p_pin: pin });
+      if (error) throw /link_locked/.test(error.message) ? Object.assign(new Error("link_locked"), { code: "link_locked" }) : error;
+      return data as { ok: boolean; reason?: "email"; email?: string; password?: string; restaurant_id?: string; membership_id?: string; name?: string };
+    },
+    changeMyPin: async (restaurantId, membershipId, oldPin, newPin) => {
+      const { error } = await this.client.rpc("change_my_pin", { p_restaurant_id: restaurantId, p_membership_id: membershipId, p_old: oldPin, p_new: newPin });
+      if (error) throw error;
+    },
     setPin: async (restaurantId, membershipId, pin) => {
       const { error } = await this.client.rpc("set_staff_pin", { p_restaurant_id: restaurantId, p_membership_id: membershipId, p_pin: pin });
       if (error) throw error;

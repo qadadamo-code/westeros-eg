@@ -26,7 +26,8 @@ export function RequireStaff({ children }: { children: ReactNode }) {
   const s = useSession();
   const loc = useLocation();
   if (s.status === "booting") return <BootScreen />;
-  if (!s.staff) return <Navigate to={s.status === "locked" ? "/login/pin" : "/login"} replace state={{ from: loc.pathname + loc.search }} />;
+  // a device that isn't linked opens on the PIN screen too: an employee links it there with the restaurant code
+  if (!s.staff) return <Navigate to="/login/pin" replace state={{ from: loc.pathname + loc.search }} />;
   return <>{children}</>;
 }
 

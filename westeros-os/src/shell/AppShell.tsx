@@ -1,4 +1,5 @@
 import { StockSync } from "@/modules/cc/finance/SourceEntry";
+import { deviceLockMinutes } from "./AccountDialogs";
 import { Suspense, useEffect, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
@@ -41,7 +42,7 @@ export function PageFallback() {
 function useAutoLock() {
   const s = useSession();
   const settings = useLive("settings").data[0];
-  const minutes = settings?.autoLockMinutes ?? 0;
+  const minutes = deviceLockMinutes(settings?.autoLockMinutes ?? 0);
   useEffect(() => {
     if (s.method !== "pin" || !minutes) return;
     let timer: ReturnType<typeof setTimeout>;

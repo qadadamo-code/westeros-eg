@@ -55,6 +55,8 @@ interface SessionApi extends SessionState {
   role: Role | null;
   can: (p: Permission) => boolean;
   signIn: (email: string, password: string) => Promise<void>;
+  /** a new device: own mobile number + PIN, once; then PIN only. Throws code "link_locked" after repeated misses */
+  linkDevice: (phone: string, pin: string) => Promise<{ ok: boolean; reason?: "email"; email?: string }>;
   /** membershipId null = PIN only (the PIN identifies the person); throws code "pin_locked" after repeated misses */
   pinSignIn: (membershipId: string | null, pin: string) => Promise<Membership | null>;
   /** sign the acting person out of the device (back to the names screen) */
@@ -141,6 +143,25 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       saveRaw(EMAIL_KEY, "1");
       markWelcome();
       await boot();
+    },
+    [repo, boot],
+  );
+
+  const linkDevice = useCallback(
+    async (phone: string, pin: string) => {
+      if (!repo.auth.linkDevice) return { ok: false };
+      const r = await repo.auth.linkDevice(phone, pin);
+      if (!r.ok || !r.email || !r.password || !r.restaurant_id || !r.membership_id) return { ok: false, reason: r.reason, email: r.email };
+      await repo.auth.signInWithPassword(r.email, r.password);
+      // the device is now linked to the restaurant, and this person is in with a PIN session (lock, auto-lock, bio)
+      saveRaw(DEVICE_KEY, r.restaurant_id);
+      saveRaw(EMAIL_KEY, "");
+      saveRaw(REST_KEY, "");
+      saveJSON(PIN_KEY, { membershipId: r.membership_id, restaurantId: r.restaurant_id });
+      rememberPin(r.restaurant_id, r.membership_id, r.name ?? "", pin);
+      markWelcome();
+      await boot();
+      return { ok: true };
     },
     [repo, boot],
   );
@@ -252,8 +273,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const role = s.staff?.role ?? null;
   const api = useMemo<SessionApi>(
-    () => ({ ...s, role, can: (p) => can(role, p), signIn, pinSignIn, lock, rest, wake, signOut, switchRestaurant, switchBranch }),
-    [s, role, signIn, pinSignIn, lock, rest, wake, signOut, switchRestaurant, switchBranch],
+    () => ({ ...s, role, can: (p) => can(role, p), signIn, linkDevice, pinSignIn, lock, rest, wake, signOut, switchRestaurant, switchBranch }),
+    [s, role, signIn, linkDevice, pinSignIn, lock, rest, wake, signOut, switchRestaurant, switchBranch],
   );
 
   // amounts without an explicit currency follow the restaurant (EGP / SAR)
