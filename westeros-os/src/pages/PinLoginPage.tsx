@@ -162,9 +162,9 @@ export function PinLoginPage() {
                     />
                   )
                 ) : (
-                  <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                  <ul className="flex flex-wrap justify-center gap-3">
                     {list.map((m, i) => (
-                      <motion.li key={m.id} initial={reduced ? false : { opacity: 0, y: 18, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ delay: reduced ? 0 : 0.03 * i, ...spring.soft }}>
+                      <motion.li key={m.id} className="w-[calc(50%-6px)] sm:w-[calc(33.333%-8px)] lg:w-[calc(25%-9px)]" initial={reduced ? false : { opacity: 0, y: 18, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ delay: reduced ? 0 : 0.03 * i, ...spring.soft }}>
                         <motion.button
                           type="button"
                           layoutId={reduced ? undefined : `staff-${m.id}`}
