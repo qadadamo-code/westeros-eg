@@ -39,6 +39,8 @@ export interface SessionState {
   deviceRestaurantId: string | null;
   /** screen is covered by the PIN lock; the person stays signed in and the page under it keeps its place and typed values */
   resting: boolean;
+  /** the saved device sign-in could not be checked (no internet / server unreachable); it is kept and retried */
+  offline: boolean;
 }
 
 interface SessionApi extends SessionState {
@@ -58,7 +60,7 @@ interface SessionApi extends SessionState {
 
 const Ctx = createContext<SessionApi | null>(null);
 
-const INITIAL: SessionState = { status: "booting", user: null, memberships: [], restaurant: null, branches: [], branchId: null, staff: null, method: null, deviceRestaurantId: null, resting: false };
+const INITIAL: SessionState = { status: "booting", user: null, memberships: [], restaurant: null, branches: [], branchId: null, staff: null, method: null, deviceRestaurantId: null, resting: false, offline: false };
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const repo = useRepo();
@@ -78,7 +80,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   );
 
   const boot = useCallback(async () => {
-    const user = await repo.auth.current().catch(() => null);
+    let offline = false;
+    const user = await repo.auth.current().catch((e: { code?: string }) => {
+      offline = e?.code === "offline";
+      return null;
+    });
     const memberships = user ? await repo.auth.myMemberships().catch(() => []) : [];
     let device = loadRaw(DEVICE_KEY);
     if (!device && repo.kind === "local") device = DEMO_RESTAURANT_ID;
@@ -90,19 +96,20 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       const [m] = await repo.list("memberships", { where: { id: pin.membershipId, active: true } }).catch(() => []);
       if (m) {
         const t = await loadTenant(m.restaurantId, m);
-        if (t) return setS({ status: "ready", user, memberships, ...t, staff: m, method: "pin", deviceRestaurantId: device, resting: loadRaw(REST_KEY) === "1" });
+        if (t) return setS({ status: "ready", user, memberships, ...t, staff: m, method: "pin", deviceRestaurantId: device, resting: loadRaw(REST_KEY) === "1", offline: false });
       }
-      saveJSON(PIN_KEY, null);
+      // a dropped connection must not end the person's PIN session; only a missing/inactive row does
+      if (!offline) saveJSON(PIN_KEY, null);
     }
     // 2) an email session
     if (user && memberships.length) {
       const savedR = loadRaw(RESTAURANT_KEY);
       const pick = memberships.find((x) => x.restaurant.id === savedR) ?? memberships[0];
       const t = await loadTenant(pick.restaurant.id, pick.membership);
-      if (t) return setS({ status: "ready", user, memberships, ...t, staff: pick.membership, method: "password", deviceRestaurantId: device, resting: false });
+      if (t) return setS({ status: "ready", user, memberships, ...t, staff: pick.membership, method: "password", deviceRestaurantId: device, resting: false, offline: false });
     }
     // 3) nobody: a paired device shows the PIN screen
-    setS({ ...INITIAL, status: device ? "locked" : "signed-out", user, memberships, deviceRestaurantId: device });
+    setS({ ...INITIAL, status: device ? "locked" : "signed-out", user, memberships, deviceRestaurantId: device, offline });
   }, [repo, loadTenant]);
 
   useEffect(() => {
@@ -193,6 +200,25 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     },
     [s.restaurant],
   );
+
+  // a paired device whose saved sign-in could not be read (the PC woke up before the internet did, a server hiccup)
+  // keeps trying on its own, so staff never have to ask the owner to sign in again
+  const waiting = s.status !== "booting" && !s.user && !!s.deviceRestaurantId;
+  useEffect(() => {
+    if (!waiting) return;
+    const retry = () => void boot();
+    const onVisible = () => document.visibilityState === "visible" && retry();
+    const off = repo.auth.onChange((u) => u && retry());
+    window.addEventListener("online", retry);
+    document.addEventListener("visibilitychange", onVisible);
+    const t = setInterval(retry, 20_000);
+    return () => {
+      off();
+      window.removeEventListener("online", retry);
+      document.removeEventListener("visibilitychange", onVisible);
+      clearInterval(t);
+    };
+  }, [waiting, repo, boot]);
 
   // keep the acting staff row fresh (role or name edits by a manager on another device)
   useEffect(() => {

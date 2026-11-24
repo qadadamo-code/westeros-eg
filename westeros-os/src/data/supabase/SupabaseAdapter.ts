@@ -8,7 +8,7 @@
  *    reads fall back to the last rows seen for that collection.
  *  - Realtime: one channel per restaurant, postgres_changes filtered by restaurant_id.
  */
-import { createClient, type RealtimeChannel, type SupabaseClient } from "@supabase/supabase-js";
+import { createClient, isAuthRetryableFetchError, type RealtimeChannel, type SupabaseClient } from "@supabase/supabase-js";
 import { uuid } from "@/lib/id";
 import { nowIso } from "@/lib/time";
 import { loadJSON, saveJSON } from "@/lib/storage";
@@ -326,7 +326,10 @@ export class SupabaseAdapter implements Repo {
 
   auth: AuthApi = {
     current: async () => {
-      const { data } = await this.client.auth.getSession();
+      const { data, error } = await this.client.auth.getSession();
+      // an expired access token is refreshed here; when that fails only because the network is down, the saved
+      // sign-in is still there, so say "offline" instead of "signed out"
+      if (!data.session && error && isAuthRetryableFetchError(error)) throw Object.assign(new Error("offline"), { code: "offline", cause: error });
       return this.toUser(data.session?.user);
     },
     signInWithPassword: async (email, password) => {
@@ -335,7 +338,8 @@ export class SupabaseAdapter implements Repo {
       return this.toUser(data.user)!;
     },
     signOut: async () => {
-      await this.client.auth.signOut();
+      // local: signing out one phone or PC must not sign out every other device on the same account (the default is global)
+      await this.client.auth.signOut({ scope: "local" });
     },
     onChange: (cb) => {
       const { data } = this.client.auth.onAuthStateChange((_e, session) => cb(this.toUser(session?.user)));

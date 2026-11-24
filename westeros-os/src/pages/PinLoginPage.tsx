@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowLeft, ArrowRight, Mail, Search } from "lucide-react";
+import { ArrowLeft, ArrowRight, Mail, Search, WifiOff } from "lucide-react";
 import { useSession } from "@/auth/session";
 import { ROLE_LABEL, ROLE_RANK } from "@/auth/roles";
 import { useRepo } from "@/data/hooks";
@@ -56,7 +56,7 @@ export function PinLoginPage() {
     if (!rid) return;
     repo.auth.pinRoster(rid).then(setRoster, () => setRoster([]));
     repo.list("restaurants", { where: { id: rid } }).then((r) => setRestaurant(r[0] ?? null), () => {});
-  }, [repo, s.deviceRestaurantId]);
+  }, [repo, s.deviceRestaurantId, s.user?.id]); // eslint-disable-line react-hooks/exhaustive-deps -- names come back once the device sign-in is read again
 
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -147,6 +147,8 @@ export function PinLoginPage() {
                 ) : !list.length ? (
                   s.user ? (
                     <EmptyState title={t("pin.noStaff")} />
+                  ) : s.offline ? (
+                    <EmptyState icon={<WifiOff />} title={t("pin.offline")} body={t("pin.offlineHint")} />
                   ) : (
                     <EmptyState
                       icon={<Mail />}

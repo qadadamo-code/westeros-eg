@@ -99,6 +99,8 @@ export const dict = {
   "pin.demoHint": { ar: "PIN التجربة: {pin}", en: "Demo PIN: {pin}" },
   "pin.needsDevice": { ar: "الجهاز ده محتاج مدير يسجّل دخول مرة واحدة الأول", en: "A manager needs to sign this device in once first" },
   "pin.noStaff": { ar: "مفيش حد ليه PIN لسه", en: "Nobody has a PIN yet" },
+  "pin.offline": { ar: "مفيش اتصال بالنت دلوقتي", en: "No connection right now" },
+  "pin.offlineHint": { ar: "الجهاز لسه داخل، أول ما النت يرجع الأسماء هتظهر لوحدها", en: "This device is still signed in; names come back as soon as the connection does" },
   "pin.deviceOut": { ar: "الجهاز خرج من الحساب، فالأسماء مش ظاهرة", en: "This device is signed out, so names are hidden" },
   "pin.deviceOutHint": { ar: "ادخل بإيميل المالك مرة واحدة، وبعدها أسماء كل اللي ليهم PIN هتظهر هنا", en: "Sign in once with the owner's email, then everyone with a PIN shows here" },
   "pin.digit": { ar: "رقم {n}", en: "Digit {n}" },
