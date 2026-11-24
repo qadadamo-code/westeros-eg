@@ -371,6 +371,14 @@ export class LocalAdapter implements Repo {
       void this.update("memberships", m.id, { lastSeenAt: nowIso() });
       return clone(m);
     },
+    setMemberEmail: async (restaurantId, membershipId, email) => {
+      await this.readyP;
+      const e = email.trim().toLowerCase();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) throw new Error("email_bad");
+      const all = [...this.map("memberships").values()] as unknown as Membership[];
+      if (all.some((m) => m.id !== membershipId && m.restaurantId === restaurantId && (m.email ?? "").toLowerCase() === e)) throw new Error("email_taken");
+      await this.update("memberships", membershipId, { email: e });
+    },
     setPin: async (restaurantId, membershipId, pin) => {
       await this.readyP;
       if (!/^\d{6}$/.test(pin)) throw new Error("PIN must be 6 digits");

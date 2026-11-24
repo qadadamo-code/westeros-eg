@@ -165,12 +165,19 @@ function UserDialog({ cc, member, profile, readOnly, onClose }: { cc: Cc; member
   const canPin = staff?.role === "owner" || staff?.role === "admin";
   const pinOk = pin === "" ? !!member || !canPin : PIN_RULE.test(pin);
   const pwOk = password === "" || password.length >= 8;
-  const valid = !!name.trim() && pinOk && pwOk && !codeProblem && (owner || !!type) && !!hireDate;
+  // the sign-in email: top management only, and only the owner changes the owner's
+  const emailLocked = !!member?.userId && !(canPin && (!owner || staff?.role === "owner"));
+  const emailChanged = !!member?.userId && !!email.trim() && email.trim().toLowerCase() !== (member.email ?? "").toLowerCase();
+  const emailBad = emailChanged && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim());
+  const valid = !!name.trim() && pinOk && pwOk && !emailBad && !codeProblem && (owner || !!type) && !!hireDate;
   const save = async () => {
     setBusy(true);
     try {
       const branchIds = branch === ALL ? [] : [branch];
-      const base = { name: name.trim(), phone: phone.trim() || null, email: email.trim() || null, branchIds };
+      // the sign-in email of an email account changes through the server first (it checks it isn't taken)
+      const loginEmail = email.trim().toLowerCase();
+      if (emailChanged && !emailLocked && db.repo.auth.setMemberEmail) await db.repo.auth.setMemberEmail(db.restaurantId, member!.id, loginEmail);
+      const base = { name: name.trim(), phone: phone.trim() || null, email: (member?.userId ? (emailChanged && !emailLocked ? loginEmail : member.email) : email.trim()) || null, branchIds };
       let id = member?.id ?? created.current ?? undefined;
       if (!member && id) await db.update("memberships", id, { ...base, role });
       else if (member) await db.update("memberships", member.id, { ...base, ...(owner ? {} : { role, active: member.id === staff?.id ? true : active }), ...(pin ? { hasPin: true } : {}) });
@@ -191,7 +198,7 @@ function UserDialog({ cc, member, profile, readOnly, onClose }: { cc: Cc; member
       onClose();
     } catch (e) {
       const msg = String((e as Error).message ?? e);
-      toast({ tone: "error", title: "تعذر الحفظ", description: /device_user_id/.test(msg) ? "رقم البصمة مستخدم مع موظف آخر" : /pin_taken/.test(msg) ? "الـPIN ده مستخدم مع موظف تاني، اختار PIN غيره" : /6 digits|6 أرقام/.test(msg) ? "الـPIN لازم يكون 6 أرقام" : /password_short/.test(msg) ? "كلمة السر لازم 8 حروف أو أرقام على الأقل" : msg });
+      toast({ tone: "error", title: "تعذر الحفظ", description: /device_user_id/.test(msg) ? "رقم البصمة مستخدم مع موظف آخر" : /pin_taken/.test(msg) ? "الـPIN ده مستخدم مع موظف تاني، اختار PIN غيره" : /6 digits|6 أرقام/.test(msg) ? "الـPIN لازم يكون 6 أرقام" : /password_short/.test(msg) ? "كلمة السر لازم 8 حروف أو أرقام على الأقل" : /email_taken/.test(msg) ? "الإيميل ده مستخدم مع حساب تاني" : /email_bad/.test(msg) ? "الإيميل مكتوب غلط" : msg });
     } finally {
       setBusy(false);
     }
@@ -215,7 +222,7 @@ function UserDialog({ cc, member, profile, readOnly, onClose }: { cc: Cc; member
             <Input label="الاسم" value={name} onChange={(e) => setName(e.target.value)} />
             <Input label="المسمى الوظيفي" placeholder="مثلاً: شيف صوصات" value={position} onChange={(e) => setPosition(e.target.value)} />
             <Input label="رقم الموبايل" inputMode="tel" dir="ltr" value={phone} onChange={(e) => setPhone(e.target.value)} />
-            <Input label="الإيميل" type="email" dir="ltr" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <Input label={member?.userId ? "الإيميل (بيدخل بيه السيستم)" : "الإيميل"} type="email" dir="ltr" value={email} onChange={(e) => setEmail(e.target.value)} disabled={emailLocked} hint={emailLocked ? "تغيير إيميل الدخول للإدارة العليا بس" : undefined} error={emailBad ? "الإيميل مكتوب غلط" : undefined} />
             <Input label="الرقم القومي" inputMode="numeric" dir="ltr" maxLength={14} value={nationalId} onChange={(e) => setNationalId(e.target.value.replace(/\D/g, ""))} />
             <Input label="تاريخ الميلاد" type="date" dir="ltr" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
             <div className="sm:col-span-2"><Input label="العنوان" value={address} onChange={(e) => setAddress(e.target.value)} /></div>
