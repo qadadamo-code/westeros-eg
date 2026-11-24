@@ -14,7 +14,7 @@ export function ViewBranchPicker() {
   }
   return (
     <div className="w-48">
-      <Select aria-label="الفرع" value={v.value ?? ""} onChange={(e) => { const id = e.target.value || null; v.set(id); if (id && id !== branchId) switchBranch(id); }} options={[{ value: "", label: v.allowed ? "كل فروعي" : "كل الفروع" }, ...list.map((b) => ({ value: b.id, label: b.name.ar }))]} />
+      <Select aria-label="الفرع" value={v.value ?? ""} onChange={(e) => { const id = e.target.value || null; v.set(id); if (id && id !== branchId) switchBranch(id); if (!id && branches.find((b) => b.id === branchId)?.isCentral) { const till = list.find((b) => !b.isCentral); if (till) switchBranch(till.id); } }} options={[{ value: "", label: v.allowed ? "كل فروعي" : "كل الفروع" }, ...list.map((b) => ({ value: b.id, label: b.name.ar }))]} />
     </div>
   );
 }

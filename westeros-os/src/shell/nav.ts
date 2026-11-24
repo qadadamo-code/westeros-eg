@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Workflow } from "lucide-react";
 import { useSession } from "@/auth/session";
+import { useViewBranch } from "@/auth/viewBranch";
 import { homeFor, visibleModules } from "@/modules/registry";
 import type { ModuleDef } from "@/modules/types";
 import { useScreenAccess } from "./useScreenAccess";
@@ -11,6 +12,9 @@ export const GROUPS = ["service", "manage", "admin"] as const;
 export const TILL_MODULES = new Set(["cc-pos", "cc-orders", "pos", "orders"]);
 export function useCentralBranch(): boolean {
   const { branchId, branches } = useSession();
+  const v = useViewBranch();
+  // on كل الفروع the till screens stay (they work on a real branch); only a central kitchen picked or held hides them
+  if (!v.locked && branches.length > 1 && !v.value) return false;
   return !!branches.find((b) => b.id === branchId)?.isCentral;
 }
 
