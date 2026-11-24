@@ -7,7 +7,7 @@ import { ROLES, ROLE_LABEL, type Role } from "@/auth/roles";
 import { useT } from "@/i18n/i18n";
 import { uuid } from "@/lib/id";
 import { formatMoney } from "@/lib/money";
-import { Badge, Button, Card, Dialog, EmptyState, Input, Segmented, Select, Switch, Textarea, useToast } from "@/ui";
+import { Badge, Button, Card, Dialog, EmptyState, Input, PIN_RULE, Segmented, Select, Switch, Textarea, useToast } from "@/ui";
 import { useHr } from "@/modules/hr/useHr";
 import { changeRole, documentAlerts, saveCompensation, saveProfile, setStaffActive } from "@/modules/hr/ops";
 import { CONTRACT, DOC_KIND, PAY_METHOD, SALARY_TYPE, STATION, WEEKDAYS } from "@/modules/hr/labels";
@@ -349,9 +349,9 @@ function PinDialog({ membershipId, name, onClose }: { membershipId: string; name
   const { L } = useT();
   const db = useDb();
   const { toast } = useToast();
-  const [pin, setPin] = useState(String(1000 + Math.floor(Math.random() * 9000)));
+  const [pin, setPin] = useState(String(100000 + Math.floor(Math.random() * 900000)));
   return (
-    <Dialog open onClose={onClose} size="sm" title={L(`PIN جديد لـ ${name}`, `New PIN for ${name}`)} footer={<Button block disabled={!/^\d{4,6}$/.test(pin)} onClick={async () => { await db.repo.auth.setPin(db.restaurantId, membershipId, pin); await db.update("memberships", membershipId, { hasPin: true }); await db.audit("staff.pin", "memberships", membershipId, {}); toast({ title: L(`الـ PIN بقى ${pin}`, `PIN is now ${pin}`), tone: "success" }); onClose(); }}>{L("احفظ", "Save")}</Button>}>
+    <Dialog open onClose={onClose} size="sm" title={L(`PIN جديد لـ ${name}`, `New PIN for ${name}`)} footer={<Button block disabled={!PIN_RULE.test(pin)} onClick={async () => { await db.repo.auth.setPin(db.restaurantId, membershipId, pin); await db.update("memberships", membershipId, { hasPin: true }); await db.audit("staff.pin", "memberships", membershipId, {}); toast({ title: L(`الـ PIN بقى ${pin}`, `PIN is now ${pin}`), tone: "success" }); onClose(); }}>{L("احفظ", "Save")}</Button>}>
       <Input label="PIN" inputMode="numeric" dir="ltr" maxLength={6} value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))} className="tabular-nums text-center text-[22px] tracking-[0.4em]" />
     </Dialog>
   );

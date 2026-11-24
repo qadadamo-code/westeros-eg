@@ -15,9 +15,10 @@ import { sheetNumber } from "../xlsx";
 import { amountOf, entryRef, STATUS_LABEL } from "./journal";
 import { EntryView, ToolsDialog } from "./Journal";
 import { useActor, useFinPerms } from "./perms";
+import { BuyMethodSelect } from "./PayMethods";
 import { autoMatch, BANK_RECON, bankRecon, CASH_COUNT, countedTotal, METHODS, MONEY_LABEL, moneyAccounts, PREPAID, prepaidSchedule, tafqeet, VOUCHER_LABEL, voucherLines, voucherProblem, needsFx, crossCurrency, type BankReconData, type PrepaidData, type StatementLine, type VoucherInput, type VoucherType } from "./treasury";
 import { addMoneyAccount, ensureBranchTills, postCashCount, runPrepaid, saveBankRecon, savePrepaid, saveVoucher } from "./treasuryOps";
-import { AccountSelect, Amount, BranchSelect, Confirm, esc, fmt, fromText, periodLabel, periodOf, PeriodPicker, printDoc, PrintButton, printTable, sheetDay, toText, today, type Period, Toolbar } from "./ui";
+import { AccountSelect, useBalanceHint, Amount, BranchSelect, Confirm, esc, fmt, fromText, periodLabel, periodOf, PeriodPicker, printDoc, PrintButton, printTable, sheetDay, toText, today, type Period, Toolbar } from "./ui";
 import { useFinance, type Fin } from "./useFinance";
 import { useAmountCurrency } from "./AmountCurrency";
 import { baseOf, denomsOf, currencyName, currencyOf, currencySymbol, foreignBalance, isForeign, parseRate, rateOf, rateText } from "./currency";
@@ -156,6 +157,8 @@ function VoucherDialog({ fin, type, moneyId, onClose, onSaved }: { fin: Fin; typ
   const actor = useActor();
   const money = useMemo(() => moneyAccounts(fin.ix.ordered()), [fin.ix]);
   const [d, setD] = useState({ date: today(), moneyId: moneyId ?? money[0]?.id ?? "", otherId: "", amount: "", vat: "", creditId: "", onCredit: false, party: "", memo: "", branchId: fin.branchId ?? "", centreId: "", method: METHODS[0], ref: "", rate: "", fromBase: "" });
+  const moneyHint = useBalanceHint(fin, d.moneyId);
+  const otherHint = useBalanceHint(fin, d.otherId);
   const [files, setFiles] = useState<FinEntry["attachments"]>([]);
   const [busy, setBusy] = useState(false);
   const file = useRef<HTMLInputElement>(null);
@@ -218,9 +221,9 @@ function VoucherDialog({ fin, type, moneyId, onClose, onSaved }: { fin: Fin; typ
         {type === "expense" ? <div className="sm:col-span-2"><Switch checked={d.onCredit} onChange={(v) => set({ onCredit: v })} label="مصروف آجل (لم يدفع بعد)" description="يتسجل على حساب مورد أو مصروفات مستحقة بدل الخزينة" /></div> : null}
         {type === "expense" && d.onCredit
           ? <AccountSelect fin={fin} label="على حساب" value={d.creditId} onChange={(v) => set({ creditId: v })} filter={(a) => a.type === "liability"} />
-          : <Select label={type === "receipt" ? "إلى خزينة أو بنك" : type === "transfer" ? "من خزينة أو بنك" : "من خزينة أو بنك"} value={d.moneyId} onChange={(e) => set({ moneyId: e.target.value })} options={moneyOptions()} />}
+          : <Select label={type === "receipt" ? "إلى خزينة أو بنك" : type === "transfer" ? "من خزينة أو بنك" : "من خزينة أو بنك"} value={d.moneyId} hint={moneyHint} onChange={(e) => set({ moneyId: e.target.value })} options={moneyOptions()} />}
         {type === "transfer"
-          ? <Select label="إلى خزينة أو بنك" value={d.otherId} onChange={(e) => set({ otherId: e.target.value })} options={moneyOptions(d.moneyId)} />
+          ? <Select label="إلى خزينة أو بنك" value={d.otherId} hint={otherHint} onChange={(e) => set({ otherId: e.target.value })} options={moneyOptions(d.moneyId)} />
           : <AccountSelect fin={fin} manualOnly label={type === "receipt" ? "من حساب (الدائن)" : type === "payment" ? "إلى حساب (المدين)" : "حساب المصروف"} value={d.otherId} onChange={(v) => set({ otherId: v })}
               filter={type === "expense" ? (a) => a.type === "expense" || a.type === "cogs" : (a) => !["cash", "bank", "wallet"].includes(a.kind)} />}
         {ac.box(fromText(d.amount), mcRate)}
@@ -234,7 +237,7 @@ function VoucherDialog({ fin, type, moneyId, onClose, onSaved }: { fin: Fin; typ
         ) : null}
         {type === "expense" ? <Input label={`ضريبة قيمة مضافة (${sym(ac.cur)})`} dir="ltr" inputMode="decimal" value={d.vat} onChange={(e) => set({ vat: e.target.value })} hint={<button type="button" className="text-primary underline-offset-2 hover:underline" onClick={() => set({ vat: toText(Math.round(fromText(d.amount) * 0.14)) })}>احسب 14%</button>} /> : null}
         {type !== "transfer" ? <Input label={type === "receipt" ? "استلمنا من" : "المستفيد"} value={d.party} onChange={(e) => set({ party: e.target.value })} /> : null}
-        <Select label="طريقة الدفع" value={d.method} onChange={(e) => set({ method: e.target.value })} options={METHODS.map((m) => ({ value: m, label: m }))} />
+        {type === "payment" || type === "expense" ? <BuyMethodSelect settings={fin.settings} value={d.method} fallback={METHODS} onPick={(name, acc) => set({ method: name, ...(acc ? { moneyId: acc } : {}) })} /> : <Select label="طريقة الدفع" value={d.method} onChange={(e) => set({ method: e.target.value })} options={METHODS.map((m) => ({ value: m, label: m }))} />}
         <Input label="رقم مرجعي (شيك، تحويل، فاتورة)" dir="ltr" value={d.ref} onChange={(e) => set({ ref: e.target.value })} />
         <BranchSelect fin={fin} label="الفرع" className="w-full" all={null} value={d.branchId} onChange={(v) => set({ branchId: v })} />
         {centres.length && type !== "transfer" ? <Select label="مركز التكلفة" value={d.centreId} onChange={(e) => set({ centreId: e.target.value })} options={[{ value: "", label: "بدون مركز تكلفة" }, ...centres.map((c) => ({ value: c.id, label: c.name.ar }))]} /> : null}

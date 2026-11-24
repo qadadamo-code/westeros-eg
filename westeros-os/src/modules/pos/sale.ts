@@ -42,7 +42,7 @@ export const receiptNumber = (device: string, seq: number) => `${device}-${Strin
 
 /* ───────── tenders ───────── */
 
-export async function takePayment(db: Db, check: Check, p: { method: PaymentMethod; amount: Units; tip: Units; tendered: Units | null; reference?: string | null; splitLabel?: string | null }) {
+export async function takePayment(db: Db, check: Check, p: { method: PaymentMethod; amount: Units; tip: Units; tendered: Units | null; reference?: string | null; splitLabel?: string | null; payMethodId?: string | null }) {
   const amount = toPiastre(p.amount);
   if (amount <= 0) throw new Error("amount must be positive");
   if (p.tip && p.method === "cash") throw new Error("cash tips go to the tip jar, not through the till");
@@ -50,7 +50,7 @@ export async function takePayment(db: Db, check: Check, p: { method: PaymentMeth
   const row = await db.insert("payments", {
     branchId, checkId: check.id, method: p.method, amount, tip: toPiastre(p.tip), tendered: p.method === "cash" ? (p.tendered ?? amount) : null,
     change: p.method === "cash" ? Math.max(0, (p.tendered ?? amount) - amount) : null, reference: p.reference ?? null, splitLabel: p.splitLabel ?? null,
-    status: "captured", takenBy: db.actorId, refundOf: null,
+    status: "captured", takenBy: db.actorId, refundOf: null, ...(p.payMethodId ? { payMethodId: p.payMethodId } : {}),
   });
   const paid = (await db.list("payments", { where: { checkId: check.id, status: "captured" } })).reduce((a, x) => a + x.amount, 0);
   await db.update("checks", check.id, { paid });

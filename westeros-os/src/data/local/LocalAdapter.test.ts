@@ -100,8 +100,11 @@ describe("LocalAdapter", () => {
     expect(await a.auth.verifyPin(DEMO_RESTAURANT_ID, staffId("cashier1"), "4000")).toMatchObject({ role: "cashier" });
     expect(await a.auth.verifyPin(DEMO_RESTAURANT_ID, staffId("cashier1"), "1234")).toBeNull();
     expect(await a.auth.verifyPin("other", staffId("cashier1"), "4000")).toBeNull();
-    await a.auth.setPin(DEMO_RESTAURANT_ID, staffId("cashier1"), "2468");
-    expect(await a.auth.verifyPin(DEMO_RESTAURANT_ID, staffId("cashier1"), "2468")).not.toBeNull();
+    await a.auth.setPin(DEMO_RESTAURANT_ID, staffId("cashier1"), "246813");
+    expect(await a.auth.verifyPin(DEMO_RESTAURANT_ID, staffId("cashier1"), "246813")).not.toBeNull();
+    expect(await a.auth.verifyAnyPin(DEMO_RESTAURANT_ID, "246813")).toMatchObject({ id: staffId("cashier1") });
+    expect(await a.auth.verifyAnyPin(DEMO_RESTAURANT_ID, "999999")).toBeNull();
+    await expect(a.auth.setPin(DEMO_RESTAURANT_ID, staffId("owner"), "246813")).rejects.toThrow("pin_taken");
     const roster = await a.auth.pinRoster(DEMO_RESTAURANT_ID);
     expect(roster.length).toBe(DEMO_STAFF.length);
     expect(JSON.stringify(roster)).not.toMatch(/sha256/);

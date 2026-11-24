@@ -70,7 +70,17 @@ export interface AuthApi {
   myMemberships(): Promise<{ membership: Membership; restaurant: Restaurant }[]>;
   /** checks a staff PIN on a shared device; returns the membership when correct */
   verifyPin(restaurantId: string, membershipId: string, pin: string): Promise<Membership | null>;
-  /** sets/changes a PIN (manager+ or the person themselves) */
+  /** emails a link to set a new password (forgot password); the link opens `redirectTo` */
+  sendPasswordReset?(email: string, redirectTo: string): Promise<void>;
+  /** sets a new password for the signed-in email account (after opening the reset link) */
+  updatePassword?(password: string): Promise<void>;
+  /** the app was opened from a password-reset link */
+  onRecovery?(cb: () => void): Unsubscribe;
+  /** PIN-only sign-in: finds the one active person with this PIN (throws code "pin_locked" after repeated misses) */
+  verifyAnyPin(restaurantId: string, pin: string): Promise<Membership | null>;
+  /** top management sets the password of a member who signs in by email */
+  setMemberPassword?(restaurantId: string, membershipId: string, password: string): Promise<void>;
+  /** sets/changes a PIN (top management only, Mohammed 2026-11-24) */
   setPin(restaurantId: string, membershipId: string, pin: string): Promise<void>;
   /** staff that can sign in on this device with a PIN (no secrets) */
   pinRoster(restaurantId: string): Promise<Membership[]>;

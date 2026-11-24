@@ -17,7 +17,8 @@ import { ImageField } from "../ui";
 import { AreaGate, useArea } from "../useAccess";
 import { Confirm } from "../finance/ui";
 import { GroupDialog } from "./GroupDialog";
-import { ItemDialog, CHANNELS } from "./ItemDialog";
+import { ItemDialog } from "./ItemDialog";
+import { channelsOf, soldOn } from "@/data/channels";
 import { SideOptions } from "./SideOptions";
 import { groupsOf } from "./bonbell";
 import { linkPlan } from "./sideOptions";
@@ -43,6 +44,7 @@ function Body() {
   const { can } = useSession();
   const manage = can("menu.edit") && area.edit;
   const db = useDb();
+  const channels = channelsOf(useLive("settings").data[0]);
   const { toast } = useToast();
   const cats = useLive("menuCategories", { orderBy: [{ field: "sort" }] }).data;
   const items = useLive("menuItems", { orderBy: [{ field: "sort" }] }).data;
@@ -203,13 +205,13 @@ function Body() {
                       <tr key={i.id} className="cursor-pointer border-b border-line/60 hover:bg-surface-2" onClick={() => setDetail(i.id)}>
                         <td className="num p-2 font-semibold text-muted">{i.sku || "—"}</td>
                         <td className="p-2">{i.imageUrl ? <img src={i.imageUrl} alt="" loading="lazy" className="size-12 rounded-lg object-cover" /> : <span className="block size-12 rounded-lg bg-surface-3" />}</td>
-                        <td className="p-2 font-semibold">{i.name.ar}<FameBadge fame={fame.get(i.id)} />{i.name.en && i.name.en !== i.name.ar ? <span className="block text-[12px] font-medium text-muted" dir="ltr">{i.name.en}</span> : null}</td>
+                        <td className="p-2 font-semibold">{i.name.ar}<DiscountBadge item={i} /><FameBadge fame={fame.get(i.id)} />{i.name.en && i.name.en !== i.name.ar ? <span className="block text-[12px] font-medium text-muted" dir="ltr">{i.name.en}</span> : null}</td>
                         <td className="num p-2 font-semibold">{egp(i.price)}{i.discount ? <span className="block text-[12px] text-success">{egp(i.price - i.discount)}</span> : null}</td>
                         <td className="num p-2">{pctOf(i) ? `${pctOf(i)}%` : "0"}</td>
                         <td className="max-w-[220px] p-2 text-muted"><span className="line-clamp-2">{i.description.ar || i.description.en || "—"}</span></td>
                         <td className="p-2" onClick={(e) => e.stopPropagation()}><Toggle on={i.active} disabled={!manage} label="ظاهر" onChange={(v) => flip(i, { active: v })} /></td>
                         <td className="p-2" onClick={(e) => e.stopPropagation()}><Toggle on={!!i.recommended} disabled={!manage} label="مميز" onChange={(v) => flip(i, { recommended: v })} /></td>
-                        <td className="p-2"><div className="flex flex-wrap gap-1">{CHANNELS.filter((c) => !(i.hiddenOn ?? []).includes(c.id)).map((c) => <Badge key={c.id} size="sm">{c.label}</Badge>)}</div></td>
+                        <td className="p-2"><div className="flex flex-wrap gap-1">{channels.filter((c) => soldOn(i, c)).map((c) => <Badge key={c.id} size="sm">{c.name}</Badge>)}</div></td>
                         <td className="num p-2 text-muted">{gs.length ? `${gs.length} مجموعة` : "—"}</td>
                         <td className="num p-2">{(() => { const s = sold.get(i.id); if (!s) return <span className="text-muted">0</span>; return <span>{s.direct + s.inside}{s.inside ? <span className="block text-[11.5px] text-muted">منها {s.inside} جوه أصناف تانية</span> : null}</span>; })()}</td>
                       </tr>
@@ -227,6 +229,12 @@ function Body() {
       {open ? <ItemDetail item={open} cats={cats} groups={groups} mods={mods} manage={manage} canDelete={area.delete} onEdit={() => setItem(open)} onClose={() => setDetail(null)} /> : null}
     </div>
   );
+}
+
+/** علامة % بلون بارز على الصنف اللي عليه خصم (Mohammed 2026-11-24) */
+export function DiscountBadge({ item }: { item: Pick<MenuItem, "price" | "discount"> }) {
+  const p = pctOf(item);
+  return p ? <span className="num ms-1.5 inline-flex items-center rounded-full bg-danger px-1.5 py-0.5 align-middle text-[11px] font-bold leading-none text-white" dir="ltr">{p}%</span> : null;
 }
 
 export function FameBadge({ fame }: { fame?: Fame }) {
@@ -247,6 +255,7 @@ function Toggle({ on, onChange, disabled, label }: { on: boolean; onChange: (v: 
 function ItemDetail({ item, cats, groups, mods, manage, canDelete, onEdit, onClose }: { item: MenuItem; cats: MenuCategory[]; groups: ModifierGroup[]; mods: Modifier[]; manage: boolean; canDelete: boolean; onEdit: () => void; onClose: () => void }) {
   const db = useDb();
   const { toast } = useToast();
+  const channels = channelsOf(useLive("settings").data[0]);
   const gs = groupsOf(item, groups);
   const [group, setGroup] = useState<ModifierGroup | "new" | null>(null);
   const [drop, setDrop] = useState<ModifierGroup | null>(null);
@@ -312,7 +321,7 @@ function ItemDetail({ item, cats, groups, mods, manage, canDelete, onEdit, onClo
             {item.description.en ? <p className="text-muted" dir="ltr">{item.description.en}</p> : null}
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-[12.5px] text-muted">القنوات:</span>
-              {CHANNELS.filter((c) => !(item.hiddenOn ?? []).includes(c.id)).map((c) => <Badge key={c.id} size="sm">{c.label}</Badge>)}
+              {channels.filter((c) => soldOn(item, c)).map((c) => <Badge key={c.id} size="sm">{c.name}</Badge>)}
               {!item.active ? <Badge tone="danger" size="sm">مخفي</Badge> : null}
               {item.recommended ? <Badge tone="brass" size="sm"><Star className="size-3" /> مميز</Badge> : null}
             </div>

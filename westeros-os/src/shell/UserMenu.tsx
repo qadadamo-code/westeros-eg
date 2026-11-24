@@ -94,9 +94,14 @@ export function UserMenu({ side = "bottom", align = "end", full }: { side?: "top
               {t("shell.shortcuts")}
             </MenuItem>
             <MenuSeparator />
+            {s.deviceRestaurantId && s.method === "pin" ? (
+              <MenuItem icon={<Lock />} onClick={() => (close(), s.rest())}>
+                {t("shell.lock")}
+              </MenuItem>
+            ) : null}
             {s.deviceRestaurantId ? (
-              <MenuItem icon={s.method === "pin" ? <Lock /> : <Users />} onClick={() => (close(), s.method === "pin" ? s.rest() : s.lock())}>
-                {s.method === "pin" ? t("shell.lock") : t("shell.switchUser")}
+              <MenuItem icon={<Users />} onClick={() => (close(), s.lock())}>
+                {t("shell.switchUser")}
               </MenuItem>
             ) : null}
             {repo.reset ? (
@@ -111,14 +116,15 @@ export function UserMenu({ side = "bottom", align = "end", full }: { side?: "top
                 {t("shell.resetDemo")}
               </MenuItem>
             ) : null}
-            {s.user ? (
-              <MenuItem
-                icon={<LogOut />}
-                danger
-                // a PIN user only ends their own turn: the device stays signed in so the names screen keeps working
-                onClick={() => (close(), s.method === "pin" && s.deviceRestaurantId ? s.lock() : void s.signOut())}
-              >
-                {s.method === "pin" && s.deviceRestaurantId ? t("shell.signOut") : t("shell.signOutDevice")}
+            {s.deviceRestaurantId ? (
+              // signing out ends this person's session completely; the device stays linked so the names screen works
+              <MenuItem icon={<LogOut />} danger onClick={() => (close(), s.lock())}>
+                {t("shell.signOut")}
+              </MenuItem>
+            ) : null}
+            {s.user && (s.method === "password" || !s.deviceRestaurantId) ? (
+              <MenuItem icon={<LogOut />} danger onClick={() => (close(), void s.signOut())}>
+                {t("shell.signOutDevice")}
               </MenuItem>
             ) : null}
           </div>

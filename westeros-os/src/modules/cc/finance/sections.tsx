@@ -2,7 +2,7 @@
  * أقسام الحسابات: the accounting departments, each with its own summary and pages.
  * The same list feeds the drop-down under الحسابات in the main menu and the section bar inside the page.
  */
-import { Split, Armchair, ClipboardList, ScanSearch, Store, Banknote, BookOpen, Briefcase, ContactRound, FileBarChart, Flag, Gauge, HandCoins, Landmark, LayoutDashboard, ListTree, Lock, Percent, PiggyBank, ReceiptText, ShoppingCart, SlidersHorizontal, Target, Truck, Users, Wallet } from "lucide-react";
+import { CreditCard, FileSpreadsheet, Split, Armchair, ClipboardList, ScanSearch, Store, Banknote, BookOpen, Briefcase, ContactRound, FileBarChart, Flag, Gauge, HandCoins, Landmark, LayoutDashboard, ListTree, Lock, Percent, PiggyBank, ReceiptText, ShoppingCart, SlidersHorizontal, Target, Truck, Users, Wallet } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useMay } from "../useAccess";
 import { useFinPerms } from "./perms";
@@ -34,10 +34,13 @@ export function allSections(o: { reports: boolean; budget: boolean }): FinSectio
       { to: "/finance/buying", label: "ملخص", icon: <LayoutDashboard />, area: "finance.purchases" },
       { to: "/finance/purchases", label: "المشتريات والموردون والمرتجعات", icon: <Truck />, area: "finance.purchases" },
       { to: "/finance/expenses", label: "المصروفات", icon: <Wallet />, area: "finance.treasury" },
+      { to: "/finance/buying-pay", label: "طرق الدفع", icon: <CreditCard />, area: "finance.purchases" },
     ], "المشتريات"),
     sec("selling", "المبيعات", ReceiptText, [
       { to: "/finance/selling", label: "ملخص", icon: <LayoutDashboard />, area: "finance.sales" },
       { to: "/finance/channels", label: "قنوات البيع", icon: <Split />, area: "finance.sales" },
+      { to: "/finance/sales-pay", label: "طرق الدفع", icon: <CreditCard />, area: "finance.sales" },
+      { to: "/finance/sales-invoice", label: "فاتورة مبيعات", icon: <FileSpreadsheet />, area: "finance.sales" },
       { to: "/finance/sales", label: "المبيعات اليومية والتسويات", icon: <ReceiptText />, area: "finance.sales" },
       { to: "/pos", label: "الكاشير: صالة وتيك أواي وتوصيل", icon: <Store />, area: "pos" },
       { to: "/orders", label: "الطلبات", icon: <ClipboardList />, area: "orders" },

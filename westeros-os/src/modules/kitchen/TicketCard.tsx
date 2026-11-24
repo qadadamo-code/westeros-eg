@@ -72,6 +72,7 @@ export const TicketCard = memo(function TicketCard({ ticket, index, now, setting
         <span className="font-display text-[28px] font-bold leading-none tracking-tight" dir="ltr">
           #{o.number}
         </span>
+        {o.externalRef ? <span className="num rounded-md bg-brass-soft px-1.5 text-[13px] font-bold text-brass-text" dir="ltr">{o.externalRef}</span> : null}
         <span className="flex min-w-0 flex-1 items-center gap-1.5 text-[14.5px] font-bold">
           <KindIcon className="size-4.5 shrink-0" aria-hidden />
           <span className="truncate">{kindLabel}</span>

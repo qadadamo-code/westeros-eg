@@ -48,9 +48,9 @@ export function SalesChannels({ can }: { can: boolean }) {
     <div className="grid gap-4">
       <Card className="grid gap-3 p-4">
         <p className="text-[14px] font-semibold">النسب</p>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Input label="نسبة الضريبة %" inputMode="decimal" dir="ltr" className="num" disabled={!can} defaultValue={String(settings.tax.vatRate / 100)} onBlur={(e) => void setRate("vatRate", e.target.value)} />
-          <Input label="نسبة السيرفيس (الخدمة) %" inputMode="decimal" dir="ltr" className="num" disabled={!can} defaultValue={String(settings.tax.serviceRate / 100)} onBlur={(e) => void setRate("serviceRate", e.target.value)} />
+        <div className="flex flex-wrap items-end gap-4">
+          <Input label="الضريبة" wrapClassName="w-28" end={<span className="pe-2 text-[14px] font-semibold text-muted">%</span>} inputMode="decimal" dir="ltr" className="num text-center" disabled={!can} defaultValue={String(settings.tax.vatRate / 100)} onBlur={(e) => void setRate("vatRate", e.target.value)} />
+          <Input label="السيرفيس (الخدمة)" wrapClassName="w-28" end={<span className="pe-2 text-[14px] font-semibold text-muted">%</span>} inputMode="decimal" dir="ltr" className="num text-center" disabled={!can} defaultValue={String(settings.tax.serviceRate / 100)} onBlur={(e) => void setRate("serviceRate", e.target.value)} />
         </div>
         <p className="text-[12.5px] text-muted">كل قناة تحت بتختار هل فواتيرها عليها ضريبة وسيرفيس ولا لأ.</p>
       </Card>

@@ -2,19 +2,21 @@
  * المستخدمين: the employees of the company, with search, filters, a toggle that hides the stopped ones, ticking
  * several rows for one action, and the card of an employee (personal data, role and code, workplace, sign-in).
  */
-import { useMemo, useState } from "react";
-import { Building2, Pencil, Plus, Power, Search, ShieldCheck, Trash2, Users, X } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import { Building2, Camera, Pencil, Plus, Power, Search, ShieldCheck, Trash2, Users, X } from "lucide-react";
 import { useSession } from "@/auth/session";
 import { useDb, useLive } from "@/data/hooks";
 import type { Membership, MfgUserType } from "@/data/types";
 import type { ContractType, StaffProfile } from "@/data/hrTypes";
 import { searchHit } from "@/lib/search";
 import { loadRaw, saveRaw } from "@/lib/storage";
-import { Badge, Button, Card, Dialog, EmptyState, Input, Select, Switch, Table, useToast, type Column } from "@/ui";
+import { Badge, Button, Card, Dialog, EmptyState, Input, PIN_RULE, Select, Switch, Table, useToast, type Column } from "@/ui";
 import { useSelection } from "../catalog/Bulk";
 import { nextUserCode, rangeOf, userTypeOf, userTypesOf } from "../lib";
 import { useCc, type Cc } from "../useCc";
 import { useArea } from "../useAccess";
+import { PersonPhoto } from "@/modules/hr/ui";
+import { fileToDataUrl } from "@/modules/hr/image";
 import { ExportButton } from "../ui";
 import { ExcelImport } from "../catalog/Import";
 import { CONTRACTS, exportUsers, importUsers, USER_FIELDS, USER_HEAD } from "./usersExcel";
@@ -140,6 +142,10 @@ function UserDialog({ cc, member, profile, readOnly, onClose }: { cc: Cc; member
   const [emName, setEmName] = useState(profile?.emergencyContact?.name ?? "");
   const [emPhone, setEmPhone] = useState(profile?.emergencyContact?.phone ?? "");
   const [notes, setNotes] = useState(profile?.notes ?? "");
+  const [photo, setPhoto] = useState<string | null>(profile?.photoUrl ?? null);
+  const photoInput = useRef<HTMLInputElement>(null);
+  // a new employee saved once (then a PIN problem) is updated on the next try, never inserted twice
+  const created = useRef<string | null>(null);
   const [branch, setBranch] = useState(member?.branchIds[0] ?? (member ? ALL : cc.branchId || ALL));
   const [typeId, setTypeId] = useState(member ? userTypeOf(member, cc.lists)?.id ?? "" : types[0]?.id ?? "");
   const type = types.find((t) => t.id === typeId) ?? null;
@@ -152,34 +158,40 @@ function UserDialog({ cc, member, profile, readOnly, onClose }: { cc: Cc; member
   const twin = settings ? Object.entries(settings.chefCodes).find(([id, c]) => id !== member?.id && c === code && cc.prod.staff.some((m) => m.id === id)) : undefined;
   const codeProblem = owner || !type ? "" : !auto && typed === null ? `أكواد "${type.name}" خلصت. زود عدد المستخدمين للدور ده من خانة الأدوار.` : !Number.isInteger(code) || code < range!.from || code > range!.to ? `كود "${type.name}" لازم يكون من ${range!.from} إلى ${range!.to}` : twin ? `الكود ${code} مستخدم مع "${cc.prod.staff.find((m) => m.id === twin[0])?.name ?? "مستخدم آخر"}"` : "";
   const [pin, setPin] = useState("");
+  const [password, setPassword] = useState("");
   const [active, setActive] = useState(member?.active ?? true);
   const [busy, setBusy] = useState(false);
-  const pinOk = pin === "" ? !!member : /^\d{4,6}$/.test(pin);
-  const valid = !!name.trim() && pinOk && !codeProblem && (owner || !!type) && !!hireDate;
+  // only top management sets PINs; an employee never changes their own (Mohammed 2026-11-24)
+  const canPin = staff?.role === "owner" || staff?.role === "admin";
+  const pinOk = pin === "" ? !!member || !canPin : PIN_RULE.test(pin);
+  const pwOk = password === "" || password.length >= 8;
+  const valid = !!name.trim() && pinOk && pwOk && !codeProblem && (owner || !!type) && !!hireDate;
   const save = async () => {
     setBusy(true);
     try {
       const branchIds = branch === ALL ? [] : [branch];
       const base = { name: name.trim(), phone: phone.trim() || null, email: email.trim() || null, branchIds };
-      let id = member?.id;
-      if (member) await db.update("memberships", member.id, { ...base, ...(owner ? {} : { role, active: member.id === staff?.id ? true : active }), ...(pin ? { hasPin: true } : {}) });
-      else id = (await db.insert("memberships", { ...base, userId: null, role, color: "#F8BB18", hasPin: true, active: true, lastSeenAt: null })).id;
+      let id = member?.id ?? created.current ?? undefined;
+      if (!member && id) await db.update("memberships", id, { ...base, role });
+      else if (member) await db.update("memberships", member.id, { ...base, ...(owner ? {} : { role, active: member.id === staff?.id ? true : active }), ...(pin ? { hasPin: true } : {}) });
+      else created.current = id = (await db.insert("memberships", { ...base, userId: null, role, color: "#F8BB18", hasPin: !!pin, active: true, lastSeenAt: null })).id;
       if (!id) throw new Error("لم يُحفظ المستخدم");
       if (pin) await db.repo.auth.setPin(db.restaurantId, id, pin);
+      if (password && member?.userId && db.repo.auth.setMemberPassword) await db.repo.auth.setMemberPassword(db.restaurantId, member.id, password);
       const card = {
         nationalId: nationalId.trim() || null, birthDate: birthDate || null, address: address.trim() || null, hireDate, contractType: contract,
         position: { ar: position.trim(), en: profile?.position.en ?? "" }, deviceUserId: device.trim() || null,
         emergencyContact: emName.trim() || emPhone.trim() ? { name: emName.trim(), phone: emPhone.trim(), relation: profile?.emergencyContact?.relation ?? "" } : null,
-        notes: notes.trim(),
+        notes: notes.trim(), photoUrl: photo,
       };
       if (profile) await db.update("staffProfiles", profile.id, card);
-      else await db.insert("staffProfiles", { ...card, membershipId: id, photoUrl: null, nationality: "EG", contractEnd: null, station: null, foodHandler: false, documents: [], weeklyOff: [5], terminatedAt: null, terminationReason: null });
+      else await db.insert("staffProfiles", { ...card, membershipId: id, nationality: "EG", contractEnd: null, station: null, foodHandler: false, documents: [], weeklyOff: [5], terminatedAt: null, terminationReason: null });
       if (!owner && type && settings) await db.update("mfgSettings", settings.id, { lists: { ...cc.lists, userTypes: types, userTypeOf: { ...(cc.lists.userTypeOf ?? {}), [id]: type.id } }, chefCodes: { ...settings.chefCodes, [id]: code } });
       toast({ tone: "success", title: "تم حفظ المستخدم" });
       onClose();
     } catch (e) {
       const msg = String((e as Error).message ?? e);
-      toast({ tone: "error", title: "تعذر الحفظ", description: /device_user_id/.test(msg) ? "رقم البصمة مستخدم مع موظف آخر" : msg });
+      toast({ tone: "error", title: "تعذر الحفظ", description: /device_user_id/.test(msg) ? "رقم البصمة مستخدم مع موظف آخر" : /pin_taken/.test(msg) ? "الـPIN ده مستخدم مع موظف تاني، اختار PIN غيره" : /6 digits|6 أرقام/.test(msg) ? "الـPIN لازم يكون 6 أرقام" : /password_short/.test(msg) ? "كلمة السر لازم 8 حروف أو أرقام على الأقل" : msg });
     } finally {
       setBusy(false);
     }
@@ -191,6 +203,14 @@ function UserDialog({ cc, member, profile, readOnly, onClose }: { cc: Cc; member
       <fieldset disabled={readOnly} className="grid gap-5">
         <section className="grid gap-3">
           <h3 className={h3}>البيانات الأساسية</h3>
+          <div className="flex items-center gap-4">
+            <PersonPhoto m={{ name: name || "؟", color: member?.color ?? "#F8BB18" }} p={{ photoUrl: photo }} size="xl" />
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="secondary" icon={<Camera />} onClick={() => photoInput.current?.click()}>{photo ? "غيّر الصورة" : "صورة الموظف"}</Button>
+              {photo ? <Button size="sm" variant="ghost" onClick={() => setPhoto(null)}>شيل الصورة</Button> : null}
+            </div>
+            <input ref={photoInput} type="file" accept="image/*" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) setPhoto(await fileToDataUrl(f, 320)); }} />
+          </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <Input label="الاسم" value={name} onChange={(e) => setName(e.target.value)} />
             <Input label="المسمى الوظيفي" placeholder="مثلاً: شيف صوصات" value={position} onChange={(e) => setPosition(e.target.value)} />
@@ -228,7 +248,14 @@ function UserDialog({ cc, member, profile, readOnly, onClose }: { cc: Cc; member
         </section>
         <section className="grid gap-3">
           <h3 className={h3}>الدخول للسيستم</h3>
-          <Input label={member ? "PIN جديد (اتركه فاضي لو مش هتغيره)" : "PIN للدخول (من 4 إلى 6 أرقام)"} inputMode="numeric" dir="ltr" maxLength={6} value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))} />
+          {canPin ? (
+            <Input label={member ? "PIN جديد من 6 أرقام (اتركه فاضي لو مش هتغيره)" : "PIN للدخول (6 أرقام)"} hint="ممنوع يتكرر: كل موظف ليه PIN مختلف" inputMode="numeric" dir="ltr" maxLength={6} value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))} />
+          ) : (
+            <p className="text-[13px] text-muted">{member?.hasPin ? "الموظف ليه PIN. " : ""}تحديد وتغيير الـPIN للإدارة العليا بس.</p>
+          )}
+          {canPin && member?.userId ? (
+            <Input label="كلمة سر جديدة للدخول بالإيميل (اتركها فاضية لو مش هتغيرها)" type="password" autoComplete="new-password" dir="ltr" value={password} onChange={(e) => setPassword(e.target.value)} error={pwOk ? undefined : "8 حروف أو أرقام على الأقل"} />
+          ) : null}
           {member && !owner && member.id !== staff?.id ? <Switch checked={active} onChange={setActive} label="الموظف نشط" description="الموظف غير النشط لا يقدر يدخل السيستم" /> : null}
         </section>
         <Input label="ملاحظات" value={notes} onChange={(e) => setNotes(e.target.value)} />

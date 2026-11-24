@@ -1,7 +1,7 @@
 /** Category rail + search + item grid. Tap = add (or open modifiers), long-press/right-click = always open the sheet. */
 import { forwardRef, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Ban, Flame, Leaf, Search, Sparkles, Star, X, TrendingUp } from "lucide-react";
+import { Ban, Flame, Leaf, Percent, Search, Sparkles, Star, X, TrendingUp } from "lucide-react";
 import type { Fame } from "@/modules/menu/sold";
 import type { MenuCategory, MenuItem } from "@/data/types";
 import { useT } from "@/i18n/i18n";
@@ -24,13 +24,14 @@ export interface MenuPanelProps {
 export const MenuPanel = forwardRef<HTMLInputElement, MenuPanelProps>(function MenuPanel({ cats, items, counts, onPick, fame }, searchRef) {
   const { L, loc, lang } = useT();
   const reduced = useReduced();
-  const [cat, setCat] = useState<string | "all">("all");
+  const [cat, setCat] = useState<string | "all" | "discounts">("all");
+  const discounted = useMemo(() => items.filter((i) => (i.discount ?? 0) > 0), [items]);
   const [q, setQ] = useState("");
   const catById = useMemo(() => new Map(cats.map((c) => [c.id, c])), [cats]);
   const shown = useMemo(() => {
-    const list = q.trim() ? items.filter((i) => matches(`${i.name.ar} ${i.name.en} ${i.sku ?? ""} ${catById.get(i.categoryId)?.name.ar ?? ""}`, q)) : cat === "all" ? items : items.filter((i) => i.categoryId === cat);
+    const list = q.trim() ? items.filter((i) => matches(`${i.name.ar} ${i.name.en} ${i.sku ?? ""} ${catById.get(i.categoryId)?.name.ar ?? ""}`, q)) : cat === "all" ? items : cat === "discounts" ? discounted : items.filter((i) => i.categoryId === cat);
     return cat === "all" && !q.trim() ? [...list].sort((a, b) => (catById.get(a.categoryId)?.sort ?? 0) - (catById.get(b.categoryId)?.sort ?? 0) || a.sort - b.sort) : list;
-  }, [items, cat, q, catById]);
+  }, [items, cat, q, catById, discounted]);
   const inCat = useMemo(() => {
     const m = new Map<string, number>();
     for (const [itemId, n] of counts) {
@@ -71,6 +72,12 @@ export const MenuPanel = forwardRef<HTMLInputElement, MenuPanelProps>(function M
         <Chip active={cat === "all" && !q} onClick={() => (setCat("all"), setQ(""))}>
           {L("الكل", "All")}
         </Chip>
+        {discounted.length ? (
+          <Chip active={cat === "discounts" && !q} color="var(--sf-danger)" onClick={() => (setCat("discounts"), setQ(""))} count={discounted.length}>
+            <Percent aria-hidden />
+            {L("الخصومات", "Discounts")}
+          </Chip>
+        ) : null}
         {cats.map((c) => {
           const Icon = catIcon(c.icon);
           return (
@@ -136,45 +143,50 @@ function ItemTile({ item, cat, count, onPick, lang, fame }: { item: MenuItem; ca
           onPick(item, { forceSheet: true });
         }}
         className={cn(
-          "group relative flex h-full min-h-[112px] w-full flex-col overflow-hidden rounded-[18px] border border-line bg-surface p-3 text-start shadow-sf-sm transition-[border-color,box-shadow] hover:border-line-strong hover:shadow-sf focus-visible:outline-2",
+          "group relative flex h-full w-full flex-col overflow-hidden rounded-[18px] border border-line bg-surface text-start shadow-sf-sm transition-[border-color,box-shadow] hover:border-line-strong hover:shadow-sf focus-visible:outline-2",
           off && "opacity-55",
           count > 0 && "border-transparent ring-2",
         )}
-        style={{ ...(count > 0 ? { ["--tw-ring-color" as string]: color } : {}), backgroundImage: `linear-gradient(160deg, color-mix(in srgb, ${color} 13%, transparent), transparent 62%)` }}
+        style={count > 0 ? { ["--tw-ring-color" as string]: color } : undefined}
         aria-label={`${loc(item.name)} ${formatMoney(Math.max(0, item.price - (item.discount ?? 0)), { lang })}${off ? ` — ${L("خلصان", "sold out")}` : ""}`}
       >
-        <span className="relative flex items-start justify-between gap-2">
+        {/* الصورة كبيرة، والعلامات فوقها زي الإشعار (Mohammed 2026-11-24) */}
+        <span className="relative block aspect-[4/3] w-full overflow-hidden" style={{ background: `radial-gradient(circle at 50% 60%, color-mix(in srgb, ${color} 22%, transparent), color-mix(in srgb, ${color} 6%, transparent) 70%)` }}>
           {photo ? (
-            <img src={photo} alt="" loading="lazy" onError={() => setBroken(true)} className="size-12 rounded-full object-cover shadow-sf-sm ring-2 ring-brass/60" />
+            <img src={photo} alt="" loading="lazy" decoding="async" onError={() => setBroken(true)} className="absolute inset-0 size-full object-cover transition-transform duration-200 group-hover:scale-[1.04]" />
           ) : (
-            <span className="grid size-8 place-items-center rounded-xl text-white shadow-sf-sm" style={{ background: color }}>
-              <Icon className="size-[17px]" aria-hidden />
+            <span className="absolute inset-0 grid place-items-center" style={{ color }}>
+              <Icon className="size-12 opacity-80" aria-hidden />
             </span>
           )}
-          <span className={cn("flex gap-1 text-brass transition-opacity [&_svg]:size-4", count > 0 && "opacity-0")}>
-            {item.tags.includes("popular") ? <Star aria-label={L("الأكثر طلبًا", "Popular")} className="fill-current" /> : null}
-            {item.tags.includes("chef") ? <Sparkles aria-label={L("اختيار الشيف", "Chef's pick")} /> : null}
-            {item.tags.includes("spicy") ? <Flame aria-label={L("حرّاق", "Spicy")} className="text-danger" /> : null}
-            {item.tags.includes("veg") ? <Leaf aria-label={L("نباتي", "Vegetarian")} className="text-ok" /> : null}
+          <span className="absolute inset-x-1.5 top-1.5 flex flex-wrap items-start gap-1 pe-8 [&>span]:shadow-sf-sm">
+            {item.discount && item.price ? <span className="num rounded-full bg-danger px-2 py-0.5 text-[11.5px] font-bold leading-4 text-white" dir="ltr">-{Math.round((item.discount / item.price) * 100)}%</span> : null}
+            {fame ? (
+              <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold leading-4 [&_svg]:size-3", fame === "top" ? "bg-brass text-black" : "bg-info text-white")}>
+                {fame === "top" ? <Flame /> : <TrendingUp />} {fame === "top" ? L("الأكثر طلباً", "Best seller") : L("تريند", "Trending")}
+              </span>
+            ) : null}
+            {item.tags.includes("popular") && !fame ? <span className="inline-flex items-center gap-1 rounded-full bg-brass px-2 py-0.5 text-[11px] font-bold leading-4 text-black [&_svg]:size-3"><Star className="fill-current" /> {L("مميز", "Popular")}</span> : null}
+            {item.tags.includes("chef") ? <span className="inline-flex items-center rounded-full bg-surface/90 px-1.5 py-0.5 text-brass-text [&_svg]:size-3.5"><Sparkles aria-label={L("اختيار الشيف", "Chef's pick")} /></span> : null}
+            {item.tags.includes("spicy") ? <span className="inline-flex items-center rounded-full bg-surface/90 px-1.5 py-0.5 text-danger [&_svg]:size-3.5"><Flame aria-label={L("حرّاق", "Spicy")} /></span> : null}
+            {item.tags.includes("veg") ? <span className="inline-flex items-center rounded-full bg-surface/90 px-1.5 py-0.5 text-ok [&_svg]:size-3.5"><Leaf aria-label={L("نباتي", "Vegetarian")} /></span> : null}
+          </span>
+          {off ? (
+            <span className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 bg-danger py-0.5 text-[12px] font-bold text-white">
+              <Ban className="size-3.5" /> {L("خلصان", "86'd")}
+            </span>
+          ) : null}
+        </span>
+        <span className="flex flex-1 flex-col gap-1 p-2.5">
+          <span className="line-clamp-2 text-[15px] font-semibold leading-snug">{loc(item.name)}</span>
+          <span className="mt-auto flex items-center justify-between gap-2">
+            <span className="flex items-baseline gap-1.5" dir="ltr">
+              <span className="num text-[16px] font-bold text-ink">{formatMoney(Math.max(0, item.price - (item.discount ?? 0)), { lang, compact: true, bare: true })}</span>
+              {item.discount ? <span className="num text-[12px] text-muted line-through">{formatMoney(item.price, { lang, compact: true, bare: true })}</span> : null}
+            </span>
+            {item.modifierGroupIds.length ? <span className="rounded-full bg-surface-3 px-2 py-0.5 text-[11px] font-semibold text-muted">{L("اختيارات", "options")}</span> : null}
           </span>
         </span>
-        <span className="relative mt-2 line-clamp-2 text-[15px] font-semibold leading-snug">{loc(item.name)}</span>
-        {fame ? (
-          <span className={cn("relative mt-1 inline-flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold [&_svg]:size-3", fame === "top" ? "bg-brass-soft text-brass-text" : "bg-info-soft text-info")}>
-            {fame === "top" ? <Flame /> : <TrendingUp />} {fame === "top" ? L("الأكثر طلباً", "Best seller") : L("تريند", "Trending")}
-          </span>
-        ) : null}
-        <span className="relative mt-auto flex items-end justify-between gap-2 pt-2">
-          <span className="num text-[14.5px] font-semibold text-ink-2" dir="ltr">
-            {formatMoney(Math.max(0, item.price - (item.discount ?? 0)), { lang, compact: true, bare: true })}
-          </span>
-          {item.modifierGroupIds.length ? <span className="rounded-full bg-surface-3 px-2 text-[11px] font-semibold text-muted">{L("اختيارات", "options")}</span> : null}
-        </span>
-        {off ? (
-          <span className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 bg-danger py-0.5 text-[12px] font-bold text-white">
-            <Ban className="size-3.5" /> {L("خلصان", "86'd")}
-          </span>
-        ) : null}
         <AnimatePresence>
           {count > 0 ? (
             <motion.span

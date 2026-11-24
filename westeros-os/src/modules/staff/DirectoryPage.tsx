@@ -127,7 +127,7 @@ function AddStaffDialog({ onClose, onCreated }: { onClose: () => void; onCreated
   const isOwner = hr.session.role === "owner";
   const roles = ROLES.filter((r) => r !== "platform_admin" && r !== "owner" && (isOwner || r !== "admin"));
   const [f, setF] = useState({
-    name: "", role: "waiter" as Role, phone: "", email: "", invite: false, pin: String(1000 + Math.floor(Math.random() * 9000)), positionAr: "", positionEn: "", hireDate: hr.today,
+    name: "", role: "waiter" as Role, phone: "", email: "", invite: false, pin: String(100000 + Math.floor(Math.random() * 900000)), positionAr: "", positionEn: "", hireDate: hr.today,
     foodHandler: true, salaryType: "monthly" as SalaryType, salary: 0, branchIds: [] as string[],
   });
   const [busy, setBusy] = useState(false);
@@ -145,7 +145,7 @@ function AddStaffDialog({ onClose, onCreated }: { onClose: () => void; onCreated
       onClose();
     } catch (e) {
       const code = e instanceof HrError ? e.code : "";
-      toast({ title: code === "pin" ? L("الـ PIN لازم ٤–٦ أرقام", "PIN must be 4–6 digits") : code === "name" ? L("اكتب الاسم", "Enter a name") : String((e as Error).message), tone: "error" });
+      toast({ title: code === "pin" ? L("الـ PIN لازم ٦ أرقام", "PIN must be 6 digits") : code === "name" ? L("اكتب الاسم", "Enter a name") : String((e as Error).message), tone: "error" });
     } finally {
       setBusy(false);
     }
@@ -177,7 +177,7 @@ function AddStaffDialog({ onClose, onCreated }: { onClose: () => void; onCreated
           maxLength={6}
           value={f.pin}
           onChange={(e) => set("pin", e.target.value.replace(/\D/g, ""))}
-          end={<button type="button" className="grid size-10 place-items-center rounded-lg text-muted hover:bg-surface-3" aria-label={L("PIN عشوائي", "Random PIN")} onClick={() => set("pin", String(1000 + Math.floor(Math.random() * 9000)))}><Shuffle className="size-4" /></button>}
+          end={<button type="button" className="grid size-10 place-items-center rounded-lg text-muted hover:bg-surface-3" aria-label={L("PIN عشوائي", "Random PIN")} onClick={() => set("pin", String(100000 + Math.floor(Math.random() * 900000)))}><Shuffle className="size-4" /></button>}
         />
         <Input label={L("تاريخ التعيين", "Hire date")} type="date" value={f.hireDate} onChange={(e) => set("hireDate", e.target.value)} />
         {hr.session.branches.length > 1 ? (

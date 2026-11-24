@@ -50,6 +50,7 @@ function isNetworkError(e: unknown) {
 export class SupabaseAdapter implements Repo {
   readonly kind = "supabase" as const;
   readonly client: SupabaseClient;
+  private recovering = false;
   private cache = new Map<CollectionName, Map<string, AnyRow>>();
   private listeners = new Set<{ cols: Set<string> | null; rid: string | null; cb: (e: ChangeEvent) => void }>();
   private channels = new Map<string, { ch: RealtimeChannel; refs: number }>();
@@ -67,6 +68,10 @@ export class SupabaseAdapter implements Repo {
 
   constructor(url: string, anonKey: string) {
     this.client = createClient(url, anonKey, { auth: { persistSession: true, autoRefreshToken: true } });
+    // a reset link is read while the client starts, before the app listens: remember it
+    this.client.auth.onAuthStateChange((e) => {
+      if (e === "PASSWORD_RECOVERY") this.recovering = true;
+    });
     const online = typeof navigator === "undefined" ? true : navigator.onLine;
     this.status = { mode: "cloud", online, pending: this.outbox.length, peers: 0, lastSyncAt: null, error: null };
     if (typeof window !== "undefined") {
@@ -421,6 +426,22 @@ export class SupabaseAdapter implements Repo {
       // local: signing out one phone or PC must not sign out every other device on the same account (the default is global)
       await this.client.auth.signOut({ scope: "local" });
     },
+    sendPasswordReset: async (email, redirectTo) => {
+      const { error } = await this.client.auth.resetPasswordForEmail(email, { redirectTo });
+      if (error) throw error;
+    },
+    updatePassword: async (password) => {
+      const { error } = await this.client.auth.updateUser({ password });
+      if (error) throw error;
+    },
+    onRecovery: (cb) => {
+      if (this.recovering) {
+        this.recovering = false;
+        queueMicrotask(cb);
+      }
+      const { data } = this.client.auth.onAuthStateChange((e) => e === "PASSWORD_RECOVERY" && cb());
+      return () => data.subscription.unsubscribe();
+    },
     onChange: (cb) => {
       const { data } = this.client.auth.onAuthStateChange((_e, session) => cb(this.toUser(session?.user)));
       return () => data.subscription.unsubscribe();
@@ -441,6 +462,15 @@ export class SupabaseAdapter implements Repo {
       const { data, error } = await this.client.rpc("verify_staff_pin", { p_restaurant_id: restaurantId, p_membership_id: membershipId, p_pin: pin });
       if (error) throw error;
       return data ? rowFromDb<Membership>(data as Record<string, unknown>) : null;
+    },
+    verifyAnyPin: async (restaurantId, pin) => {
+      const { data, error } = await this.client.rpc("verify_any_pin", { p_restaurant_id: restaurantId, p_pin: pin });
+      if (error) throw /pin_locked/.test(error.message) ? Object.assign(new Error("pin_locked"), { code: "pin_locked" }) : error;
+      return data ? rowFromDb<Membership>(data as Record<string, unknown>) : null;
+    },
+    setMemberPassword: async (restaurantId, membershipId, password) => {
+      const { error } = await this.client.rpc("set_member_password", { p_restaurant_id: restaurantId, p_membership_id: membershipId, p_password: password });
+      if (error) throw error;
     },
     setPin: async (restaurantId, membershipId, pin) => {
       const { error } = await this.client.rpc("set_staff_pin", { p_restaurant_id: restaurantId, p_membership_id: membershipId, p_pin: pin });

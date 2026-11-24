@@ -117,8 +117,8 @@ describe("HR ops (local backend)", () => {
 
   it("create staff with a PIN; /me is visible to every role, homes unchanged", async () => {
     const { db, repo } = await setup("owner");
-    const m = await createStaff(db, { name: "حسن الجديد", role: "waiter", phone: "01005550999", email: null, branchIds: [], pin: "5555", color: "#0d5a53", profile: { foodHandler: true }, comp: { monthlySalary: major(9_000), hourlyRate: 0 } });
-    expect(await repo.auth.verifyPin(DEMO_RESTAURANT_ID, m.id, "5555")).toBeTruthy();
+    const m = await createStaff(db, { name: "حسن الجديد", role: "waiter", phone: "01005550999", email: null, branchIds: [], pin: "555512", color: "#0d5a53", profile: { foodHandler: true }, comp: { monthlySalary: major(9_000), hourlyRate: 0 } });
+    expect(await repo.auth.verifyPin(DEMO_RESTAURANT_ID, m.id, "555512")).toBeTruthy();
     expect((await db.list("staffProfiles", { where: { membershipId: m.id } }))[0].foodHandler).toBe(true);
     for (const r of ["owner", "manager", "cashier", "waiter", "chef", "kitchen", "delivery", "accountant"] as const) expect(visibleModules(r).map((x) => x.id)).toContain("me");
     expect(visibleModules("platform_admin").map((x) => x.id)).not.toContain("me");

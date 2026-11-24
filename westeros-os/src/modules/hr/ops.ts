@@ -80,7 +80,7 @@ export interface NewStaff {
  */
 export async function createStaff(db: Db, x: NewStaff): Promise<Membership> {
   if (!x.name.trim()) throw new HrError("name");
-  if (x.pin && !/^\d{4,6}$/.test(x.pin)) throw new HrError("pin");
+  if (x.pin && !/^\d{6}$/.test(x.pin)) throw new HrError("pin");
   const m = await db.insert("memberships", {
     userId: null, name: x.name.trim(), role: x.role, branchIds: x.branchIds, phone: x.phone.trim() || null, email: x.email?.trim().toLowerCase() || null, color: x.color,
     hasPin: !!x.pin, active: true, lastSeenAt: null,

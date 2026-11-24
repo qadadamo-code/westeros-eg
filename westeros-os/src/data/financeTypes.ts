@@ -157,6 +157,18 @@ export interface FinSettingsData {
   ratesAt?: string | null;
   /** خدمة التوصيل: the delivery methods and how their fees are collected and shared (ثوابت النظام > خدمة التوصيل) */
   delivery?: { methods: DeliveryMethod[] };
+  /** طرق الدفع (Mohammed 2026-11-24): في البيع (الكاشير) وفي الشراء والمصاريف، كل طريقة مربوطة بحساب خزينة أو بنك */
+  payMethods?: { sales?: PayMethodDef[]; buying?: PayMethodDef[] };
+}
+
+/** طريقة دفع: اسمها، نوعها في الكاشير (للبيع)، والخزينة أو البنك اللي فلوسها بتروح له، ومفعلة ولا لأ */
+export interface PayMethodDef {
+  id: string;
+  name: string;
+  /** how the till treats it (البيع بس): cash counts change, the others are taken as they are */
+  base?: "cash" | "card" | "wallet" | "instapay";
+  accountId: string;
+  active: boolean;
 }
 
 /** طريقة توصيل: who delivers, how the fee is collected, and whose share of the fee is it. */

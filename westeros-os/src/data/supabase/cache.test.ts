@@ -26,7 +26,7 @@ function query() {
   return q;
 }
 vi.mock("@supabase/supabase-js", () => ({
-  createClient: () => ({ from: () => query(), auth: { getSession: async () => ({ data: { session: null } }) }, channel: () => ({ on() { return this; }, subscribe() {} }), removeChannel: async () => {} }),
+  createClient: () => ({ from: () => query(), auth: { getSession: async () => ({ data: { session: null } }), onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }) }, channel: () => ({ on() { return this; }, subscribe() {} }), removeChannel: async () => {} }),
   isAuthRetryableFetchError: () => false,
 }));
 

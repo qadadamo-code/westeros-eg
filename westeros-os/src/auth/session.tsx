@@ -15,6 +15,7 @@ import type { Branch, Membership, Restaurant } from "@/data/types";
 import { loadJSON, loadRaw, saveJSON, saveRaw } from "@/lib/storage";
 import { DEMO_RESTAURANT_ID } from "@/data/seedIds";
 import { can, type Permission } from "./permissions";
+import { markWelcome } from "./welcome";
 import type { Role } from "./roles";
 
 const PIN_KEY = "sufra-os.pinSession";
@@ -22,6 +23,12 @@ const PIN_KEY = "sufra-os.pinSession";
 const REST_KEY = "sufra-os.screenLock";
 const DEVICE_KEY = "sufra-os.device";
 const RESTAURANT_KEY = "sufra-os.restaurant";
+/**
+ * "1" only while the email account itself is the person using the app. The email sign-in stays underneath as the
+ * device's link (it is what lets the names screen and PINs work), so signing out / switching user clears this flag and
+ * a reload lands on the names screen, never back inside the owner's account (Mohammed 2026-11-24).
+ */
+const EMAIL_KEY = "sufra-os.emailActive";
 const branchKey = (rid: string) => `sufra-os.branch.${rid}`;
 
 export interface SessionState {
@@ -47,7 +54,8 @@ interface SessionApi extends SessionState {
   role: Role | null;
   can: (p: Permission) => boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  pinSignIn: (membershipId: string, pin: string) => Promise<Membership | null>;
+  /** membershipId null = PIN only (the PIN identifies the person); throws code "pin_locked" after repeated misses */
+  pinSignIn: (membershipId: string | null, pin: string) => Promise<Membership | null>;
   /** sign the acting person out of the device (back to the names screen) */
   lock: () => void;
   /** cover the screen until the same person types the PIN; nothing under it is lost */
@@ -102,7 +110,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       if (!offline) saveJSON(PIN_KEY, null);
     }
     // 2) an email session
-    if (user && memberships.length) {
+    if (user && memberships.length && loadRaw(EMAIL_KEY) === "1") {
       const savedR = loadRaw(RESTAURANT_KEY);
       const pick = memberships.find((x) => x.restaurant.id === savedR) ?? memberships[0];
       const t = await loadTenant(pick.restaurant.id, pick.membership);
@@ -129,21 +137,26 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       const savedR = loadRaw(RESTAURANT_KEY);
       const pick = memberships.find((x) => x.restaurant.id === savedR) ?? memberships[0];
       saveRaw(DEVICE_KEY, pick.restaurant.id);
+      saveRaw(EMAIL_KEY, "1");
+      markWelcome();
       await boot();
     },
     [repo, boot],
   );
 
   const pinSignIn = useCallback(
-    async (membershipId: string, pin: string) => {
+    async (membershipId: string | null, pin: string) => {
       const rid = s.deviceRestaurantId;
       if (!rid) return null;
-      const m = await repo.auth.verifyPin(rid, membershipId, pin);
+      // null: PIN-only sign-in, the PIN itself says who the person is (PINs are unique)
+      const m = membershipId ? await repo.auth.verifyPin(rid, membershipId, pin) : await repo.auth.verifyAnyPin(rid, pin);
       if (!m) return null;
       saveJSON(PIN_KEY, { membershipId: m.id, restaurantId: rid });
+      saveRaw(EMAIL_KEY, "");
       const t = await loadTenant(rid, m);
       if (!t) return null;
       saveRaw(REST_KEY, "");
+      markWelcome();
       setS((p) => ({ ...p, status: "ready", ...t, staff: m, method: "pin", resting: false }));
       return m;
     },
@@ -152,6 +165,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const lock = useCallback(() => {
     saveJSON(PIN_KEY, null);
+    saveRaw(EMAIL_KEY, "");
     saveRaw(REST_KEY, "");
     setS((p) => ({ ...p, status: p.deviceRestaurantId ? "locked" : "signed-out", staff: null, method: null, resting: false }));
   }, []);
@@ -176,6 +190,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     saveJSON(PIN_KEY, null);
+    saveRaw(EMAIL_KEY, "");
     await repo.auth.signOut();
     await boot();
   }, [repo, boot]);
