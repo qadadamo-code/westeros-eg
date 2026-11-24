@@ -1,4 +1,4 @@
-import { lazy } from "react";
+import { tillOnly } from "./TillGuard";
 import { Receipt } from "lucide-react";
 import { defineModule } from "../../types";
 import { useLive } from "@/data/hooks";
@@ -18,6 +18,6 @@ export default defineModule({
   permission: "pos.use",
   homeFor: ["cashier"],
   nav: { path: "/pos", group: "service", order: 7, mobile: true, useBadge: useOpenChecks },
-  routes: [{ path: "/pos/*", element: lazy(() => import("@/modules/pos/PosPage")) }],
+  routes: [{ path: "/pos/*", element: tillOnly(() => import("@/modules/pos/PosPage")) }],
   keywords: ["cashier", "كاشير", "نقطة البيع", "فاتورة", "وردية", "صالة", "تيك أواي", "ديلفري"],
 });

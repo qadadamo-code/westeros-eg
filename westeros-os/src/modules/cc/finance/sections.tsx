@@ -6,6 +6,7 @@ import { CreditCard, FileSpreadsheet, Split, Armchair, ClipboardList, ScanSearch
 import type { LucideIcon } from "lucide-react";
 import { useMay } from "../useAccess";
 import { useFinPerms } from "./perms";
+import { useCentralBranch } from "@/shell/nav";
 
 export interface FinPage { to: string; label: string; icon: JSX.Element; end?: boolean; area: string }
 export interface FinSection { id: string; label: string; short?: string; Icon: LucideIcon; icon: JSX.Element; pages: FinPage[] }
@@ -59,8 +60,11 @@ export function allSections(o: { reports: boolean; budget: boolean }): FinSectio
 export function useFinSections(): FinSection[] {
   const perms = useFinPerms();
   const may = useMay();
+  const central = useCentralBranch();
   const o = { reports: perms.has("reports"), budget: perms.has("budget") || perms.has("profit") };
-  return allSections(o).map((g) => ({ ...g, pages: g.pages.filter((p) => may(p.area, "view")) })).filter((g) => g.pages.length);
+  // a central-kitchen branch has no till: الكاشير والطلبات are hidden while it's the chosen branch (Saqr 2026-11-24)
+  const till = (p: FinPage) => !central || (p.area !== "pos" && p.area !== "orders");
+  return allSections(o).map((g) => ({ ...g, pages: g.pages.filter((p) => may(p.area, "view") && till(p)) })).filter((g) => g.pages.length);
 }
 
 

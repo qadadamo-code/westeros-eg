@@ -1,4 +1,4 @@
-import { lazy } from "react";
+import { tillOnly } from "../pos/TillGuard";
 import { ClipboardList } from "lucide-react";
 import { defineModule } from "../../types";
 import { useActiveOrders } from "@/modules/badges";
@@ -12,6 +12,6 @@ export default defineModule({
   description: { ar: "كل الطلبات: صالة وتيك أواي وتوصيل، إعادة الطباعة والمرتجعات", en: "Every order: dine-in, takeaway and delivery, reprints and refunds" },
   permission: "orders.create",
   nav: { path: "/orders", group: "service", order: 8, useBadge: useActiveOrders },
-  routes: [{ path: "/orders/*", element: lazy(() => import("@/modules/orders/OrdersPage")) }],
+  routes: [{ path: "/orders/*", element: tillOnly(() => import("@/modules/orders/OrdersPage")) }],
   keywords: ["orders", "طلبات", "مرتجع", "طباعة"],
 });
