@@ -16,6 +16,7 @@ import { useCc, type Cc } from "../useCc";
 import { BulkBar, useSelection, type DeleteResult } from "./Bulk";
 import { ExcelImport, type ImportField, type ImportPlan } from "./Import";
 import { stockItemUse } from "./usage";
+import { deleteVoidBatch } from "@/modules/production/ops";
 
 const FIELDS: ImportField[] = [
   { key: "كود المنتج", aliases: ["الكود", "كود", "رقم الصنف", "كود الصنف", "code", "sku"] },
@@ -50,7 +51,7 @@ export default function Products() {
   const cc = useCc();
   const db = useDb();
   const prod = cc.prod;
-  const { can } = useSession();
+  const { can, staff } = useSession();
   const recipes = useLive("recipes").data;
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("");
@@ -142,12 +143,16 @@ export default function Products() {
   const remove = async (): Promise<DeleteResult> => {
     const out: DeleteResult = { deleted: 0, refused: [] };
     for (const p of sel.rows) {
-      const why = prod.batches.some((b) => b.outputs.some((o) => o.productId === p.id)) ? "له تشغيلات مسجلة" : await stockItemUse(db, cc, recipes, p.stockItemId, p.id);
+      // a product made only in cancelled batches can go: its cancelled batches are deleted with it
+      const runs = prod.batches.filter((b) => b.outputs.some((o) => o.productId === p.id));
+      const voided = runs.filter((b) => b.status === "void");
+      const why = runs.length > voided.length ? "له تشغيلات سارية (ألغيها الأول من سجل التشغيلات)" : await stockItemUse(db, cc, recipes, p.stockItemId, p.id, new Set(voided.map((b) => b.id)));
       if (why) {
         out.refused.push({ name: p.name.ar, why });
         continue;
       }
       try {
+        for (const b of voided) await deleteVoidBatch(db, b.id, staff?.id ?? null);
         await db.remove("mfgProducts", p.id);
         await db.remove("stockItems", p.stockItemId);
         out.deleted++;

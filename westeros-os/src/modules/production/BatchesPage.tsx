@@ -3,7 +3,7 @@ import { useArea } from "@/modules/cc/useAccess";
 import { SourceEntry } from "@/modules/cc/finance/SourceEntry";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Ban, ClipboardList, Printer, Search } from "lucide-react";
+import { Ban, ClipboardList, Printer, Search, Trash2 } from "lucide-react";
 import { useSession } from "@/auth/session";
 import { useDb } from "@/data/hooks";
 import type { MfgBatch, MfgInputRole } from "@/data/types";
@@ -13,7 +13,7 @@ import { BASE_NAME } from "@/modules/inventory/units";
 import { Badge, Button, Card, Dialog, EmptyState, Input, Select, Table, Textarea, useToast, type Column } from "@/ui";
 import { ExportButton } from "@/modules/cc/ui";
 import { LabelDialog } from "./LabelDialog";
-import { voidBatch } from "./ops";
+import { deleteVoidBatch, voidBatch } from "./ops";
 import { ExpiryBadge, fmtDateTime, fmtG, fmtKg, fmtPct, outQtyText } from "./ui";
 import { categoryName, METHOD_LABEL, useProduction, type Prod } from "./useProduction";
 
@@ -106,6 +106,7 @@ function BatchDialog({ batch, prod, onClose }: { batch: MfgBatch | null; prod: P
   const [voiding, setVoiding] = useState(false);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   if (!batch) return null;
   const b = batch;
   const doVoid = async () => {
@@ -121,17 +122,30 @@ function BatchDialog({ batch, prod, onClose }: { batch: MfgBatch | null; prod: P
       setBusy(false);
     }
   };
+  const doDelete = async () => {
+    setBusy(true);
+    try {
+      await deleteVoidBatch(db, b.id, staff?.id ?? null);
+      toast({ tone: "success", title: L("اتحذفت التشغيلة الملغاة", "Cancelled batch deleted") });
+      setDeleting(false);
+      onClose();
+    } catch (e) {
+      toast({ tone: "error", title: L("تعذر الحذف", "Could not delete"), description: String((e as Error).message ?? e) });
+    } finally {
+      setBusy(false);
+    }
+  };
   return (
     <>
       <Dialog
-        open={!label}
+        open={!label && !deleting}
         onClose={onClose}
         size="xl"
         title={<span className="flex flex-wrap items-center gap-2"><span className="num" dir="ltr">{b.number}</span>{b.status === "void" ? <Badge tone="danger">{L("ملغاة", "Void")}</Badge> : <Badge tone="ok">{loc(METHOD_LABEL[b.method])}</Badge>}</span>}
         description={`${b.outputs.map((o) => loc(o.name)).join("، ")} · ${loc(categoryName(prod.categories, b.category))}`}
         footer={
           <div className="flex flex-wrap items-center justify-between gap-2">
-            {b.status === "done" && can("production.manage") && area.delete ? <Button variant="danger-soft" icon={<Ban />} onClick={() => setVoiding(true)}>{L("إلغاء التشغيلة", "Void batch")}</Button> : <span />}
+            {b.status === "done" && can("production.manage") && area.delete ? <Button variant="danger-soft" icon={<Ban />} onClick={() => setVoiding(true)}>{L("إلغاء التشغيلة", "Void batch")}</Button> : b.status === "void" && can("production.manage") && area.delete ? <Button variant="danger-soft" icon={<Trash2 />} onClick={() => setDeleting(true)}>{L("حذف التشغيلة", "Delete batch")}</Button> : <span />}
             <div className="flex gap-2">
               <SourceEntry refId={b.id} />
               <Button variant="ghost" onClick={onClose}>{L("إغلاق", "Close")}</Button>
@@ -209,6 +223,19 @@ function BatchDialog({ batch, prod, onClose }: { batch: MfgBatch | null; prod: P
       >
         <Textarea label={L("سبب الإلغاء", "Reason")} rows={3} value={reason} onChange={(e) => setReason(e.target.value)} />
       </Dialog>
+      <Dialog
+        open={deleting}
+        onClose={() => setDeleting(false)}
+        size="sm"
+        title={L("حذف التشغيلة الملغاة", "Delete cancelled batch")}
+        description={L("التشغيلة هتختفي من السجل. المخزن مش هيتأثر لأنها ملغاة. تقدر ترجعها من السجل والاسترجاع.", "The batch leaves the log. Stock is not affected because it is cancelled. You can restore it from history.")}
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => setDeleting(false)}>{L("رجوع", "Back")}</Button>
+            <Button variant="danger" loading={busy} onClick={doDelete}>{L("تأكيد الحذف", "Confirm delete")}</Button>
+          </div>
+        }
+      />
     </>
   );
 }

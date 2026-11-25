@@ -102,6 +102,14 @@ export async function voidBatch(db: Db, batchId: string, p: { reason: string; by
   return row;
 }
 
+/** Deletes a cancelled batch for good (its stock moves already cancel out). Only a void batch can be deleted. */
+export async function deleteVoidBatch(db: Db, batchId: string, by: string | null) {
+  const b = await db.get("mfgBatches", batchId);
+  if (!b || b.status !== "void") throw new Error("ألغِ التشغيلة الأول");
+  await db.remove("mfgBatches", b.id);
+  await db.audit("mfg.batch.delete", "mfgBatches", b.id, { number: b.number }, by);
+}
+
 export async function countLabels(db: Db, batchId: string, copies: number) {
   const b = await db.get("mfgBatches", batchId);
   if (b) await db.update("mfgBatches", b.id, { labelsPrinted: b.labelsPrinted + copies });
