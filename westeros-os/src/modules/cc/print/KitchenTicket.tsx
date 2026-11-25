@@ -1,4 +1,4 @@
-/** طلبية المطبخ على الورق (Saqr 2026-11-25): what the kitchen printer prints, shaped by ثوابت النظام > التشغيل > شاشة المطبخ. */
+/** طلبية المطبخ على الورق (Saqr 2026-11-25): what the kitchen printer prints, shaped by التشغيل > اعدادات التشغيل > شاشة المطبخ. */
 import type { KitchenTicketDesign } from "@/data/types";
 import { PAPER_MM } from "@/lib/receipt";
 

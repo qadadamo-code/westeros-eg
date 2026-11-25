@@ -39,7 +39,7 @@ async function shrinkLogo(file: File): Promise<string> {
   }
 }
 
-/** `embedded`: inside ثوابت النظام > التشغيل > الكاشير (Cost Control version), without the settings menu */
+/** `embedded`: inside التشغيل > اعدادات التشغيل > الكاشير (Cost Control version), without the settings menu */
 export default function InvoiceDesigner({ embedded = false }: { embedded?: boolean }) {
   const { L } = useT();
   const db = useDb();

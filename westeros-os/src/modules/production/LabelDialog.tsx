@@ -27,9 +27,9 @@ export function LabelDialog({ batch, onClose, justSaved }: { batch: MfgBatch | n
   const [typed, setTyped] = useState(1);
   const [pick, setPick] = useState(0);
   const [busy, setBusy] = useState(false);
-  const { staff } = useSession();
-  // طابعة ستيكرات الصلاحية (Saqr 2026-11-25): through the print station when it is on
-  const pset = printOf(listsOf(settings));
+  const { staff, branchId } = useSession();
+  // طابعة ستيكرات الصلاحية (Saqr 2026-11-25): through the print station when it is on (the branch's اعدادات التشغيل)
+  const pset = printOf(listsOf(settings), branchId);
   const station = viaStation(pset, pset.stickerPrinterId);
   const [shift, setShift] = useState(savedLabelShift);
   const move = (dx: number, dy: number) => {

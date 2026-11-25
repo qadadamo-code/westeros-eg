@@ -47,7 +47,7 @@ const LISTED: Area[] = [
   { id: "stores.summary", screen: "cc-stores", label: "ملخص المخازن والفروع", acts: ["view"], summary: true },
 
   { id: "constants", screen: "cc-constants", label: "ثوابت النظام", acts: ["view", "edit"] },
-  { id: "print.station", screen: "cc-constants", label: "محطة الطباعة", acts: ["view"], note: "تنزيل برنامج محطة الطباعة وفتح شاشة المحطة على كمبيوتر الطباعة." },
+  { id: "print.station", screen: "cc-opsset", label: "محطة الطباعة", acts: ["view"], note: "تنزيل برنامج محطة الطباعة وفتح شاشة المحطة على كمبيوتر الطباعة." },
 
   { id: "mfg.make", screen: "cc-mfg", label: "تصنيع صنف", acts: ["view", "add"] },
   { id: "mfg.recipes", screen: "cc-mfg", label: "الوصفات", acts: ["view", "add", "edit", "delete"] },
@@ -96,6 +96,7 @@ const LISTED: Area[] = [
   { id: "pos", screen: "cc-pos", label: "الكاشير", acts: ["view"], note: "البيع والدفع والوردية. الخصومات والإلغاء بعد الإرسال بموافقة مدير." },
   { id: "orders", screen: "cc-orders", label: "الطلبات", acts: ["view"] },
   { id: "kitchen", screen: "cc-kitchen", label: "شاشة المطبخ", acts: ["view"] },
+  { id: "ops.settings", screen: "cc-opsset", label: "اعدادات التشغيل", acts: ["view", "edit"], note: "الطابعات وشكل فاتورة الكاشير وطلبية المطبخ وطابعة الستيكرات، لكل فرع." },
 
   { id: "radio.settings", screen: "cc-radio", label: "صلاحيات اللاسلكي والمجموعات", acts: ["view", "edit"] },
   { id: "radio.log", screen: "cc-radio", label: "سجل المحادثات", acts: ["view"] },

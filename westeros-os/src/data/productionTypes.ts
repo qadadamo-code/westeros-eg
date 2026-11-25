@@ -235,8 +235,10 @@ export interface MfgLists {
   mealOptions?: number[];
   /** اللاسلكي (Saqr 2026-11-25): who may use it, with whom, and the group chats */
   radio?: RadioSetup;
-  /** الطابعات وشكل الفاتورة وطلبية المطبخ (Saqr 2026-11-25, ثوابت النظام > التشغيل) */
+  /** الطابعات وشكل الفاتورة وطلبية المطبخ (Saqr 2026-11-25, التشغيل > اعدادات التشغيل) */
   printing?: PrintSetup;
+  /** اعدادات التشغيل لكل فرع (Saqr 2026-11-25); a branch without its own uses `printing` */
+  printingByBranch?: Record<string, PrintSetup>;
   sideOptions?: { id: string; name: string; nameAr?: string; price: number; available?: boolean; menuItemId?: string | null }[];
   /** وحدة التخزين لمواد الخام */
   storageUnits: string[];

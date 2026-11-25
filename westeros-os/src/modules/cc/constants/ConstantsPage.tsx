@@ -2,7 +2,7 @@
 import { AreaGate, useArea } from "../useAccess";
 import { blockRange } from "../menu/codes";
 import { useState, type ReactNode } from "react";
-import { Factory, Landmark, Store, Plus, Settings2, Trash2, Warehouse, X } from "lucide-react";
+import { Factory, Landmark, Plus, Settings2, Trash2, Warehouse, X } from "lucide-react";
 import { Navigate, useLocation } from "react-router-dom";
 import { RouteTabs } from "@/modules/marketing/ui";
 import { useDb, useLive } from "@/data/hooks";
@@ -14,7 +14,6 @@ import { Button, Card, CardHeader, EmptyState, IconButton, Input, Select, useToa
 import { codeRanges, rangeProblem, rawRanges, specOf, STORE_TYPES, type CodeKind } from "../lib";
 import { useCc } from "../useCc";
 import FinanceConstants from "./FinanceConstants";
-import OpsConstants from "./OpsConstants";
 import { FINANCE_ON } from "../finance/flag";
 
 const BASE_LABEL: Record<MfgUnitDef["base"], string> = { g: "وزن (جرام)", ml: "حجم (مل)", pc: "عدد (قطعة)" };
@@ -29,7 +28,6 @@ export default function ConstantsPage() {
 const CONSTANT_TABS = [
   { to: "/constants", end: true, label: "المخازن والفروع", icon: <Warehouse /> },
   { to: "/constants/mfg", label: "التصنيع", icon: <Factory /> },
-  { to: "/constants/ops", label: "التشغيل", icon: <Store /> },
   ...(FINANCE_ON ? [{ to: "/constants/finance", label: "الحسابات", icon: <Landmark /> }] : []),
 ];
 
@@ -104,7 +102,7 @@ function ConstantsPageBody() {
       <RouteTabs label="ثوابت النظام" items={CONSTANT_TABS} />
       {readOnly ? <p className="rounded-xl border border-line px-3 py-2 text-[13.5px] text-muted">للمشاهدة بس: الدور بتاعك مالوش صلاحية تعديل ثوابت النظام.</p> : null}
       {tab === "finance" ? <FinanceConstants readOnly={readOnly} /> : null}
-      {tab === "ops" ? <OpsConstants settings={s} readOnly={readOnly} /> : null}
+      {tab === "ops" ? <Navigate to="/ops-settings" replace /> : null}
       {/* without تعديل every field and button of the page is locked */}
       <fieldset disabled={readOnly} className={tab === "finance" || tab === "ops" ? "hidden" : "contents"}>
       <div className="grid items-start gap-5 lg:grid-cols-2">

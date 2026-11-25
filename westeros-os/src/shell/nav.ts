@@ -19,7 +19,7 @@ export function useCentralBranch(): boolean {
 }
 
 /** التشغيل (Saqr 2026-11-24): manufacturing, menu, cashier, orders and the kitchen screen sit under one menu; each keeps its own routes and permissions */
-export const OPS_MODULES = ["cc-mfg", "cc-menu", "cc-pos", "cc-orders", "cc-kitchen"];
+export const OPS_MODULES = ["cc-mfg", "cc-menu", "cc-pos", "cc-orders", "cc-kitchen", "cc-opsset"];
 function opsMenu(members: ModuleDef[]): ModuleDef {
   const first = members[0];
   const sub = members.map((m) => ({ to: m.nav!.path, label: m.title.ar, Icon: m.icon, paths: [{ to: m.nav!.path, end: false }], module: m }));

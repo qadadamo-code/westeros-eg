@@ -140,6 +140,7 @@ export const SCREENS: { id: string; label: string }[] = [
   { id: "cc-pos", label: "الكاشير" },
   { id: "cc-orders", label: "الطلبات" },
   { id: "cc-kitchen", label: "شاشة المطبخ" },
+  { id: "cc-opsset", label: "اعدادات التشغيل" },
   { id: "cc-radio", label: "اللاسلكي" },
 ];
 /** the screens of the till: a type that opens only these (and the summary) works at the cashier level */
@@ -147,7 +148,7 @@ export const POS_SCREENS = ["cc-pos", "cc-orders", "cc-kitchen"];
 const ROLE_SCREENS: Record<MfgUserType["role"], string[]> = {
   kitchen: ["cc-summary", "cc-stores", "cc-catalog", "cc-mfg"],
   chef: ["cc-summary", "cc-stores", "cc-catalog", "cc-constants", "cc-mfg"],
-  manager: ["cc-summary", "cc-stores", "cc-catalog", "cc-constants", "cc-mfg", "cc-menu", ...POS_SCREENS],
+  manager: ["cc-summary", "cc-stores", "cc-catalog", "cc-constants", "cc-mfg", "cc-menu", ...POS_SCREENS, "cc-opsset"],
   cashier: ["cc-summary", ...POS_SCREENS],
   admin: SCREENS.map((x) => x.id),
 };

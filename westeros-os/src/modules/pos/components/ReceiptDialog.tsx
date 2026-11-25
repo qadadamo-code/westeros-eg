@@ -17,8 +17,8 @@ export function ReceiptDialog({ open, onClose, model, title, etaError, actions }
   const { L } = useT();
   const reduced = useReduced();
   const [paper, setPaper] = useState<InvoiceDesign["paper"]>("80");
-  // طابعة فواتير الكاشير (ثوابت النظام > التشغيل): its paper wins over the design's
-  const setup = printOf(listsOf(useLive("mfgSettings").data[0]));
+  // طابعة فواتير الكاشير (التشغيل > اعدادات التشغيل): its paper wins over the design's
+  const setup = printOf(listsOf(useLive("mfgSettings").data[0]), useSession().branchId);
   const printer = setup.printers.find((p) => p.id === setup.receiptPrinterId) ?? null;
   useEffect(() => {
     if (open && model) setPaper(printer?.paper ?? model.design.paper);

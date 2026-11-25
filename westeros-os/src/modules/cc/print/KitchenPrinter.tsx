@@ -5,6 +5,7 @@
  * Chrome started with --kiosk-printing prints without the dialog.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSession } from "@/auth/session";
 import { useLive } from "@/data/hooks";
 import type { OrderItem } from "@/data/types";
 import { printNode } from "@/lib/receipt";
@@ -24,7 +25,8 @@ const loadDone = (): Record<string, number> => {
 
 export function KitchenPrinter() {
   const settings = useLive("mfgSettings").data[0];
-  const setup = printOf(listsOf(settings));
+  const { branchId } = useSession();
+  const setup = printOf(listsOf(settings), branchId);
   const [mine, setMine] = useState(devicePrinter());
   useEffect(() => {
     const f = () => setMine(devicePrinter());
@@ -39,7 +41,8 @@ export function KitchenPrinter() {
 
 function Run({ printerId }: { printerId: string }) {
   const settings = useLive("mfgSettings").data[0];
-  const setup = printOf(listsOf(settings));
+  const { branchId } = useSession();
+  const setup = printOf(listsOf(settings), branchId);
   const printer = setup.printers.find((p) => p.id === printerId)!;
   const since = useMemo(() => new Date(Date.now() - 60_000).toISOString(), []);
   const startedAt = useRef(Date.now());
@@ -55,7 +58,7 @@ function Run({ printerId }: { printerId: string }) {
   useEffect(() => {
     const done = loadDone();
     const catOf = new Map(menu.map((m) => [m.id, m.categoryId]));
-    const fresh = items.filter((i) => i.firedAt && i.status !== "void" && !done[i.id] && Date.parse(i.firedAt) >= startedAt.current - 5_000 && printersFor(setup, catOf.get(i.itemId)).includes(printerId));
+    const fresh = items.filter((i) => i.firedAt && i.status !== "void" && !done[i.id] && Date.parse(i.firedAt) >= startedAt.current - 5_000 && printersFor(setup, catOf.get(i.itemId)).includes(printerId) && orders.find((o) => o.id === i.orderId)?.branchId === branchId);
     if (!fresh.length) return;
     const now = Date.now();
     for (const i of fresh) done[i.id] = now;

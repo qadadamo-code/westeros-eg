@@ -31,7 +31,9 @@ export default function StationPage() {
 function Station() {
   const db = useDb();
   const settings = useLive("mfgSettings").data[0];
-  const setup = printOf(listsOf(settings));
+  // the station prints for the branch this PC works in (its اعدادات التشغيل)
+  const { branchId, branches } = useSession();
+  const setup = printOf(listsOf(settings), branchId);
   const [helper, setHelper] = useState<boolean | null>(null);
   const [log, setLog] = useState<LogRow[]>([]);
   const add = (text: string, ok: boolean) => setLog((l) => [{ at: Date.now(), text, ok }, ...l].slice(0, 40));
@@ -61,7 +63,7 @@ function Station() {
   useEffect(() => {
     if (!helper) return;
     for (const j of jobs) {
-      if (taken.current.has(j.id)) continue;
+      if (taken.current.has(j.id) || !printer(j.printerId)) continue;
       taken.current.add(j.id);
       void db.update("printJobs", j.id, { status: "printing" }).then(() => run(jobLabel(j, printer(j.printerId)), () => doJob(j)));
     }
@@ -101,7 +103,7 @@ function Station() {
       /* fresh */
     }
     const catOf = new Map(menu.map((m) => [m.id, m.categoryId]));
-    const fresh = items.filter((i) => i.firedAt && i.status !== "void" && !done[i.id] && Date.parse(i.firedAt) >= startedAt.current - 5_000);
+    const fresh = items.filter((i) => i.firedAt && i.status !== "void" && !done[i.id] && Date.parse(i.firedAt) >= startedAt.current - 5_000 && orders.find((o) => o.id === i.orderId)?.branchId === branchId);
     if (!fresh.length) return;
     const now = Date.now();
     for (const i of fresh) done[i.id] = now;
@@ -141,6 +143,7 @@ function Station() {
   }, [items, helper, setup.kitchenPrint]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { staff } = useSession();
+  const branchName = branches.find((b) => b.id === branchId)?.name.ar;
   const test = (p: PrinterDef) => run(`تجربة ← ${p.name}`, async () => sendBytes(p, await kitchenBytes({ ...SAMPLE_TICKET, printer: p.name, number: "تجربة", cashier: staff?.name ?? null }, setup, p)));
 
   return (
@@ -149,7 +152,7 @@ function Station() {
         <span className="grid size-12 place-items-center rounded-2xl bg-brass text-white"><Printer className="size-6" /></span>
         <div className="flex-1">
           <h1 className="text-[22px] font-bold">محطة الطباعة</h1>
-          <p className="text-[13.5px] text-muted">سيب الشاشة دي مفتوحة على الكمبيوتر ده. بتطبع طلبات كل الأجهزة على الطابعات بالـ IP.</p>
+          <p className="text-[13.5px] text-muted">سيب الشاشة دي مفتوحة على الكمبيوتر ده. بتطبع طلبات كل الأجهزة على طابعات {branchName ? `فرع ${branchName}` : "الفرع"} بالـ IP.</p>
         </div>
       </div>
 
@@ -172,7 +175,7 @@ function Station() {
 
       <Card className="grid gap-2 p-4">
         <p className="text-[15px] font-bold">الطابعات</p>
-        {!setup.printers.length ? <p className="text-[13.5px] text-muted">مفيش طابعات متعرفة. عرّفها من ثوابت النظام ← التشغيل ← الكاشير.</p> : null}
+        {!setup.printers.length ? <p className="text-[13.5px] text-muted">مفيش طابعات متعرفة. عرّفها من التشغيل ← اعدادات التشغيل.</p> : null}
         {setup.printers.map((p) => (
           <div key={p.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-line px-3 py-2">
             <Printer className="size-4 text-muted" />

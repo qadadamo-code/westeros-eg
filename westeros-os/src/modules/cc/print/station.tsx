@@ -1,6 +1,6 @@
 /**
  * محطة الطباعة (Saqr 2026-11-25): the restaurant's Windows PC runs a small program (westeros-print-station.bat,
- * downloaded from ثوابت النظام > التشغيل) that listens on this PC only (localhost:17777) and passes bytes to a printer's
+ * downloaded from التشغيل > اعدادات التشغيل) that listens on this PC only (localhost:17777) and passes bytes to a printer's
  * IP. The station screen (/print-station, open in Chrome on that PC) turns each job into those bytes.
  * Any device asks for a print by adding a print job; the kitchen tickets are made by the station itself.
  */

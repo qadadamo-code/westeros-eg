@@ -1,5 +1,5 @@
 /**
- * ثوابت النظام > التشغيل (Saqr 2026-11-25):
+ * التشغيل > اعدادات التشغيل (Saqr 2026-11-25; moved out of ثوابت النظام the same day, one setup per branch):
  *   الكاشير       طابعات النظام (الاسم، الـ IP، الورق)، الجهاز ده متوصل بأنهي طابعة، طابعة فواتير الكاشير،
  *                 طابعات كل فئة في المنيو (أكتر من طابعة للفئة)، وشكل فاتورة الكاشير
  *   شاشة المطبخ  تفعيل طابعة المطبخ (أو الشغل على شاشة المطبخ الداخلية بس)، وشكل طلبية المطبخ
@@ -15,31 +15,35 @@ import { Button, Card, CardHeader, EmptyState, IconButton, Input, Segmented, Sel
 import { listsOf } from "../lib";
 import { Confirm } from "../finance/ui";
 import { KitchenTicketView, SAMPLE_TICKET } from "../print/KitchenTicket";
-import { devicePrinter, printOf, setDevicePrinter } from "../print/setup";
+import { devicePrinter, printOf, setDevicePrinter, withPrintFor } from "../print/setup";
 import { STATION_FILE, queuePrint } from "../print/station";
 import { useMay } from "../useAccess";
 import { useSession } from "@/auth/session";
+import { mainBranchOf, onMenuOf } from "../menu/menuBranch";
 
 const InvoiceDesigner = lazy(() => import("@/modules/settings/invoice/InvoiceDesigner"));
 
-export default function OpsConstants({ settings, readOnly }: { settings: MfgSettings; readOnly: boolean }) {
+export default function OpsConstants({ settings, branchId, readOnly }: { settings: MfgSettings; branchId: string; readOnly: boolean }) {
   const [part, setPart] = useState<"cashier" | "kitchen">("cashier");
   const db = useDb();
   const lists = listsOf(settings);
-  const setup = printOf(lists);
-  const save = (p: Partial<PrintSetup>) => db.update("mfgSettings", settings.id, { lists: { ...lists, printing: { ...setup, ...p } } });
+  const setup = printOf(lists, branchId);
+  const save = (p: Partial<PrintSetup>) => db.update("mfgSettings", settings.id, { lists: withPrintFor(lists, branchId, p) });
   return (
     <div className="grid gap-5">
       <Segmented label="التشغيل" value={part} onChange={setPart} options={[{ value: "cashier", label: "الكاشير", icon: <Receipt /> }, { value: "kitchen", label: "شاشة المطبخ", icon: <ChefHat /> }]} />
-      {part === "cashier" ? <Cashier setup={setup} save={save} readOnly={readOnly} /> : <Kitchen setup={setup} save={save} readOnly={readOnly} />}
+      {part === "cashier" ? <Cashier setup={setup} save={save} readOnly={readOnly} branchId={branchId} /> : <Kitchen setup={setup} save={save} readOnly={readOnly} />}
     </div>
   );
 }
 
 type Props = { setup: PrintSetup; save: (p: Partial<PrintSetup>) => Promise<unknown>; readOnly: boolean };
 
-function Cashier({ setup, save, readOnly }: Props) {
-  const cats = useLive("menuCategories", { orderBy: [{ field: "sort" }] }).data;
+function Cashier({ setup, save, readOnly, branchId }: Props & { branchId: string }) {
+  // the branch's own menu categories (منيو منفصل لكل فرع)
+  const { branches } = useSession();
+  const main = mainBranchOf(branches);
+  const cats = useLive("menuCategories", { orderBy: [{ field: "sort" }] }).data.filter(onMenuOf(branchId, main));
   const [del, setDel] = useState<PrinterDef | null>(null);
   const [mine, setMine] = useState(devicePrinter());
   const setPrinter = (id: string, p: Partial<PrinterDef>) => void save({ printers: setup.printers.map((x) => (x.id === id ? { ...x, ...p } : x)) });

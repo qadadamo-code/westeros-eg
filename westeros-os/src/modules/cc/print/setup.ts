@@ -9,10 +9,17 @@ import type { KitchenTicketDesign, MfgLists, PrintSetup } from "@/data/types";
 export const DEFAULT_KITCHEN: KitchenTicketDesign = { fontSize: 15, header: "طلبية المطبخ", channel: true, table: true, customer: true, modifiers: true, notes: true, time: true, cashier: false };
 export const EMPTY_PRINT: PrintSetup = { printers: [], receiptPrinterId: null, kitchenPrint: false, kitchenDefaultPrinterId: null, categoryPrinters: {}, kitchen: DEFAULT_KITCHEN };
 
-export const printOf = (lists: Pick<MfgLists, "printing"> | null | undefined): PrintSetup => {
-  const p = lists?.printing;
+/** a branch's printing setup: its own, else the one saved before settings were per branch */
+export const printOf = (lists: Pick<MfgLists, "printing" | "printingByBranch"> | null | undefined, branchId?: string | null): PrintSetup => {
+  const p = (branchId ? lists?.printingByBranch?.[branchId] : undefined) ?? lists?.printing;
   return { ...EMPTY_PRINT, ...(p ?? {}), kitchen: { ...DEFAULT_KITCHEN, ...(p?.kitchen ?? {}) } };
 };
+
+/** the lists with one branch's printing setup changed */
+export const withPrintFor = (lists: MfgLists, branchId: string, p: Partial<PrintSetup>): MfgLists => ({
+  ...lists,
+  printingByBranch: { ...(lists.printingByBranch ?? {}), [branchId]: { ...printOf(lists, branchId), ...p } },
+});
 
 /** the printers a menu category's kitchen lines go to: its own, else the default kitchen printer */
 export function printersFor(p: PrintSetup, categoryId: string | null | undefined): string[] {
