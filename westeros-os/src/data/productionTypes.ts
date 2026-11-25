@@ -344,6 +344,10 @@ export interface KitchenTicketDesign {
   notes: boolean;
   time: boolean;
   cashier: boolean;
+  /** كود الطلب في تطبيق التوصيل (Saqr 2026-11-25) */
+  appCode?: boolean;
+  /** ترتيب البيانات ومكانها: keys in print order; keys in `bottom` print under the items */
+  layout?: { order: string[]; bottom: string[] };
 }
 export interface PrintSetup {
   printers: PrinterDef[];

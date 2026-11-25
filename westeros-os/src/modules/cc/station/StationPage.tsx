@@ -145,6 +145,7 @@ function Station() {
           at: lines[0].firedAt ?? new Date().toISOString(),
           printer: p.name,
           note: o?.note || null,
+          appCode: o?.externalRef ?? null,
           lines: lines.map((l) => ({ qty: l.qty, name: l.name.ar || l.name.en, modifiers: l.modifiers.map((m) => m.name.ar || m.name.en), notes: l.notes, toGo: l.toGo })),
         };
         void run(`طلبية مطبخ #${data.number} ← ${p.name}`, async () => sendBytes(p, await kitchenBytes(data, setup, p)));

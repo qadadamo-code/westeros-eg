@@ -82,6 +82,7 @@ function Run({ printerId }: { printerId: string }) {
         at: lines[0].firedAt ?? new Date().toISOString(),
         printer: printer.name,
         note: o?.note || null,
+          appCode: o?.externalRef ?? null,
         lines: lines.map((l) => ({ qty: l.qty, name: l.name.ar || l.name.en, modifiers: l.modifiers.map((m) => m.name.ar || m.name.en), notes: l.notes, toGo: l.toGo })),
       };
       queue.current = queue.current.then(() => printNode(<KitchenTicketView data={data} design={setup.kitchen} paper={printer.paper} />, printer.paper)).catch(() => undefined);

@@ -5,7 +5,7 @@
  *   شاشة المطبخ  تفعيل طابعة المطبخ (أو الشغل على شاشة المطبخ الداخلية بس)، وشكل طلبية المطبخ
  */
 import { lazy, Suspense, useState } from "react";
-import { Check, ChefHat, Download, ExternalLink, Plus, Printer, Receipt, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, ChefHat, Download, ExternalLink, Plus, Printer, Receipt, Trash2 } from "lucide-react";
 import { useDb, useLive } from "@/data/hooks";
 import type { KitchenTicketDesign, MfgSettings, PrintSetup, PrinterDef } from "@/data/types";
 import { uuid } from "@/lib/id";
@@ -14,7 +14,7 @@ import { printNode } from "@/lib/receipt";
 import { Button, Card, CardHeader, EmptyState, IconButton, Input, Segmented, Select, Skeleton, Switch } from "@/ui";
 import { listsOf } from "../lib";
 import { Confirm } from "../finance/ui";
-import { KitchenTicketView, SAMPLE_TICKET } from "../print/KitchenTicket";
+import { KitchenTicketView, SAMPLE_TICKET, TICKET_KEYS, ticketLayout } from "../print/KitchenTicket";
 import { devicePrinter, isReceipt, printOf, setDevicePrinter, withPrintFor } from "../print/setup";
 import { STATION_FILE, queuePrint } from "../print/station";
 import { useMay } from "../useAccess";
@@ -96,7 +96,7 @@ function Cashier({ setup, save, readOnly }: Props) {
 }
 
 const FIELDS: [keyof KitchenTicketDesign, string][] = [
-  ["channel", "قناة البيع"], ["table", "رقم الترابيزة"], ["customer", "اسم العميل"], ["modifiers", "الإضافات"], ["notes", "الملاحظات"], ["time", "الوقت"], ["cashier", "الموظف"],
+  ["appCode", "كود الطلب (تطبيق توصيل)"], ["channel", "قناة البيع"], ["table", "رقم الترابيزة"], ["customer", "اسم العميل"], ["modifiers", "الإضافات"], ["notes", "الملاحظات"], ["time", "الوقت"], ["cashier", "الموظف"],
 ];
 
 function Kitchen({ setup, save, readOnly, branchId }: Props & { branchId: string }) {
@@ -157,9 +157,10 @@ function Kitchen({ setup, save, readOnly, branchId }: Props & { branchId: string
           <Input label="العنوان فوق الطلبية" defaultValue={k.header} disabled={readOnly} onBlur={(e) => e.target.value !== k.header && setK({ header: e.target.value })} />
           <Select label="حجم الخط" value={String(k.fontSize)} disabled={readOnly} onChange={(e) => setK({ fontSize: Number(e.target.value) })} options={[12, 13, 14, 15, 16, 18, 20, 22].map((n) => ({ value: String(n), label: `${n}` }))} />
           <div className="grid gap-2 sm:grid-cols-2">
-            {FIELDS.map(([key, label]) => <Switch key={key} checked={!!k[key]} disabled={readOnly} onChange={(v) => setK({ [key]: v })} label={label} />)}
+            {FIELDS.map(([key, label]) => <Switch key={key} checked={key === "appCode" ? k.appCode !== false : !!k[key]} disabled={readOnly} onChange={(v) => setK({ [key]: v })} label={label} />)}
           </div>
           <Button variant="outline" icon={<Printer />} onClick={() => void printNode(<KitchenTicketView data={SAMPLE_TICKET} design={k} paper={paper} />, paper)}>اطبع طلبية تجربة</Button>
+          <TicketOrder design={k} set={setK} readOnly={readOnly} />
         </Card>
         <div className="grid place-items-center rounded-2xl bg-surface-3 p-4">
           <div className="shadow-sf-lg"><KitchenTicketView data={SAMPLE_TICKET} design={k} paper={paper} /></div>
@@ -202,5 +203,36 @@ function StationCard({ setup, save, readOnly }: Props) {
         </div>
       ) : <p className="text-[12.5px] text-muted">تنزيل البرنامج محتاج صلاحية (محطة الطباعة) من الأدوار.</p>}
     </Card>
+  );
+}
+
+/** ترتيب بيانات طلبية المطبخ ومكانها (Saqr 2026-11-25) */
+function TicketOrder({ design, set, readOnly }: { design: KitchenTicketDesign; set: (p: Partial<KitchenTicketDesign>) => void; readOnly: boolean }) {
+  const { order, bottom } = ticketLayout(design);
+  const label = (k: string) => TICKET_KEYS.find((m) => m.key === k)?.label ?? k;
+  const move = (i: number, d: number) => {
+    const j = i + d;
+    if (j < 0 || j >= order.length) return;
+    const next = [...order];
+    [next[i], next[j]] = [next[j], next[i]];
+    set({ layout: { order: next, bottom } });
+  };
+  const place = (k: string, under: boolean) => set({ layout: { order, bottom: under ? [...bottom.filter((x) => x !== k), k] : bottom.filter((x) => x !== k) } });
+  return (
+    <div className="grid gap-1 border-t border-line pt-3">
+      <p className="text-[13.5px] font-semibold">ترتيب البيانات ومكانها في الطلبية</p>
+      <p className="text-[12.5px] text-muted">رتّب بالأسهم، واختار كل سطر يظهر فوق الأصناف ولا تحتها.</p>
+      <div className="divide-y divide-line">
+        {order.map((k, i) => (
+          <div key={k} className="flex items-center gap-2 py-1.5" data-ticket-order={k}>
+            <span className="num w-5 text-[12.5px] text-muted">{i + 1}</span>
+            <span className="flex-1 text-[14px] font-medium">{label(k)}</span>
+            <Segmented size="sm" label={label(k)} value={bottom.includes(k) ? "bottom" : "top"} onChange={(v) => !readOnly && place(k, v === "bottom")} options={[{ value: "top", label: "فوق" }, { value: "bottom", label: "تحت" }]} />
+            <Button size="sm" variant="ghost" aria-label="لفوق" disabled={readOnly || i === 0} onClick={() => move(i, -1)} icon={<ArrowUp className="size-4" />} />
+            <Button size="sm" variant="ghost" aria-label="لتحت" disabled={readOnly || i === order.length - 1} onClick={() => move(i, 1)} icon={<ArrowDown className="size-4" />} />
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
