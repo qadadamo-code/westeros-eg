@@ -60,14 +60,24 @@ function Station() {
   /* ── jobs from other devices ── */
   const jobs = useLive("printJobs", { where: { status: "queued" }, orderBy: [{ field: "createdAt" }] }).data;
   const taken = useRef(new Set<string>());
-  useEffect(() => {
-    if (!helper) return;
-    for (const j of jobs) {
+  const take = (list: PrintJob[]) => {
+    for (const j of list) {
       if (taken.current.has(j.id) || !printer(j.printerId)) continue;
       taken.current.add(j.id);
       void db.update("printJobs", j.id, { status: "printing" }).then(() => run(jobLabel(j, printer(j.printerId)), () => doJob(j)));
     }
+  };
+  const takeRef = useRef(take);
+  takeRef.current = take;
+  useEffect(() => {
+    if (helper) take(jobs);
   }, [jobs, helper]); // eslint-disable-line react-hooks/exhaustive-deps
+  // a safety net if a live update is missed: look for waiting jobs every few seconds (Saqr 2026-11-25: a receipt waited until refresh)
+  useEffect(() => {
+    if (!helper) return;
+    const t = setInterval(() => void db.list("printJobs", { where: { status: "queued" } }).then((l) => takeRef.current(l)).catch(() => undefined), 4_000);
+    return () => clearInterval(t);
+  }, [helper]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const doJob = async (j: PrintJob) => {
     const p = printer(j.printerId);
