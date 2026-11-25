@@ -15,7 +15,7 @@ import { sheetCode, sheetNumber } from "../xlsx";
 import { useCc, type Cc } from "../useCc";
 import { BulkBar, useSelection, type DeleteResult } from "./Bulk";
 import { ExcelImport, type ImportField, type ImportPlan } from "./Import";
-import { stockItemUse } from "./usage";
+import { HAS_MOVES, IN_REQUEST, stockItemUse } from "./usage";
 import { deleteVoidBatch } from "@/modules/production/ops";
 
 const FIELDS: ImportField[] = [
@@ -147,14 +147,17 @@ export default function Products() {
       const runs = prod.batches.filter((b) => b.outputs.some((o) => o.productId === p.id));
       const voided = runs.filter((b) => b.status === "void");
       const why = runs.length > voided.length ? "له تشغيلات سارية (ألغيها الأول من سجل التشغيلات)" : await stockItemUse(db, cc, recipes, p.stockItemId, p.id, new Set(voided.map((b) => b.id)));
-      if (why) {
+      // the stock card has history elsewhere (transfers, counts, other batches): the product goes, the card is hidden and its history kept
+      const keepCard = why === HAS_MOVES || why === IN_REQUEST;
+      if (why && !keepCard) {
         out.refused.push({ name: p.name.ar, why });
         continue;
       }
       try {
         for (const b of voided) await deleteVoidBatch(db, b.id, staff?.id ?? null);
         await db.remove("mfgProducts", p.id);
-        await db.remove("stockItems", p.stockItemId);
+        if (keepCard) await db.update("stockItems", p.stockItemId, { active: false });
+        else await db.remove("stockItems", p.stockItemId);
         out.deleted++;
       } catch {
         out.refused.push({ name: p.name.ar, why: "مرتبط ببيانات أخرى" });
