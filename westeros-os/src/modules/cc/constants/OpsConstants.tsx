@@ -5,7 +5,7 @@
  *   شاشة المطبخ  تفعيل طابعة المطبخ (أو الشغل على شاشة المطبخ الداخلية بس)، وشكل طلبية المطبخ
  */
 import { lazy, Suspense, useState } from "react";
-import { ArrowDown, ArrowUp, Check, ChefHat, Download, ExternalLink, Plus, Printer, Receipt, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, ChefHat, Plus, Printer, Receipt, Trash2 } from "lucide-react";
 import { useDb, useLive } from "@/data/hooks";
 import type { KitchenTicketDesign, MfgSettings, PrintSetup, PrinterDef } from "@/data/types";
 import { uuid } from "@/lib/id";
@@ -16,7 +16,8 @@ import { listsOf } from "../lib";
 import { Confirm } from "../finance/ui";
 import { KitchenTicketView, SAMPLE_TICKET, TICKET_KEYS, ticketLayout } from "../print/KitchenTicket";
 import { devicePrinter, isReceipt, printOf, setDevicePrinter, withPrintFor } from "../print/setup";
-import { STATION_FILE, queuePrint } from "../print/station";
+import { queuePrint } from "../print/station";
+import { StationSetup } from "../print/StationSetup";
 import { useMay } from "../useAccess";
 import { useSession } from "@/auth/session";
 import { mainBranchOf, onMenuOf } from "../menu/menuBranch";
@@ -176,23 +177,15 @@ function StationCard({ setup, save, readOnly }: Props) {
   const db = useDb();
   const { staff } = useSession();
   const allowed = may("print.station", "view");
-  const base = import.meta.env.BASE_URL;
   return (
     <Card className="grid gap-3 p-4" data-station-card>
-      <CardHeader title="محطة الطباعة" subtitle="كمبيوتر ويندوز واحد في المطعم بيطبع طلبات كل الأجهزة (أندرويد، آيفون، ويندوز) على الطابعات بالـ IP" />
+      <CardHeader title="محطة الطباعة" subtitle="جهاز واحد في المطعم (كمبيوتر ويندوز أو تابلت أندرويد) بيطبع طلبات كل الأجهزة (أندرويد، آيفون، ويندوز) على الطابعات بالـ IP" />
       <Switch checked={!!setup.stationOn} disabled={readOnly} onChange={(v) => void save({ stationOn: v })} label="تفعيل محطة الطباعة"
         description={setup.stationOn ? "الفواتير والستيكرات من أي جهاز بتروح للمحطة، وطلبيات المطبخ بتطلع منها على طابعات الفئات." : "مقفولة: كل جهاز بيطبع من المتصفح على الطابعة المتعرفة عليه."} />
       {allowed ? (
         <div className="grid gap-2 rounded-xl bg-surface-2 p-3 text-[13.5px]">
-          <p className="font-semibold">تشغيل المحطة على كمبيوتر الطباعة:</p>
-          <ol className="list-decimal space-y-1 ps-5">
-            <li>نزّل برنامج المحطة وافتحه مرة واحدة (بيشتغل لوحده بعد كده كل ما الكمبيوتر يفتح).</li>
-            <li>افتح شاشة المحطة في كروم على نفس الكمبيوتر وسيبها مفتوحة.</li>
-          </ol>
-          <div className="flex flex-wrap gap-2">
-            <a href={`${base}${STATION_FILE}`} download className="inline-flex items-center gap-2 rounded-xl bg-ink px-4 py-2 font-semibold text-bg"><Download className="size-4" />تنزيل برنامج المحطة</a>
-            <a href={`${base}print-station`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-xl border border-line px-4 py-2 font-semibold hover:bg-surface"><ExternalLink className="size-4" />فتح شاشة المحطة</a>
-          </div>
+          <p className="font-semibold">تشغيل المحطة على جهاز الطباعة:</p>
+          <StationSetup />
           {setup.stationOn ? (
             <div className="flex flex-wrap gap-2 pt-1">
               {setup.printers.filter((p) => p.ip && p.kind !== "label").map((p) => (

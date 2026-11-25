@@ -4,7 +4,7 @@
  * tickets of every printer by its menu categories. Keep this screen open.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CheckCircle2, Download, Printer, RefreshCw, TriangleAlert, XCircle } from "lucide-react";
+import { CheckCircle2, Printer, RefreshCw, TriangleAlert, XCircle } from "lucide-react";
 import { useSession } from "@/auth/session";
 import { useDb, useLive } from "@/data/hooks";
 import type { OrderItem, PrintJob, PrinterDef } from "@/data/types";
@@ -15,7 +15,8 @@ import { useMay } from "../useAccess";
 import { listsOf } from "../lib";
 import { printersFor, printOf } from "../print/setup";
 import type { KitchenTicketData } from "../print/KitchenTicket";
-import { kitchenBytes, pingHelper, receiptBytes, sendBytes, STATION_FILE, stickerBytes, type StickerPayload } from "../print/station";
+import { kitchenBytes, pingHelper, receiptBytes, sendBytes, stickerBytes, type StickerPayload } from "../print/station";
+import { StationSetup } from "../print/StationSetup";
 import { SAMPLE_TICKET } from "../print/KitchenTicket";
 
 interface LogRow { at: number; text: string; ok: boolean }
@@ -163,7 +164,7 @@ function Station() {
         <span className="grid size-12 place-items-center rounded-2xl bg-brass text-white"><Printer className="size-6" /></span>
         <div className="flex-1">
           <h1 className="text-[22px] font-bold">محطة الطباعة</h1>
-          <p className="text-[13.5px] text-muted">سيب الشاشة دي مفتوحة على الكمبيوتر ده. بتطبع طلبات كل الأجهزة على طابعات {branchName ? `فرع ${branchName}` : "الفرع"} بالـ IP.</p>
+          <p className="text-[13.5px] text-muted">سيب الشاشة دي مفتوحة على الجهاز ده. بتطبع طلبات كل الأجهزة على طابعات {branchName ? `فرع ${branchName}` : "الفرع"} بالـ IP.</p>
         </div>
       </div>
 
@@ -176,9 +177,8 @@ function Station() {
         </div>
         {helper === false ? (
           <div className="grid gap-2 rounded-xl bg-warn-soft p-3 text-[13.5px]">
-            <p className="font-semibold text-warn"><TriangleAlert className="me-1 inline size-4" />شغّل برنامج المحطة على الكمبيوتر ده:</p>
-            <p>نزّل الملف وافتحه مرة واحدة. بيشتغل لوحده كل ما الكمبيوتر يفتح.</p>
-            <a href={`${import.meta.env.BASE_URL}${STATION_FILE}`} download className="inline-flex w-fit items-center gap-2 rounded-xl bg-ink px-4 py-2 font-semibold text-bg"><Download className="size-4" />تنزيل برنامج المحطة</a>
+            <p className="font-semibold text-warn"><TriangleAlert className="me-1 inline size-4" />شغّل برنامج المحطة على الجهاز ده:</p>
+            <StationSetup showOpen={false} />
             <p className="text-muted">لو كروم سأل "السماح بالوصول للأجهزة على الشبكة المحلية"، اختار سماح.</p>
           </div>
         ) : null}
