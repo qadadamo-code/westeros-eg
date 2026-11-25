@@ -5,7 +5,7 @@
  */
 import { useArea } from "@/modules/cc/useAccess";
 import { searchHit } from "@/lib/search";
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Beef, Check, Layers, RefreshCw, Scale, Search, ShieldCheck, Shapes, TriangleAlert } from "lucide-react";
 import { useSession } from "@/auth/session";
@@ -54,6 +54,8 @@ function ByProduct({ prod, initial }: { prod: Prod; initial: MfgProduct | undefi
   const [run, setRun] = useState(0);
   const [q, setQ] = useState("");
   const p = prod.productById.get(productId);
+  // picking a product (or saving one) opens the next page from its top, not where the list was scrolled (Saqr 2026-11-25, phone)
+  useEffect(() => { if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior }); }, [productId, run]);
   const list = useMemo(() => {
     const n = q.trim().toLowerCase();
     return prod.products.filter((x) => x.active && searchHit(n, x.name.ar, x.code));
