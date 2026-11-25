@@ -7,17 +7,50 @@ import type { ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { flushSync } from "react-dom";
 
+// heights are left to the layout: fixed pixel heights made lines overlap when a font differed (Saqr 2026-11-25)
+const SKIP = new Set(["height", "block-size", "min-height", "min-block-size"]);
 function inlineStyles(src: Element, dst: Element) {
   const cs = getComputedStyle(src);
   let css = "";
   for (let i = 0; i < cs.length; i++) {
     const p = cs[i];
+    if (SKIP.has(p)) continue;
     css += `${p}:${cs.getPropertyValue(p)};`;
   }
   (dst as HTMLElement).setAttribute("style", css);
   const a = src.children;
   const b = dst.children;
   for (let i = 0; i < a.length; i++) if (b[i]) inlineStyles(a[i], b[i]);
+}
+
+/**
+ * A picture drawn from an SVG can't load the page's web fonts, so the text fell back to another font and overlapped.
+ * The fonts of the page's Google Fonts link (Arabic and Latin parts) are fetched once and embedded as data URLs.
+ */
+let fontCache: Promise<string> | null = null;
+const toDataUrl = (b: Blob) => new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = rej; r.readAsDataURL(b); });
+export function embeddedFonts(): Promise<string> {
+  if (fontCache) return fontCache;
+  fontCache = (async () => {
+    const href = (document.querySelector('link[href*="fonts.googleapis.com/css"]') as HTMLLinkElement | null)?.href;
+    if (!href) return "";
+    const css = await (await fetch(href)).text();
+    const blocks = [...css.matchAll(/\/\*\s*([\w-]+)\s*\*\/\s*(@font-face\s*\{[^}]*\})/g)].filter((m) => m[1] === "arabic" || m[1] === "latin").map((m) => m[2]);
+    const out = await Promise.all(blocks.map(async (b) => {
+      const url = b.match(/url\(([^)]+)\)/)?.[1]?.replace(/["']/g, "");
+      if (!url) return "";
+      try {
+        return b.replace(/url\([^)]+\)/, `url(${await toDataUrl(await (await fetch(url)).blob())})`);
+      } catch {
+        return "";
+      }
+    }));
+    return out.join("\n");
+  })().catch(() => {
+    fontCache = null;
+    return "";
+  });
+  return fontCache;
 }
 
 /** lays the node out at `widthCss` (e.g. "72mm") and returns a canvas `dots` wide (white background) */
@@ -37,7 +70,8 @@ export async function nodeToCanvas(node: ReactNode, dots: number, widthCss?: str
     inlineStyles(el, clone);
     clone.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
     const xhtml = new XMLSerializer().serializeToString(clone);
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><foreignObject x="0" y="0" width="100%" height="100%">${xhtml}</foreignObject></svg>`;
+    const fonts = await embeddedFonts();
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">${fonts ? `<defs><style>${fonts}</style></defs>` : ""}<foreignObject x="0" y="0" width="100%" height="100%">${xhtml}</foreignObject></svg>`;
     const img = new Image();
     img.decoding = "sync";
     await new Promise<void>((res, rej) => {
