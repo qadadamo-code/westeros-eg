@@ -88,6 +88,6 @@ export const CANNED: { id: string; text: Localized; channel: GroupChannel; needs
   { id: "rider_ready", text: { ar: "أوردر الدليفري جاهز — الطيار ييجي", en: "Delivery order ready — rider to the pass" }, channel: "delivery" },
   { id: "rider_arrived", text: { ar: "وصلت للعميل", en: "Arrived at the customer" }, channel: "delivery" },
   { id: "rush", text: { ar: "زحمة — الكل يساعد في الصالة", en: "Rush — everyone help on the floor" }, channel: "all" },
-  { id: "86", text: { ar: "صنف خلص — راجعوا المنيو", en: "An item is 86'd — check the menu" }, channel: "kitchen" },
+  { id: "86", text: { ar: "صنف خلص — راجعوا المنيو", en: "An item is sold out — check the menu" }, channel: "kitchen" },
   { id: "clean", text: { ar: "طاولة {t} محتاجة تنضيف", en: "Table {t} needs clearing" }, channel: "floor", needsTable: true },
 ];

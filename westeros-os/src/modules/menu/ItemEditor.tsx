@@ -162,7 +162,7 @@ export function ItemEditor({ item, categoryId, onClose }: { item: MenuItem | nul
         <fieldset disabled={!editable} className="contents">
           {tab === "availability" ? (
             <div className="grid gap-4">
-              <Switch checked={d.available} onChange={(v) => set("available", v)} label={L("متاح النهارده", "Available today")} description={L("اقفلها = 86 (خلص) — بيختفي من الطلب في كل مكان", "Off = 86'd — can't be ordered anywhere")} />
+              <Switch checked={d.available} onChange={(v) => set("available", v)} label={L("متاح النهارده", "Available today")} description={L("اقفلها = خلصان — بيختفي من الطلب في كل مكان", "Off = sold out — can't be ordered anywhere")} />
               <Switch checked={d.active} onChange={(v) => set("active", v)} label={L("في المنيو", "On the menu")} />
               <fieldset className="grid gap-2">
                 <legend className="mb-1 text-[13px] font-semibold text-ink-2">{L("مواعيد البيع", "Selling hours")} · <span className="font-normal text-muted">{scheduleLabel(d.schedule, lang)}</span></legend>

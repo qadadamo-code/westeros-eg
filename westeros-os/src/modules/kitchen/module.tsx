@@ -22,7 +22,7 @@ export default defineModule({
     { ar: "تذاكر لكل محطة (شوّاية، سخن، بارد، حلويات، بار) بعدّاد وقت", en: "Tickets per station (grill, hot, cold, desserts, bar) with timers" },
     { ar: "لمسة واحدة: بيتعمل ← جاهز، والجرسون يعرف على طول", en: "One tap: preparing → ready, and the waiter knows instantly" },
     { ar: "الكورسات: الحلو مايطلعش قبل الأكل", en: "Courses: dessert doesn't fire before mains" },
-    { ar: "الشيف يقدر يقفل صنف خلص (٨٦) من الشاشة", en: "Chef can 86 a sold-out item from the screen" },
+    { ar: "الشيف يقدر يقفل صنف خلص من الشاشة", en: "Chef can mark an item sold out from the screen" },
   ],
   data: ["orderItems", "kitchenStations"],
 });

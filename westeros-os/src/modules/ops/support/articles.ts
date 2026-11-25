@@ -52,9 +52,9 @@ export const ARTICLES: Article[] = [
     "الألوان: فاضية، قاعدين، طلبوا، طالبين الحساب، محتاجة تنضيف. دوس على طاولة علشان تقعّد ضيوف أو تفتح الشيك أو تنقل أو تدمج طاولات. تعديل التصميم من زر التصميم (صلاحية المدير).",
     "Colours: free, seated, ordered, bill requested, dirty. Tap a table to seat guests, open the check, move or merge tables. Edit the layout with the Design button (manager).",
   ]),
-  A("kitchen", "kitchen", "/kitchen", ["مطبخ", "kds", "تيكت", "86", "خلص"], ["شاشة المطبخ والـ 86", "Kitchen display and 86"], [
-    "كل محطة بتشوف أصنافها لايف. دوس علشان «جاهز»، والتيكت بيغيّر لونه مع التأخير. صنف خلص؟ اعمله 86 من شاشة المطبخ — بيختفي من المنيو والـ QR، وبيتسجل كحدث في الكاميرات.",
-    "Each station sees its items live. Tap to mark ready; tickets change colour as they age. Out of something? 86 it from the kitchen screen — it disappears from the menu and QR and is logged as a camera event.",
+  A("kitchen", "kitchen", "/kitchen", ["مطبخ", "kds", "تيكت", "86", "خلص"], ["شاشة المطبخ والخلصان", "Kitchen display and sold out"], [
+    "كل محطة بتشوف أصنافها لايف. دوس علشان «جاهز»، والتيكت بيغيّر لونه مع التأخير. صنف خلص؟ اعمله «خلصان» من شاشة المطبخ — بيختفي من المنيو والـ QR، وبيتسجل كحدث في الكاميرات.",
+    "Each station sees its items live. Tap to mark ready; tickets change colour as they age. Out of something? Mark it sold out from the kitchen screen — it disappears from the menu and QR and is logged as a camera event.",
   ]),
   A("waiter-calls", "waiter", "/waiter", ["جرسون", "نداء", "call", "waiter", "QR"], ["نداءات الضيوف من الـ QR", "Guest calls from the QR menu"], [
     "الضيف بيدوس «نادي الجرسون» من الـ QR. النداء بيظهر عندك بصوت. لو محدش ردّ في الوقت المحدد بيتصعّد للمدير وبيظهر في مركز التنبيهات. دوس «رايح» علشان الضيف يعرف إنك جاي.",
@@ -98,7 +98,7 @@ export const ARTICLES: Article[] = [
   ]),
   A("cameras-exceptions", "cameras", "/cameras/events", ["استثناءات", "فيديو", "إلغاء", "مرتجع", "درج"], ["ربط الكاشير بالفيديو (الاستثناءات)", "POS ↔ video exceptions"], [
     "كل إلغاء ومرتجع وخصم فوق الحد وفتح درج من غير بيع وعجز/زيادة في الدرج و86 يدوي بيظهر هنا بالوقت والجهاز والموظف والكاميرا اللي بتشوف الجهاز. «افتح الكليب» بيفتح تسجيل الـ NVR في الوقت ده. اربط كل كاميرا بأجهزتها من الإعداد.",
-    "Every void, refund, discount above the limit, no-sale drawer open, cash over/short and manual 86 lands here with time, device, staff and the camera that sees that device. “Open clip” jumps to the NVR recording at that moment. Link each camera to its devices in Setup.",
+    "Every void, refund, discount above the limit, no-sale drawer open, cash over/short and manual sold-out lands here with time, device, staff and the camera that sees that device. “Open clip” jumps to the NVR recording at that moment. Link each camera to its devices in Setup.",
   ]),
   A("occupancy", "cameras", "/cameras/occupancy", ["إشغال", "عدد", "زحمة", "occupancy", "people"], ["الإشغال التقديري (تجريبي)", "Estimated occupancy (beta)"], [
     "المضيف يكتب عدد الناس في كل منطقة، أو كاميرا عدّاد المدخل بتبعت الداخل والخارج. الرقم «تقديري» — مش بديل عن حالة الطاولات.",

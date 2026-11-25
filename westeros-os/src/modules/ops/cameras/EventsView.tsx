@@ -22,7 +22,7 @@ export const KIND_META: Record<VideoEventKind, { icon: typeof Ban; ar: string; e
   discount: { icon: Percent, ar: "خصم فوق الحد", en: "Discount over limit" },
   no_sale: { icon: PackageOpen, ar: "فتح درج بدون بيع", en: "No-sale drawer" },
   cash_variance: { icon: Scale, ar: "عجز / زيادة", en: "Cash over/short" },
-  item_86: { icon: UtensilsCrossed, ar: "86 يدوي", en: "Manual 86" },
+  item_86: { icon: UtensilsCrossed, ar: "صنف خلصان يدوي", en: "Manual sold out" },
 };
 
 export default function EventsView() {
