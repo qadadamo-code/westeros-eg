@@ -267,7 +267,7 @@ export default function Register() {
   const mfgSettings = useLive("mfgSettings").data[0] ?? null;
   const stockOf = useBranchStock(session.branchId, menu.items);
   const pick = (item: MenuItem, { forceSheet }: { forceSheet: boolean }) => {
-    if (!item.available) return toast({ title: L("الصنف ده خلصان النهارده", "This item is 86'd today"), tone: "warn" });
+    if (!item.available) return toast({ title: L("الصنف ده خلصان النهارده", "This item is sold out today"), tone: "warn" });
     // Saqr 2026-11-25: an item short in the branch stock sells only with the permission
     if (stockOf(item)?.short && !memberCan(session.staff, listsOf(mfgSettings), "pos.sellOut"))
       return toast({ title: L("الصنف مش متوفر في الفرع", "Not in stock at this branch"), description: L("مكوناته مش كفاية في مخزون الفرع، والبيع محتاج صلاحية \"البيع لمنتجات غير متوفرة\".", "Needs the sell-out permission."), tone: "warn" });

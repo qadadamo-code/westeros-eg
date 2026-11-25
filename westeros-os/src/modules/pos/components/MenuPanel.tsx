@@ -229,7 +229,7 @@ function ItemTile({ item, cat, count, onPick, lang, fame, info, onPeek }: { item
           ) : null}
           {off ? (
             <span className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 bg-danger py-0.5 text-[12px] font-bold text-white">
-              <Ban className="size-3.5" /> {L("خلصان", "86'd")}
+              <Ban className="size-3.5" /> {L("خلصان", "Sold out")}
             </span>
           ) : null}
         </span>

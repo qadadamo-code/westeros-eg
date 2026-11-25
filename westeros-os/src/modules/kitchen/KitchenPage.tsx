@@ -143,7 +143,7 @@ export function KitchenScreen({ kiosk = false }: { kiosk?: boolean }) {
         l: { ar: "التذاكر", en: "Tickets view" },
         a: { ar: "المطلوب كله", en: "All-day view" },
         e: { ar: "الباس", en: "Expo view" },
-        x: { ar: "قائمة الخلصان (٨٦)", en: "86 list" },
+        x: { ar: "قائمة الخلصان", en: "Sold out" },
       },
     },
   );

@@ -111,7 +111,7 @@ function ItemsView() {
   const toggle86 = async (it: MenuItem) => {
     await db.update("menuItems", it.id, { available: !it.available });
     await db.audit(it.available ? "menu.86" : "menu.un86", "menuItems", it.id, { item: it.name.en });
-    toast({ title: it.available ? L(`${it.name.ar} خلص (86)`, `${it.name.en} 86'd`) : L(`${it.name.ar} رجع`, `${it.name.en} is back`), tone: it.available ? "warn" : "success", duration: 1800 });
+    toast({ title: it.available ? L(`${it.name.ar} خلص`, `${it.name.en} sold out`) : L(`${it.name.ar} رجع`, `${it.name.en} is back`), tone: it.available ? "warn" : "success", duration: 1800 });
   };
   return (
     <div className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
@@ -175,7 +175,7 @@ function ItemsView() {
                   <Money value={it.price} whole className="w-20 shrink-0 text-end font-semibold" />
                   {can("menu.availability") ? (
                     <button type="button" onClick={() => toggle86(it)} aria-pressed={!it.available} className={cn("h-9 shrink-0 rounded-full px-3 text-[12.5px] font-bold", it.available ? "bg-ok-soft text-ok" : "bg-danger text-white")}>
-                      {it.available ? L("متاح", "On") : "86"}
+                      {it.available ? L("متاح", "On") : L("خلصان", "Sold out")}
                     </button>
                   ) : null}
                   {editable && !q ? (
