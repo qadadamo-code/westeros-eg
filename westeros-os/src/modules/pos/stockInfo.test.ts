@@ -10,8 +10,8 @@ describe("stockInfoOf", () => {
     expect(stockInfoOf(r, new Map([["bun", 10], ["beef", 100]]), items)).toMatchObject({ portions: 0, short: true });
     expect(stockInfoOf(r, new Map(), items)?.short).toBe(true);
   });
-  it("no recipe means no info", () => {
-    expect(stockInfoOf(null, new Map(), items)).toBeNull();
+  it("no recipe counts as short", () => {
+    expect(stockInfoOf(null, new Map(), items)).toMatchObject({ short: true, noRecipe: true, portions: 0 });
   });
   it("labels big quantities in kg", () => {
     expect(qtyLabel(1500, "g")).toBe("1.5 كجم");

@@ -11,7 +11,7 @@ import { formatMoney } from "@/lib/money";
 import { spring, useReduced } from "@/ui";
 import { menuPhoto } from "@/data/westeros/menuImages";
 import { catIcon, Chip } from "./bits";
-import { qtyLabel, type StockInfo } from "../stockInfo";
+import type { StockInfo } from "../stockInfo";
 
 export interface MenuPanelProps {
   cats: MenuCategory[];
@@ -21,7 +21,7 @@ export interface MenuPanelProps {
   /** الأكثر طلباً / تريند, from the last 30 days of sales */
   fame?: Map<string, Fame>;
   /** مكونات الصنف والمتاح في الفرع (hover / long-press), null = no recipe */
-  stock?: (item: MenuItem) => StockInfo | null;
+  stock?: (item: MenuItem) => StockInfo;
 }
 type Peek = { item: MenuItem; rect: DOMRect; pinned: boolean };
 
@@ -112,7 +112,7 @@ export const MenuPanel = forwardRef<HTMLInputElement, MenuPanelProps>(function M
 });
 
 /** the ingredients card: follows the mouse over a tile, or stays after a long press until a tap outside */
-function PeekCard({ peek, info, onClose, onOptions }: { peek: Peek; info: StockInfo | null; onClose: () => void; onOptions: () => void }) {
+function PeekCard({ peek, info, onClose, onOptions }: { peek: Peek; info: StockInfo | undefined; onClose: () => void; onOptions: () => void }) {
   const { L, loc } = useT();
   const W = 272;
   const vw = typeof window === "undefined" ? 1024 : window.innerWidth;
@@ -124,24 +124,14 @@ function PeekCard({ peek, info, onClose, onOptions }: { peek: Peek; info: StockI
     <>
       {peek.pinned ? <button type="button" aria-label={L("اقفل", "Close")} className="fixed inset-0 z-40 cursor-default" onClick={onClose} /> : null}
       <div role="tooltip" className={cn("fixed z-50 grid gap-2 rounded-2xl border border-line bg-surface p-3 text-[13px] shadow-sf-lg", !peek.pinned && "pointer-events-none")} style={{ width: W, ...style }}>
-        <div className="flex items-start justify-between gap-2">
-          <span className="font-bold leading-snug">{loc(peek.item.name)}</span>
-          {info ? (
-            info.short ? <span className="shrink-0 rounded-full bg-warn-soft px-2 py-0.5 text-[11.5px] font-bold text-warn">{L("مش متوفر", "Short")}</span>
-              : <span className="num shrink-0 rounded-full bg-ok/10 px-2 py-0.5 text-[11.5px] font-bold text-ok">{L(`يكفي ${info.portions}`, `${info.portions} left`)}</span>
-          ) : null}
+        <span className="font-bold leading-snug">{loc(peek.item.name)}</span>
+        {/* Saqr 2026-11-25: the ingredients here are the item's description in المنيو */}
+        {loc(peek.item.description) ? <p className="leading-relaxed text-ink-2">{loc(peek.item.description)}</p> : <p className="text-muted">{L("مافي شرح مكونات بالمنيو.", "No description in the menu.")}</p>}
+        <div className={cn("rounded-xl px-2.5 py-1.5 text-[12.5px] font-semibold", info?.short ? "bg-warn-soft text-warn" : "bg-ok/10 text-ok")}>
+          {!info ? null : info.noRecipe ? L("! الصنف ما إله وصفة بأصناف البيع، فالمتاح بالفرع مش محسوب", "! No recipe, so branch stock isn't known")
+            : info.short ? L("! غير متوفر بالفرع: مكوناته مش كافية", "! Not in stock at this branch")
+            : <span className="num">{L(`المتاح بالفرع: ${info.portions}`, `In branch: ${info.portions}`)}</span>}
         </div>
-        {info ? (
-          <ul className="grid gap-1">
-            <li className="flex justify-between text-[11.5px] text-muted"><span>{L("المكون", "Ingredient")}</span><span>{L("للحبة · المتاح بالفرع", "per item · in branch")}</span></li>
-            {info.lines.map((l) => (
-              <li key={l.itemId} className="flex items-baseline justify-between gap-2">
-                <span className="truncate">{l.name}</span>
-                <span className={cn("num shrink-0 text-[12.5px]", l.have < l.need ? "font-bold text-danger" : "text-ink-2")}>{qtyLabel(l.need, l.unit)} · {qtyLabel(l.have, l.unit)}</span>
-              </li>
-            ))}
-          </ul>
-        ) : <p className="text-muted">{L("الصنف ماله وصفة، فالمكونات والمتاح مش محسوبين.", "No recipe, so stock isn't tracked.")}</p>}
         {peek.pinned ? (
           <button type="button" onClick={onOptions} className="mt-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-line py-2 font-semibold text-ink-2 hover:bg-surface-2 [&_svg]:size-4">
             <SlidersHorizontal /> {L("الخيارات والملاحظات", "Options & notes")}
@@ -152,7 +142,7 @@ function PeekCard({ peek, info, onClose, onOptions }: { peek: Peek; info: StockI
   );
 }
 
-function ItemTile({ item, cat, count, onPick, lang, fame, info, onPeek }: { item: MenuItem; cat?: MenuCategory; count: number; onPick: MenuPanelProps["onPick"]; lang: "ar" | "en"; fame?: Fame; info?: StockInfo | null; onPeek?: (p: Peek | null) => void }) {
+function ItemTile({ item, cat, count, onPick, lang, fame, info, onPeek }: { item: MenuItem; cat?: MenuCategory; count: number; onPick: MenuPanelProps["onPick"]; lang: "ar" | "en"; fame?: Fame; info?: StockInfo; onPeek?: (p: Peek | null) => void }) {
   const { L, loc } = useT();
   const reduced = useReduced();
   const Icon = catIcon(cat?.icon);

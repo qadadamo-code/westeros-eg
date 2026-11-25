@@ -1,7 +1,8 @@
 /**
  * مكونات الصنف والمتاح في الفرع (Saqr 2026-11-25): for a menu item, the lines of its recipe with what one portion needs
- * and what the branch has, and how many portions that makes. An item is short when one ingredient is below one portion.
- * Items without a recipe have no info and are never short.
+ * and what the branch has, and how many portions that makes: the lowest of (on hand ÷ qty per portion) over its ingredients.
+ * An item is short when one ingredient is below one portion. An item without a recipe counts as short too (Saqr's "اه",
+ * 2026-11-25) until its recipe is added.
  */
 import { useMemo } from "react";
 import { useLive } from "@/data/hooks";
@@ -9,11 +10,12 @@ import type { MenuItem, Recipe, StockItem } from "@/data/types";
 import { sameItem } from "@/modules/cc/menu/menuBranch";
 
 export interface StockLine { itemId: string; name: string; unit: StockItem["baseUnit"]; need: number; have: number }
-export interface StockInfo { lines: StockLine[]; portions: number; short: boolean }
+export interface StockInfo { lines: StockLine[]; portions: number; short: boolean; noRecipe?: boolean }
 
 /** pure: recipe lines against on-hand quantities (base units) */
-export function stockInfoOf(recipe: Pick<Recipe, "lines" | "yieldQty"> | null, onHand: Map<string, number>, items: Map<string, Pick<StockItem, "name" | "baseUnit">>): StockInfo | null {
-  if (!recipe || !recipe.lines.length) return null;
+const NO_RECIPE: StockInfo = { lines: [], portions: 0, short: true, noRecipe: true };
+export function stockInfoOf(recipe: Pick<Recipe, "lines" | "yieldQty"> | null, onHand: Map<string, number>, items: Map<string, Pick<StockItem, "name" | "baseUnit">>): StockInfo {
+  if (!recipe || !recipe.lines.length) return NO_RECIPE;
   const y = recipe.yieldQty || 1;
   const lines: StockLine[] = recipe.lines
     .filter((l) => l.qty > 0)
@@ -24,7 +26,7 @@ export function stockInfoOf(recipe: Pick<Recipe, "lines" | "yieldQty"> | null, o
       need: (l.qty * (1 + (l.lossBp ?? 0) / 10_000)) / y,
       have: Math.max(0, onHand.get(l.itemId) ?? 0),
     }));
-  if (!lines.length) return null;
+  if (!lines.length) return NO_RECIPE;
   const portions = Math.max(0, Math.floor(Math.min(...lines.map((l) => (l.need > 0 ? l.have / l.need : Infinity))) + 1e-9));
   return { lines, portions: Number.isFinite(portions) ? portions : 0, short: lines.some((l) => l.have + 1e-9 < l.need) };
 }
@@ -46,8 +48,8 @@ export function useBranchStock(branchId: string | null | undefined, menu: MenuIt
     for (const l of levels) if (!branchId || l.branchId === branchId) onHand.set(l.itemId, (onHand.get(l.itemId) ?? 0) + l.qty);
     const items = new Map(stockItems.map((i) => [i.id, i]));
     const recipeOf = new Map(recipes.filter((r) => r.ownerType === "menu_item" && !r.scopeItemId && r.lines.length).map((r) => [r.ownerId, r]));
-    const cache = new Map<string, StockInfo | null>();
-    return (item: MenuItem): StockInfo | null => {
+    const cache = new Map<string, StockInfo>();
+    return (item: MenuItem): StockInfo => {
       if (cache.has(item.id)) return cache.get(item.id)!;
       // كل فرع إله منيو: a branch copy without its own recipe uses the same item's recipe from another branch
       let r = recipeOf.get(item.id) ?? null;
