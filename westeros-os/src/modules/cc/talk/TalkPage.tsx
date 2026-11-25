@@ -13,6 +13,8 @@ import { PttButton, usePttNotices } from "@/modules/ops/radio/PttButton";
 import { useRecentClips, useUnread } from "@/modules/ops/radio/useClips";
 import { recorderSupported } from "@/modules/ops/radio/recorder";
 import { useMyRadio } from "./useRadio";
+import { askNotifications, rememberChannel } from "./runtime";
+import { Bell } from "lucide-react";
 
 export default function TalkPage() {
   const { staff } = useSession();
@@ -38,6 +40,7 @@ export default function TalkPage() {
   useEffect(() => {
     if (!current) return;
     radio.markRead(current.id);
+    rememberChannel(current.id);
     if (params.get("ch") !== current.id) setParams({ ch: current.id }, { replace: true });
   }, [current?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const list = useMemo(() => (current ? clips.data.filter((c) => c.channel === current.id).slice(0, 60) : []), [clips.data, current]);
@@ -56,7 +59,7 @@ export default function TalkPage() {
   return (
     <div className="mx-auto grid max-w-3xl gap-4">
       <PageHeader icon={<RadioTower />} title="اللاسلكي" subtitle="اختار الشخص أو المجموعة، واضغط مطوّل على الزرار واتكلم"
-        actions={snap.unlocked ? <Badge tone="ok" icon={<Volume2 className="size-3.5" />}>الصوت شغّال</Badge> : <Button size="sm" variant="soft" icon={<VolumeX className="size-4" />} onClick={() => radio.unlock()}>فعّل الصوت</Button>} />
+        actions={<div className="flex flex-wrap gap-2">{typeof Notification !== "undefined" && Notification.permission !== "granted" ? <Button size="sm" variant="outline" icon={<Bell className="size-4" />} onClick={askNotifications}>فعّل الإشعارات</Button> : null}{snap.unlocked ? <Badge tone="ok" icon={<Volume2 className="size-3.5" />}>الصوت شغّال</Badge> : <Button size="sm" variant="soft" icon={<VolumeX className="size-4" />} onClick={() => radio.unlock()}>فعّل الصوت</Button>}</div>} />
 
       {snap.blocked ? (
         <Card className="flex items-center gap-3 border-warn/40 bg-warn-soft p-3">

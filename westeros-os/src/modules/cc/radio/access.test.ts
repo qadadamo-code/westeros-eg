@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { groupsOf, mayTalk, radioOn } from "./access";
+import { groupsOf, mayTalk, radioLive, radioOn } from "./access";
 
 const owner = { id: "o", role: "owner" };
 const chef = { id: "c", role: "chef" };
@@ -22,5 +22,10 @@ describe("radio access", () => {
   it("groups need the member allowed", () => {
     expect(groupsOf(r, chef).map((g) => g.id)).toEqual(["g"]);
     expect(groupsOf(r, { id: "x", role: "kitchen" })).toEqual([]);
+  });
+  it("live: owner by default, others when ticked", () => {
+    expect(radioLive(r, owner)).toBe(true);
+    expect(radioLive(r, chef)).toBe(false);
+    expect(radioLive({ ...r, access: { ...r.access, c: { on: true, peers: ["o"], live: true } } }, chef)).toBe(true);
   });
 });

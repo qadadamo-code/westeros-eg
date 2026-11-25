@@ -23,3 +23,6 @@ export function mayTalk(r: RadioSetup, a: Member, b: Member): boolean {
 
 /** the groups this member talks in (they must be allowed too) */
 export const groupsOf = (r: RadioSetup, m: Member | null | undefined) => (radioOn(r, m) && m ? r.groups.filter((g) => g.memberIds.includes(m.id)) : []);
+
+/** مباشر (Saqr 2026-11-25): voice plays at once and the floating mic talks directly; otherwise a notification to open */
+export const radioLive = (r: RadioSetup, m: Member | null | undefined): boolean => radioOn(r, m) && !!m && (r.access[m.id]?.live ?? m.role === "owner");

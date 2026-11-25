@@ -36,3 +36,14 @@ function trim() {
   })).finally(() => { trimming = false; });
 }
 self.addEventListener("activate", () => trim());
+// اللاسلكي (2026-11-25): a tap on a radio notification opens the radio screen of the app
+self.addEventListener("notificationclick", (e) => {
+  e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || self.registration.scope;
+  e.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+      for (const c of list) if (c.url.startsWith(self.registration.scope) && "focus" in c) return c.navigate(url).then((w) => (w || c).focus()).catch(() => c.focus());
+      return self.clients.openWindow(url);
+    }),
+  );
+});

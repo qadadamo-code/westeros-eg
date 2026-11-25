@@ -326,7 +326,7 @@ export interface ChecklistRun extends Row {
 
 /** اللاسلكي: per employee (membership id) allowed or not and the people they may talk to; named groups. */
 export interface RadioSetup {
-  access: Record<string, { on: boolean; peers: "all" | string[] }>;
+  access: Record<string, { on: boolean; peers: "all" | string[]; /** مباشر: hears messages at once and talks from the floating mic, like a walkie-talkie */ live?: boolean }>;
   groups: { id: string; name: string; memberIds: string[] }[];
 }
 

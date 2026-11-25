@@ -67,7 +67,7 @@ function AccessTab() {
   return (
     <div className="grid gap-3">
       {!edit ? <p className="rounded-xl border border-line px-3 py-2 text-[13.5px] text-muted">للمشاهدة بس: الدور بتاعك مالوش صلاحية تعديل اللاسلكي.</p> : null}
-      <p className="text-[13.5px] text-muted">الموظف اللي مش مسموح له مش هيشوف زرار اللاسلكي خالص. صاحب المطعم مسموح له دايماً مع الكل.</p>
+      <p className="text-[13.5px] text-muted">الموظف اللي مش مسموح له مش هيشوف زرار اللاسلكي خالص. صاحب المطعم مسموح له دايماً مع الكل. (مباشر) يعني زي الواكي توكي: الرسالة الصوتية بتشتغل لوحدها أول ما توصل، ويتكلم من زرار المايك على طول من غير ما يفتح صفحة اللاسلكي. من غيرها بيوصله إشعار ويفتح الرسالة.</p>
       <Card className="divide-y divide-line p-0">
         {members.map((m) => {
           const owner = m.role === "owner";
@@ -82,12 +82,9 @@ function AccessTab() {
                 <p className="text-[15px] font-semibold">{m.name}</p>
                 {on ? <p className="truncate text-[12.5px] text-muted">يتكلم مع: {peersText}</p> : <p className="text-[12.5px] text-muted">مش مسموح له يستخدم اللاسلكي</p>}
               </div>
-              {owner ? <Badge tone="ok">دايماً مسموح</Badge> : (
-                <>
-                  <Switch checked={on} disabled={!edit} onChange={(v) => setRow(m.id, { on: v })} label="مسموح" />
-                  <Button size="sm" variant="outline" disabled={!edit || !on} onClick={() => setPeersOf(m)}>مع مين</Button>
-                </>
-              )}
+              {owner ? <Badge tone="ok">دايماً مسموح</Badge> : <Switch checked={on} disabled={!edit} onChange={(v) => setRow(m.id, { on: v })} label="مسموح" />}
+              <Switch checked={on && (a?.live ?? owner)} disabled={!edit || !on} onChange={(v) => setRow(m.id, owner ? { on: true, peers: "all", live: v } : { live: v })} label="مباشر" />
+              {owner ? null : <Button size="sm" variant="outline" disabled={!edit || !on} onClick={() => setPeersOf(m)}>مع مين</Button>}
             </div>
           );
         })}
