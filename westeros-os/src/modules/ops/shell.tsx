@@ -19,6 +19,7 @@ import type { RadioChannelId } from "./types";
 import { useAlertToasts } from "./alerts/useAlerts";
 import { recorderSupported } from "./radio/recorder";
 import { CcRadio } from "@/modules/cc/talk/runtime";
+import { KitchenPrinter } from "@/modules/cc/print/KitchenPrinter";
 
 installDiagnostics();
 
@@ -104,6 +105,7 @@ export function OpsShellExtras() {
     <>
       {/* the Cost Control version: اللاسلكي only for employees allowed in الإعدادات ← اللاسلكي (Saqr 2026-11-25) */}
       {COST_CONTROL_ONLY ? <CcRadio /> : <RadioRuntime />}
+      {COST_CONTROL_ONLY ? <KitchenPrinter /> : null}
       <AlertToasts />
       {COST_CONTROL_ONLY ? null : <PttFab />}
     </>

@@ -39,7 +39,8 @@ async function shrinkLogo(file: File): Promise<string> {
   }
 }
 
-export default function InvoiceDesigner() {
+/** `embedded`: inside ثوابت النظام > التشغيل > الكاشير (Cost Control version), without the settings menu */
+export default function InvoiceDesigner({ embedded = false }: { embedded?: boolean }) {
   const { L } = useT();
   const db = useDb();
   const { toast } = useToast();
@@ -127,10 +128,10 @@ export default function InvoiceDesigner() {
   if (!tpl || !settings) return null;
   return (
     <div className="grid gap-6">
-      <SettingsNav />
+      {embedded ? null : <SettingsNav />}
       <PageHeader
         icon={<Printer />}
-        title={L("شكل الفاتورة", "Invoice design")}
+        title={embedded ? L("شكل فاتورة الكاشير", "Cashier receipt design") : L("شكل الفاتورة", "Invoice design")}
         subtitle={L("إيصال الكاشير ٥٨/٨٠ مم وفاتورة A4 — عربي وإنجليزي، باللوجو والـ QR", "58/80 mm receipts and A4 invoices — Arabic and English, with logo and QR")}
         actions={
           <>

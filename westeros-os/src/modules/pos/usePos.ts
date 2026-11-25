@@ -1,5 +1,5 @@
 /** Data every POS screen needs, live. */
-import { taxFor } from "@/data/channels";
+import { channelFor, taxFor } from "@/data/channels";
 import { useMemo } from "react";
 import { useLive } from "@/data/hooks";
 import { useBranch, useSession } from "@/auth/session";
@@ -76,6 +76,7 @@ export function useReceiptSourceBuilder() {
         guests: check.guests,
         mode: order?.mode ?? "dine_in",
         pickup: !!order?.pickupAt,
+        channelName: channelFor(settings, order)?.name ?? null,
         currency: restaurant.currency,
         customer: cust ? { name: cust.name, phone: cust.phone, address: order?.delivery?.address ?? null } : order?.delivery ? { name: "", phone: "", address: order.delivery.address } : null,
       };

@@ -22,6 +22,7 @@ import { METHOD_LABEL, type ReceiptModel } from "@/lib/receipt/model";
 import { PageHeader } from "@/shell/PageHeader";
 import { AnimatedMoney, Badge, Button, Card, Dialog, EmptyState, Segmented, Select, Sheet, StatTile, Table, useToast, type Tone } from "@/ui";
 import { ReceiptDialog } from "../pos/components/ReceiptDialog";
+import { useChannelName } from "../pos/channelName";
 import { STATUS_LABEL } from "../pos/components/TicketPanel";
 import { ETA_LABEL } from "../pos/EtaQueue";
 import { refundSale, returnable } from "../pos/sale";
@@ -120,6 +121,7 @@ export default function OrdersPage() {
 
   const checkById = useMemo(() => new Map(checks.map((c) => [c.id, c])), [checks]);
   const tableLabel = (ids: string[]) => ids.map((id) => tables.find((t) => t.id === id)?.label ?? "?").join("+");
+  const chName = useChannelName();
   const custOf = (o: Order) => customers.find((c) => c.id === o.customerId);
   const rows = orders.filter((o) => {
     if (kind !== "all" && kindOf(o) !== kind) return false;
@@ -206,7 +208,7 @@ export default function OrdersPage() {
                   return (
                     <span className="flex items-center gap-2">
                       <Icon className="size-4 text-muted" />
-                      <span className="font-semibold">{o.tableIds.length ? `${L("ترابيزة", "T")} ${tableLabel(o.tableIds)}` : (custOf(o)?.name || { dine_in: L("صالة", "Dine-in"), takeaway: L("تيك أواي", "Takeaway"), pickup: L("استلام", "Pickup"), delivery: L("دليفري", "Delivery") }[k])}</span>
+                      <span className="font-semibold">{o.tableIds.length ? `${L("ترابيزة", "T")} ${tableLabel(o.tableIds)}` : (custOf(o)?.name || chName(o) || { dine_in: L("صالة", "Dine-in"), takeaway: L("تيك أواي", "Takeaway"), pickup: L("استلام", "Pickup"), delivery: L("دليفري", "Delivery") }[k])}</span>
                     </span>
                   );
                 },

@@ -6,14 +6,20 @@ import type { InvoiceDesign } from "@/data/types";
 import { useT } from "@/i18n/i18n";
 import { printNode, ReceiptView, type ReceiptModel } from "@/lib/receipt";
 import { Button, Dialog, Segmented, useHotkeys, useReduced } from "@/ui";
+import { useLive } from "@/data/hooks";
+import { listsOf } from "@/modules/cc/lib";
+import { printOf } from "@/modules/cc/print/setup";
 
 export function ReceiptDialog({ open, onClose, model, title, etaError, actions }: { open: boolean; onClose: () => void; model: ReceiptModel | null; title?: string; etaError?: string | null; actions?: ReactNode }) {
   const { L } = useT();
   const reduced = useReduced();
   const [paper, setPaper] = useState<InvoiceDesign["paper"]>("80");
+  // طابعة فواتير الكاشير (ثوابت النظام > التشغيل): its paper wins over the design's
+  const setup = printOf(listsOf(useLive("mfgSettings").data[0]));
+  const printer = setup.printers.find((p) => p.id === setup.receiptPrinterId) ?? null;
   useEffect(() => {
-    if (open && model) setPaper(model.design.paper);
-  }, [open, model?.design.paper]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (open && model) setPaper(printer?.paper ?? model.design.paper);
+  }, [open, model?.design.paper, printer?.paper]); // eslint-disable-line react-hooks/exhaustive-deps
   const m = model ? { ...model, design: { ...model.design, paper } } : null;
   const print = () => m && printNode(<ReceiptView model={m} />, paper);
   useHotkeys({ "mod+p": (e) => (e.preventDefault(), print()) }, { enabled: open });
@@ -33,6 +39,7 @@ export function ReceiptDialog({ open, onClose, model, title, etaError, actions }
       }
     >
       <div className="grid gap-3">
+        {printer ? <p className="text-[13px] text-muted">{L(`الطابعة: ${printer.name}${printer.ip ? ` (${printer.ip})` : ""}`, `Printer: ${printer.name}`)}</p> : null}
         <Segmented label={L("مقاس الورق", "Paper")} value={paper} onChange={setPaper} options={[{ value: "58", label: "58mm" }, { value: "80", label: "80mm" }, { value: "a4", label: "A4" }]} />
         {m?.eta ? (
           <p className="flex items-center gap-2 rounded-xl bg-ok-soft px-3 py-2 text-[13px] font-medium text-ok">

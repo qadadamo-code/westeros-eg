@@ -42,6 +42,8 @@ export interface ReceiptSource {
   guests: number | null;
   mode: OrderMode;
   pickup?: boolean;
+  /** اسم قناة البيع (Saqr 2026-11-25): printed instead of the order type when known */
+  channelName?: string | null;
   customer: { name: string; phone: string; address?: string | null } | null;
   payments: { method: PaymentMethod; amount: Units; tip: Units }[];
   tendered: Units | null;
@@ -144,7 +146,7 @@ export function buildReceiptModel(src: ReceiptSource): ReceiptModel {
   if (src.orderNumber != null) meta.push({ label: L("رقم الطلب", "Order"), value: `#${src.orderNumber}`, mono: true });
   if (src.externalRef) meta.push({ label: L("كود طلب التطبيق", "App order code"), value: src.externalRef, mono: true });
   meta.push({ label: L("التاريخ", "Date"), value: formatStamp(src.issuedAt), mono: true });
-  if (f.orderType) meta.push({ label: L("النوع", "Type"), value: MODE_LABEL[src.pickup ? "pickup" : src.mode] });
+  if (f.orderType) meta.push({ label: src.channelName ? L("قناة البيع", "Channel") : L("النوع", "Type"), value: src.channelName ? L(src.channelName, src.channelName) : MODE_LABEL[src.pickup ? "pickup" : src.mode] });
   if (f.table && src.tableLabels.length) meta.push({ label: L("ترابيزة", "Table"), value: src.tableLabels.join(" + "), mono: true });
   if (f.guests && src.guests && src.mode === "dine_in") meta.push({ label: L("أفراد", "Guests"), value: String(src.guests), mono: true });
   if (f.cashier && src.cashier) meta.push({ label: L("الكاشير", "Cashier"), value: src.cashier });

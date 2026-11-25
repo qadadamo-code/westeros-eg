@@ -6,6 +6,7 @@ import { useT, useDict } from "@/i18n/i18n";
 import { cn } from "@/lib/cn";
 import { Button, Kbd, Popover, useReduced } from "@/ui";
 import { kdict } from "./dict";
+import { useChannelName } from "../pos/channelName";
 import { ageLevel, ageMinutes, fmtTimer, isAllergy, type Age, type KdsSettings, type Ticket } from "./kds";
 
 export const AGE_BORDER: Record<Age, string> = {
@@ -45,7 +46,10 @@ export const TicketCard = memo(function TicketCard({ ticket, index, now, setting
   const age = ageLevel(mins, settings);
   const tables = o.tableIds.map((t) => tableLabel.get(t) ?? "?").join("+");
   const KindIcon = ticket.kind === "takeaway" ? ShoppingBag : ticket.kind === "delivery" ? Truck : ticket.kind === "qr" ? QrCode : UtensilsCrossed;
-  const kindLabel = ticket.kind === "takeaway" ? k("k.takeaway") : ticket.kind === "delivery" ? k("k.delivery") : ticket.kind === "qr" ? k("k.qr", { t: tables }) : k("k.dineIn", { t: tables || "—" });
+  const baseLabel = ticket.kind === "takeaway" ? k("k.takeaway") : ticket.kind === "delivery" ? k("k.delivery") : ticket.kind === "qr" ? k("k.qr", { t: tables }) : k("k.dineIn", { t: tables || "—" });
+  // اسم قناة البيع (Saqr 2026-11-25) with the table when it has one
+  const chName = useChannelName()(o);
+  const kindLabel = chName ? (tables ? `${chName} · ${tables}` : chName) : baseLabel;
   const prio = o.priority ?? "normal";
   const held = groupBy(ticket.held, (i) => i.course);
 

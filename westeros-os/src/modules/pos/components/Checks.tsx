@@ -9,6 +9,7 @@ import { cn } from "@/lib/cn";
 import { formatMoney } from "@/lib/money";
 import { ago } from "@/lib/time";
 import { Badge, Button, Dialog, EmptyState, Segmented, spring, useReduced } from "@/ui";
+import { useChannelName } from "../channelName";
 
 export interface CheckRow {
   check: Check;
@@ -28,6 +29,7 @@ export function CheckCard({ row, active, onClick, disabled }: { row: CheckRow; a
   const { L, lang } = useT();
   const reduced = useReduced();
   const mode = row.order?.pickupAt ? "pickup" : (row.order?.mode ?? "dine_in");
+  const chName = useChannelName()(row.order);
   const Icon = MODE_ICON[mode];
   const age = Math.floor((Date.now() - Date.parse(row.check.openedAt)) / 60_000);
   return (
@@ -46,7 +48,7 @@ export function CheckCard({ row, active, onClick, disabled }: { row: CheckRow; a
           <Icon className="size-[18px]" />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[15.5px] font-semibold">{row.customer || row.staff || (mode === "delivery" ? L("دليفري", "Delivery") : mode === "pickup" ? L("استلام", "Pickup") : mode === "dine_in" ? L("صالة", "Dine-in") : L("تيك أواي", "Takeaway"))}</span>
+          <span className="block truncate text-[15.5px] font-semibold">{row.customer || row.staff || chName || (mode === "delivery" ? L("دليفري", "Delivery") : mode === "pickup" ? L("استلام", "Pickup") : mode === "dine_in" ? L("صالة", "Dine-in") : L("تيك أواي", "Takeaway"))}</span>
           {row.phone ? <span className="num block text-[12.5px] text-muted" dir="ltr">{row.phone}</span> : row.customer && row.staff ? <span className="block truncate text-[12.5px] text-muted">{row.staff}</span> : null}
         </span>
         <span className="num shrink-0 rounded-lg bg-ink px-2 py-0.5 text-[15px] font-bold text-surface" dir="ltr">#{row.order?.number ?? "—"}</span>

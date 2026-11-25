@@ -235,6 +235,8 @@ export interface MfgLists {
   mealOptions?: number[];
   /** اللاسلكي (Saqr 2026-11-25): who may use it, with whom, and the group chats */
   radio?: RadioSetup;
+  /** الطابعات وشكل الفاتورة وطلبية المطبخ (Saqr 2026-11-25, ثوابت النظام > التشغيل) */
+  printing?: PrintSetup;
   sideOptions?: { id: string; name: string; nameAr?: string; price: number; available?: boolean; menuItemId?: string | null }[];
   /** وحدة التخزين لمواد الخام */
   storageUnits: string[];
@@ -326,4 +328,29 @@ export interface ChecklistRun extends Row {
 export interface RadioSetup {
   access: Record<string, { on: boolean; peers: "all" | string[] }>;
   groups: { id: string; name: string; memberIds: string[] }[];
+}
+
+/** a printer of the system: a name and its paper; it prints from the device set as that printer (see cc/print) */
+export interface PrinterDef { id: string; name: string; paper: "58" | "80"; /** عنوان الطابعة على الشبكة */ ip?: string }
+export interface KitchenTicketDesign {
+  fontSize: number;
+  header: string;
+  channel: boolean;
+  table: boolean;
+  customer: boolean;
+  modifiers: boolean;
+  notes: boolean;
+  time: boolean;
+  cashier: boolean;
+}
+export interface PrintSetup {
+  printers: PrinterDef[];
+  receiptPrinterId: string | null;
+  /** طابعة المطبخ مفعلة: tickets print; off = the kitchen works on the internal kitchen screen only */
+  kitchenPrint: boolean;
+  /** where a category with no printer of its own prints */
+  kitchenDefaultPrinterId: string | null;
+  /** menu category id → printer ids (more than one allowed) */
+  categoryPrinters: Record<string, string[]>;
+  kitchen: KitchenTicketDesign;
 }
