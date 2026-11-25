@@ -357,16 +357,21 @@ export const mealOptionsOf = (prod: Prod): number[] => {
 
 function MealButtons({ options, value, onChange }: { options: number[]; value: number; onChange: (n: number) => void }) {
   const { L } = useT();
+  // رقم حر جنب الأزرار الثابتة (Saqr 2026-11-25): a typed number wins until a button is pressed
+  const [custom, setCustom] = useState(() => (options.includes(value) ? "" : String(value)));
   return (
     <div className="grid gap-1.5 sm:col-span-2">
       <span className="text-[13px] font-semibold text-ink-2">{L("عدد الوجبات", "Number of meals")} <span className="font-normal text-muted">· {L("يضرب كميات الوصفة", "Multiplies the recipe")}</span></span>
       <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={L("عدد الوجبات", "Number of meals")}>
         {options.map((n) => (
-          <button key={n} type="button" role="radio" aria-checked={value === n} onClick={() => onChange(n)}
+          <button key={n} type="button" role="radio" aria-checked={value === n} onClick={() => (setCustom(""), onChange(n))}
             className={cn("num min-h-12 min-w-14 rounded-xl border px-4 text-[17px] font-bold transition-colors", value === n ? "border-brass bg-brass/15 text-brass-text" : "border-line bg-surface hover:bg-surface-2")}>
             {n}
           </button>
         ))}
+        <Input aria-label={L("رقم آخر", "Other number")} placeholder={L("رقم آخر", "Other")} inputMode="decimal" wrapClassName="w-28"
+          className={cn("num min-h-12 text-center text-[17px] font-bold", !options.includes(value) && value > 0 && "border-brass bg-brass/15")}
+          value={custom} onChange={(e) => { const t = e.target.value.replace(",", "."); setCustom(t); const n = Number(t); if (!t.trim()) onChange(options.includes(1) ? 1 : options[0]); else if (Number.isFinite(n) && n > 0) onChange(n); }} />
       </div>
     </div>
   );
