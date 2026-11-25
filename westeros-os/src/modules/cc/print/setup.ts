@@ -15,6 +15,9 @@ export const printOf = (lists: Pick<MfgLists, "printing" | "printingByBranch"> |
   return { ...EMPTY_PRINT, ...(p ?? {}), kitchen: { ...DEFAULT_KITCHEN, ...(p?.kitchen ?? {}) } };
 };
 
+/** a cashier (receipt and pre-check) printer: older printers without a type count as one */
+export const isReceipt = (p: { kind?: string }) => !p.kind || p.kind === "receipt";
+
 /** the lists with one branch's printing setup changed */
 export const withPrintFor = (lists: MfgLists, branchId: string, p: Partial<PrintSetup>): MfgLists => ({
   ...lists,

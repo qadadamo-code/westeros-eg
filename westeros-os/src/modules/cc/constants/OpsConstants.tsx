@@ -15,7 +15,7 @@ import { Button, Card, CardHeader, EmptyState, IconButton, Input, Segmented, Sel
 import { listsOf } from "../lib";
 import { Confirm } from "../finance/ui";
 import { KitchenTicketView, SAMPLE_TICKET } from "../print/KitchenTicket";
-import { devicePrinter, printOf, setDevicePrinter, withPrintFor } from "../print/setup";
+import { devicePrinter, isReceipt, printOf, setDevicePrinter, withPrintFor } from "../print/setup";
 import { STATION_FILE, queuePrint } from "../print/station";
 import { useMay } from "../useAccess";
 import { useSession } from "@/auth/session";
@@ -32,18 +32,14 @@ export default function OpsConstants({ settings, branchId, readOnly }: { setting
   return (
     <div className="grid gap-5">
       <Segmented label="التشغيل" value={part} onChange={setPart} options={[{ value: "cashier", label: "الكاشير", icon: <Receipt /> }, { value: "kitchen", label: "شاشة المطبخ", icon: <ChefHat /> }]} />
-      {part === "cashier" ? <Cashier setup={setup} save={save} readOnly={readOnly} branchId={branchId} /> : <Kitchen setup={setup} save={save} readOnly={readOnly} />}
+      {part === "cashier" ? <Cashier setup={setup} save={save} readOnly={readOnly} /> : <Kitchen setup={setup} save={save} readOnly={readOnly} branchId={branchId} />}
     </div>
   );
 }
 
 type Props = { setup: PrintSetup; save: (p: Partial<PrintSetup>) => Promise<unknown>; readOnly: boolean };
 
-function Cashier({ setup, save, readOnly, branchId }: Props & { branchId: string }) {
-  // the branch's own menu categories (منيو منفصل لكل فرع)
-  const { branches } = useSession();
-  const main = mainBranchOf(branches);
-  const cats = useLive("menuCategories", { orderBy: [{ field: "sort" }] }).data.filter(onMenuOf(branchId, main));
+function Cashier({ setup, save, readOnly }: Props) {
   const [del, setDel] = useState<PrinterDef | null>(null);
   const [mine, setMine] = useState(devicePrinter());
   const setPrinter = (id: string, p: Partial<PrinterDef>) => void save({ printers: setup.printers.map((x) => (x.id === id ? { ...x, ...p } : x)) });
@@ -52,11 +48,7 @@ function Cashier({ setup, save, readOnly, branchId }: Props & { branchId: string
     const categoryPrinters = Object.fromEntries(Object.entries(setup.categoryPrinters).map(([c, ids]) => [c, ids.filter((x) => x !== id)]));
     void save({ printers: setup.printers.filter((x) => x.id !== id), categoryPrinters, receiptPrinterId: setup.receiptPrinterId === id ? null : setup.receiptPrinterId, kitchenDefaultPrinterId: setup.kitchenDefaultPrinterId === id ? null : setup.kitchenDefaultPrinterId });
   };
-  const toggleCat = (catId: string, pid: string) => {
-    const cur = setup.categoryPrinters[catId] ?? [];
-    void save({ categoryPrinters: { ...setup.categoryPrinters, [catId]: cur.includes(pid) ? cur.filter((x) => x !== pid) : [...cur, pid] } });
-  };
-  const opts = [{ value: "", label: "بدون" }, ...setup.printers.filter((p) => p.kind !== "label").map((p) => ({ value: p.id, label: p.name }))];
+  const opts = [{ value: "", label: "بدون" }, ...setup.printers.filter((p) => isReceipt(p) || p.id === setup.receiptPrinterId).map((p) => ({ value: p.id, label: p.name }))];
   return (
     <div className="grid gap-5">
       <Card className="grid gap-3 p-4">
@@ -66,7 +58,7 @@ function Cashier({ setup, save, readOnly, branchId }: Props & { branchId: string
           <div key={p.id} className="grid items-end gap-2 sm:grid-cols-[1fr_1fr_9rem_8rem_auto]" data-printer={p.id}>
             <Input label="الاسم" defaultValue={p.name} disabled={readOnly} onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== p.name) setPrinter(p.id, { name: v }); }} />
             <Input label="IP" dir="ltr" placeholder="192.168.1.50" defaultValue={p.ip ?? ""} disabled={readOnly} onBlur={(e) => { const v = e.target.value.trim(); if (v !== (p.ip ?? "")) setPrinter(p.id, { ip: v }); }} />
-            <Select label="النوع" value={p.kind ?? "receipt"} disabled={readOnly} onChange={(e) => setPrinter(p.id, { kind: e.target.value as PrinterDef["kind"] })} options={[{ value: "receipt", label: "فواتير وطلبيات" }, { value: "label", label: "ستيكرات" }]} />
+            <Select label="النوع" value={p.kind ?? "receipt"} disabled={readOnly} onChange={(e) => setPrinter(p.id, { kind: e.target.value as PrinterDef["kind"] })} options={[{ value: "receipt", label: "فواتير (الكاشير)" }, { value: "kitchen", label: "طلبيات (المطبخ)" }, { value: "label", label: "ستيكرات" }]} />
             {p.kind === "label" ? <Input label="الورق" value="مقاس الستيكر" disabled hint="بيتحدد وقت طباعة الستيكر" /> : <Select label="الورق" value={p.paper} disabled={readOnly} onChange={(e) => setPrinter(p.id, { paper: e.target.value as PrinterDef["paper"] })} options={[{ value: "80", label: "80 مم" }, { value: "58", label: "58 مم" }]} />}
             {readOnly ? <span /> : <IconButton label="حذف الطابعة" onClick={() => setDel(p)}><Trash2 /></IconButton>}
           </div>
@@ -95,28 +87,6 @@ function Cashier({ setup, save, readOnly, branchId }: Props & { branchId: string
         {!setup.printers.some((p) => p.kind === "label") ? <p className="text-[12.5px] text-muted">عرّف طابعة نوعها (ستيكرات) في طابعات النظام الأول.</p> : null}
       </Card>
 
-      <Card className="grid gap-3 p-4">
-        <CardHeader title="طابعات فئات المنيو" subtitle="كل فئة تقدر تطبع على أكتر من طابعة. الفئة اللي من غير طابعة بتطبع على طابعة المطبخ الافتراضية." />
-        {!setup.printers.length ? <p className="text-[13.5px] text-muted">ضيف طابعات الأول.</p> : !cats.length ? <p className="text-[13.5px] text-muted">مفيش فئات في المنيو.</p> : (
-          <div className="divide-y divide-line">
-            {cats.map((c) => (
-              <div key={c.id} className="flex flex-wrap items-center gap-2 py-2.5" data-cat-printers={c.id}>
-                <p className="min-w-36 flex-1 text-[14.5px] font-semibold">{c.name.ar || c.name.en}</p>
-                {setup.printers.map((p) => {
-                  const on = (setup.categoryPrinters[c.id] ?? []).includes(p.id);
-                  return (
-                    <button key={p.id} type="button" disabled={readOnly} onClick={() => toggleCat(c.id, p.id)}
-                      className={cn("flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13.5px] font-semibold", on ? "border-brass bg-brass/15 text-brass-text" : "border-line text-muted hover:text-ink")}>
-                      {on ? <Check className="size-3.5" /> : null}{p.name}
-                    </button>
-                  );
-                })}
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
-
       <Suspense fallback={<Skeleton className="h-64" />}><InvoiceDesigner embedded /></Suspense>
 
       <Confirm open={!!del} onClose={() => setDel(null)} danger confirmLabel="حذف" title={`حذف ${del?.name ?? ""}؟`} description="هتتشال من الفئات ومن طابعة الفواتير لو كانت متحددة."
@@ -129,8 +99,20 @@ const FIELDS: [keyof KitchenTicketDesign, string][] = [
   ["channel", "قناة البيع"], ["table", "رقم الترابيزة"], ["customer", "اسم العميل"], ["modifiers", "الإضافات"], ["notes", "الملاحظات"], ["time", "الوقت"], ["cashier", "الموظف"],
 ];
 
-function Kitchen({ setup, save, readOnly }: Props) {
+function Kitchen({ setup, save, readOnly, branchId }: Props & { branchId: string }) {
   const k = setup.kitchen;
+  // the branch's own menu categories (منيو منفصل لكل فرع)
+  const { branches } = useSession();
+  const main = mainBranchOf(branches);
+  const cats = useLive("menuCategories", { orderBy: [{ field: "sort" }] }).data.filter(onMenuOf(branchId, main));
+  // طابعات الطلبيات (Saqr 2026-11-25): only order printers; one already picked stays shown
+  const picked = new Set([setup.kitchenDefaultPrinterId, ...Object.values(setup.categoryPrinters).flat()]);
+  const kitchenPrinters = setup.printers.filter((p) => p.kind === "kitchen" || picked.has(p.id));
+  const toggleCat = (catId: string, pid: string) => {
+    const cur = setup.categoryPrinters[catId] ?? [];
+    void save({ categoryPrinters: { ...setup.categoryPrinters, [catId]: cur.includes(pid) ? cur.filter((x) => x !== pid) : [...cur, pid] } });
+  };
+
   const setK = (p: Partial<KitchenTicketDesign>) => void save({ kitchen: { ...k, ...p } });
   const paper = setup.printers.find((p) => p.id === setup.kitchenDefaultPrinterId)?.paper ?? "80";
   return (
@@ -141,11 +123,32 @@ function Kitchen({ setup, save, readOnly }: Props) {
         {setup.kitchenPrint ? (
           <>
             <Select label="طابعة المطبخ الافتراضية" value={setup.kitchenDefaultPrinterId ?? ""} disabled={readOnly} onChange={(e) => void save({ kitchenDefaultPrinterId: e.target.value || null })}
-              options={[{ value: "", label: "بدون" }, ...setup.printers.map((p) => ({ value: p.id, label: p.name }))]} />
-            <p className="text-[12.5px] text-muted">الفئات اللي ليها طابعات بتتحدد من تبويب الكاشير. كل طابعة بتطبع من الجهاز المتحدد إنه متوصل بيها.</p>
-            {!setup.printers.length ? <p className="text-[13px] font-semibold text-warn">مفيش طابعات متعرفة: ضيفها من تبويب الكاشير.</p> : null}
+              options={[{ value: "", label: "بدون" }, ...kitchenPrinters.map((p) => ({ value: p.id, label: p.name }))]} />
+            {!kitchenPrinters.length ? <p className="text-[13px] font-semibold text-warn">مفيش طابعات طلبيات: عرّفها بنوع (طلبيات) من تبويب الكاشير.</p> : null}
           </>
         ) : null}
+      </Card>
+
+      <Card className="grid gap-3 p-4">
+        <CardHeader title="طابعات فئات المنيو" subtitle="طلبيات المطبخ بتتطبع حسب فئة الصنف. كل فئة تقدر تطبع على أكتر من طابعة، والفئة اللي من غير طابعة بتطبع على طابعة المطبخ الافتراضية." />
+        {!kitchenPrinters.length ? <p className="text-[13.5px] text-muted">عرّف طابعة نوعها (طلبيات) في طابعات النظام من تبويب الكاشير الأول.</p> : !cats.length ? <p className="text-[13.5px] text-muted">مفيش فئات في المنيو.</p> : (
+          <div className="divide-y divide-line">
+            {cats.map((c) => (
+              <div key={c.id} className="flex flex-wrap items-center gap-2 py-2.5" data-cat-printers={c.id}>
+                <p className="min-w-36 flex-1 text-[14.5px] font-semibold">{c.name.ar || c.name.en}</p>
+                {kitchenPrinters.map((p) => {
+                  const on = (setup.categoryPrinters[c.id] ?? []).includes(p.id);
+                  return (
+                    <button key={p.id} type="button" disabled={readOnly} onClick={() => toggleCat(c.id, p.id)}
+                      className={cn("flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13.5px] font-semibold", on ? "border-brass bg-brass/15 text-brass-text" : "border-line text-muted hover:text-ink")}>
+                      {on ? <Check className="size-3.5" /> : null}{p.name}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        )}
       </Card>
 
       <div className="grid items-start gap-5 lg:grid-cols-2">
