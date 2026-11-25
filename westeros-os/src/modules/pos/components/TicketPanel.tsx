@@ -31,6 +31,8 @@ export interface TicketActions {
   /** "سفري": marks a line of a dine-in order as packed to go (only offered on dine-in) */
   onToGo?: (it: OrderItem) => void;
   onSend: () => void;
+  /** إعادة الإرسال للمطبخ: given only when the user may; the send button sends again once nothing is new */
+  onResend?: () => void;
   onFire: (course: number) => void;
   onHold: () => void;
   onPay: () => void;
@@ -57,6 +59,7 @@ export function TicketPanel({ check, orders, items, header, busy, className, ...
   const due = check ? Math.max(0, check.total - check.paid) : 0;
   const order = orders[0];
   const anySent = items.some((i) => i.status !== "new" && i.status !== "void");
+  const resend = !!a.onResend && anySent;
 
   return (
     <section className={cn("flex min-h-0 flex-col bg-surface", className)} aria-label={L("الشيك الحالي", "Current check")}>
@@ -207,15 +210,21 @@ export function TicketPanel({ check, orders, items, header, busy, className, ...
           <IconButton label={L("أكتر", "More")} variant="secondary" size="lg" onClick={() => setMore(true)} disabled={!check}>
             <MoreHorizontal />
           </IconButton>
-          <Button size="lg" variant={sendable ? "primary" : "secondary"} icon={sendable ? <Send className="size-5 flip-rtl" /> : <PauseCircle className="size-5" />} onClick={sendable ? a.onSend : a.onHold} disabled={busy || !check} className="px-3">
-            {sendable ? (
-              <>
-                {L("ابعت", "Send")} <span className="num rounded-full bg-white/20 px-1.5 text-[13px]">{sendable}</span>
-              </>
-            ) : (
-              L("علّق", "Hold")
-            )}
-          </Button>
+          {!sendable && resend ? (
+            <Button size="lg" variant="secondary" icon={<Send className="size-5 flip-rtl" />} onClick={a.onResend} disabled={busy || !check} className="px-3">
+              {L("ابعت تاني", "Send again")}
+            </Button>
+          ) : (
+            <Button size="lg" variant={sendable ? "primary" : "secondary"} icon={sendable ? <Send className="size-5 flip-rtl" /> : <PauseCircle className="size-5" />} onClick={sendable ? a.onSend : a.onHold} disabled={busy || !check} className="px-3">
+              {sendable ? (
+                <>
+                  {L("ابعت", "Send")} <span className="num rounded-full bg-white/20 px-1.5 text-[13px]">{sendable}</span>
+                </>
+              ) : (
+                L("علّق", "Hold")
+              )}
+            </Button>
+          )}
           <Button size="lg" variant="brass" icon={<Wallet className="size-5" />} onClick={a.onPay} disabled={busy || !check || !live.length} className="px-3">
             {L("ادفع", "Pay")}
           </Button>
@@ -231,6 +240,7 @@ export function TicketPanel({ check, orders, items, header, busy, className, ...
             { icon: <ArrowLeftRight />, label: L("نقل", "Transfer"), key: "T", run: a.onTransfer },
             { icon: <ReceiptText />, label: L("دمج", "Merge"), run: a.onMerge },
             { icon: <Printer />, label: L("شيك مبدئي", "Pre-bill"), run: a.onPrebill },
+            ...(resend && !sendable ? [{ icon: <PauseCircle />, label: L("علّق", "Hold"), run: a.onHold }] : []),
             ...(order?.mode === "dine_in" ? [{ icon: <Users />, label: `${L("الأفراد", "Guests")} · ${check?.guests ?? ""}`, run: () => a.onGuests(-1) }] : []),
           ].map((x) => (
             <button key={x.label} type="button" onClick={() => (setMore(false), x.run())} className="flex min-h-16 items-center gap-3 rounded-2xl border border-line bg-surface px-3.5 text-start font-semibold hover:bg-surface-2 [&_svg]:size-5 [&_svg]:text-primary">

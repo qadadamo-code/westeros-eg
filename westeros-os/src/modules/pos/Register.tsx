@@ -30,14 +30,15 @@ import { SplitDialog } from "./components/SplitDialog";
 import { TablePicker } from "./components/TablePicker";
 import { CustomerDialog, type CustomerResult } from "./components/CustomerDialog";
 import { PaymentDialog, type TenderInput } from "./components/PaymentDialog";
-import { ReceiptDialog } from "./components/ReceiptDialog";
+import { ReceiptDialog, useReceiptPrint } from "./components/ReceiptDialog";
+import { useMay } from "@/modules/cc/useAccess";
 import { BuyerDialog } from "@/modules/settings/zatca/BuyerDialog";
 import { OpenChecksDialog, TransferDialog, useCheckRows } from "./components/Checks";
 import { ShiftBranch } from "./components/ShiftBranch";
 import { OpenShiftDialog } from "./components/OpenShiftDialog";
 import { Stepper } from "./components/bits";
 import { discountPct, lineDiscountUnits } from "./math";
-import { addLine, changeChannel, discardTicket, loadTicket, mergeChecks, moveCheckToTable, moveItems, openTicket, sendToKitchen, setBillDiscount, setLineDiscount, setLineQty, replaceLine, setTicketMeta, splitIntoChecks, updateLine, voidLine, type TicketDraft } from "./ops";
+import { addLine, changeChannel, discardTicket, loadTicket, mergeChecks, moveCheckToTable, moveItems, openTicket, sendToKitchen, resendToKitchen, setBillDiscount, setLineDiscount, setLineQty, replaceLine, setTicketMeta, splitIntoChecks, updateLine, voidLine, type TicketDraft } from "./ops";
 import { closeCheck, takePayment, voidPayment } from "./sale";
 import { PromoDialog } from "@/modules/marketing/pos/PromoDialog";
 import { redeemGiftCard, refundGiftCard } from "@/modules/marketing/ops";
@@ -54,6 +55,8 @@ const NEW_DRAFT = (kind: Kind = "dine_in"): TicketDraft => ({ mode: kind === "pi
 export default function Register() {
   const { L, loc, lang } = useT();
   const db = useDb();
+  const may = useMay();
+  const printReceipt = useReceiptPrint();
   const approve = useApproval();
   const { toast } = useToast();
   const session = useSession();
@@ -363,6 +366,12 @@ export default function Register() {
       if (order?.mode === "dine_in") newTicket("dine_in");
     }
   };
+  const resend = async () => {
+    const t = await ticket();
+    if (!t) return;
+    const n = await run(() => resendToKitchen(db, t));
+    if (n) toast({ title: L(`اتبعت ${n} صنف للمطبخ تاني`, `Sent ${n} line${n > 1 ? "s" : ""} to the kitchen again`), tone: "success" });
+  };
   const fire = async (course: number) => {
     const t = await ticket();
     if (!t) return;
@@ -454,7 +463,15 @@ export default function Register() {
     const pays = await db.list("payments", { where: { checkId: check.id } });
     setDlg(null);
     setShares(null);
-    if (fresh) setReceipt({ model: receiptSrc.fromReceipt(res.receipt, fresh.check, fresh.orders, pays, null, res.zatca), etaError: res.etaError, title: L(`إيصال ${res.receipt.receiptNo}`, `Receipt ${res.receipt.receiptNo}`) });
+    // بعد الدفع الفاتورة بتتطبع على طول من غير معاينة (Saqr 2026-11-25); the preview stays for an ETA error
+    if (fresh) {
+      const model = receiptSrc.fromReceipt(res.receipt, fresh.check, fresh.orders, pays, null, res.zatca);
+      if (res.etaError) setReceipt({ model, etaError: res.etaError, title: L(`إيصال ${res.receipt.receiptNo}`, `Receipt ${res.receipt.receiptNo}`) });
+      else {
+        printReceipt(model);
+        newTicket(kind);
+      }
+    }
     if (res.ledgerError) toast({ title: L("القيد المحاسبي اتسجل كخطأ للمحاسب", "Ledger posting logged for the accountant"), description: res.ledgerError, tone: "warn" });
   };
   const tender = async (t: TenderInput) => {
@@ -588,6 +605,7 @@ export default function Register() {
       onToGo={(it) => check && void run(() => db.update("orderItems", it.id, { toGo: !it.toGo }))}
       onQty={(it, q) => check && void run(() => setLineQty(db, check.id, it, q))}
       onSend={() => void send()}
+      onResend={may("pos.resend", "view") ? () => void resend() : undefined}
       onFire={(c) => void fire(c)}
       onHold={() => void hold()}
       onPay={pay}

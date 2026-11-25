@@ -155,6 +155,15 @@ export async function sendToKitchen(db: Db, t: Ticket, course?: number): Promise
   return list.length;
 }
 
+/** إعادة الإرسال للمطبخ (Saqr 2026-11-25): what already went goes again (the kitchen ticket prints again); no stock moves twice */
+export async function resendToKitchen(db: Db, t: Ticket): Promise<number> {
+  const list = t.items.filter((i) => i.status !== "void" && i.status !== "new" && i.firedAt);
+  const at = nowIso();
+  for (const i of list) await db.update("orderItems", i.id, { firedAt: at });
+  if (list.length) await db.audit("order.resend", "checks", t.check.id, { items: list.length });
+  return list.length;
+}
+
 export async function setBillDiscount(db: Db, checkId: string, d: Discount | null, reason: string | null, approvedBy: string | null) {
   await db.update("checks", checkId, { discount: d, discountReason: d ? reason : null, discountApprovedBy: d ? approvedBy : null });
   await db.audit(d ? "check.discount" : "check.discount_removed", "checks", checkId, { discount: d, reason }, approvedBy);

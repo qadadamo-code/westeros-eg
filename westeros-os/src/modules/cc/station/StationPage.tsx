@@ -113,10 +113,10 @@ function Station() {
       /* fresh */
     }
     const catOf = new Map(menu.map((m) => [m.id, m.categoryId]));
-    const fresh = items.filter((i) => i.firedAt && i.status !== "void" && !done[i.id] && Date.parse(i.firedAt) >= startedAt.current - 5_000 && orders.find((o) => o.id === i.orderId)?.branchId === branchId);
+    const fresh = items.filter((i) => i.firedAt && i.status !== "void" && !done[`${i.id}@${i.firedAt}`] && Date.parse(i.firedAt) >= startedAt.current - 5_000 && orders.find((o) => o.id === i.orderId)?.branchId === branchId);
     if (!fresh.length) return;
     const now = Date.now();
-    for (const i of fresh) done[i.id] = now;
+    for (const i of fresh) done[`${i.id}@${i.firedAt}`] = now;
     for (const [k, t] of Object.entries(done)) if (now - t > 24 * 3600_000) delete done[k];
     try {
       localStorage.setItem(DONE_KEY, JSON.stringify(done));

@@ -13,6 +13,23 @@ import { queuePrint, viaStation } from "@/modules/cc/print/station";
 import { listsOf } from "@/modules/cc/lib";
 import { printOf } from "@/modules/cc/print/setup";
 
+/** prints a receipt straight away on the branch's receipt printer (through the print station when it is on) */
+export function useReceiptPrint() {
+  const { L } = useT();
+  const db = useDb();
+  const { staff, branchId } = useSession();
+  const { toast } = useToast();
+  const setup = printOf(listsOf(useLive("mfgSettings").data[0]), branchId);
+  const printer = setup.printers.find((p) => p.id === setup.receiptPrinterId) ?? null;
+  const station = viaStation(setup, setup.receiptPrinterId);
+  return (model: ReceiptModel) => {
+    const paper = printer?.paper ?? model.design.paper;
+    const m = { ...model, design: { ...model.design, paper } };
+    if (station) return void queuePrint(db, { printerId: station.id, kind: "receipt", payload: { model: m } }, staff?.id ?? null).then(() => toast({ title: L(`الفاتورة اتبعتت للطباعة على ${station.name}`, `Receipt sent to ${station.name}`), tone: "success", duration: 1800 }), () => printNode(<ReceiptView model={m} />, paper));
+    return void printNode(<ReceiptView model={m} />, paper);
+  };
+}
+
 export function ReceiptDialog({ open, onClose, model, title, etaError, actions }: { open: boolean; onClose: () => void; model: ReceiptModel | null; title?: string; etaError?: string | null; actions?: ReactNode }) {
   const { L } = useT();
   const reduced = useReduced();

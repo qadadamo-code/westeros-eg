@@ -94,6 +94,7 @@ const LISTED: Area[] = [
   { id: "menu", screen: "cc-menu", label: "المنيو", acts: ["view", "add", "edit", "delete"], note: "الفئات والأصناف ومجموعات الخيارات وأسعارها، والاستيراد من Bonbell." },
 
   { id: "pos", screen: "cc-pos", label: "الكاشير", acts: ["view"], note: "البيع والدفع والوردية. الخصومات والإلغاء بعد الإرسال بموافقة مدير." },
+  { id: "pos.resend", screen: "cc-pos", label: "إعادة الإرسال للمطبخ", acts: ["view"], note: "الكاشير يقدر يبعت نفس الطلب للمطبخ أكتر من مرة من زرار ابعت، فتتطبع طلبية المطبخ تاني." },
   { id: "orders", screen: "cc-orders", label: "الطلبات", acts: ["view"] },
   { id: "kitchen", screen: "cc-kitchen", label: "شاشة المطبخ", acts: ["view"] },
   { id: "ops.settings", screen: "cc-opsset", label: "اعدادات التشغيل", acts: ["view", "edit"], note: "الطابعات وشكل فاتورة الكاشير وطلبية المطبخ وطابعة الستيكرات، لكل فرع." },
