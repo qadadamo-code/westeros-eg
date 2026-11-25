@@ -288,9 +288,9 @@ export function ResultPanel({ built, footer }: { built: BuiltBatch; footer?: Rea
           </div>
         ))}
         <div className="mt-1 divide-y divide-line">
-          {built.grossWeightKg != null ? <Row label={L("الوزن الإجمالي للمكونات", "Gross weight of ingredients")} value={fmtKg(built.grossWeightKg, lang)} /> : null}
+          {built.grossWeightKg != null ? <Row label={L("الوزن الإجمالي للمكونات", "Gross weight of ingredients")} value={fmtG(built.grossWeightKg * 1000, lang)} /> : null}
           {built.mainWeightKg != null && built.method !== "weight" && built.method !== "portion" ? <Row label={L("وزن الخامة الرئيسية", "Main raw weight")} value={fmtKg(built.mainWeightKg, lang)} /> : null}
-          {built.netWeightKg != null ? <Row label={L("الوزن الصافي", "Net weight")} value={fmtKg(built.netWeightKg, lang)} /> : null}
+          {built.netWeightKg != null ? <Row label={L("الوزن الصافي", "Net weight")} value={fmtG(built.netWeightKg * 1000, lang)} /> : null}
           {built.expectedCount != null ? <Row label={L("العدد المتوقع", "Expected count")} value={built.expectedCount} /> : null}
           {built.waste != null ? (
             <Row label={L("الهدر", "Waste")} value={built.method === "portion" ? `${built.waste} ${L("قطعة", "pcs")}` : fmtG(built.waste, lang)} tone={built.waste > 0 ? "danger" : built.waste < 0 ? "warn" : undefined} />

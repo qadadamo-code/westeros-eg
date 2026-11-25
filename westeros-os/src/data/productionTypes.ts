@@ -231,6 +231,8 @@ export interface MfgSettings extends Row {
 export interface MfgUnitDef { name: string; base: "g" | "ml" | "pc"; factor: number }
 export interface MfgLists {
   /** المنيو: الخيارات الجانبية (زي Side Options في Bonbell), the names a group's options are picked from; price in pounds */
+  /** عدد الوجبات في تصنيع صنف: the ready buttons (Saqr 2026-11-25), default 0.5 · 1 · 2 · 4 · 8 */
+  mealOptions?: number[];
   sideOptions?: { id: string; name: string; nameAr?: string; price: number; available?: boolean; menuItemId?: string | null }[];
   /** وحدة التخزين لمواد الخام */
   storageUnits: string[];

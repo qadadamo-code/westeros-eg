@@ -348,13 +348,37 @@ function MfgNotes({ text, title }: { text?: string | null; title?: string }) {
 
 /* ───────── 1 + 2 · by weight / by portion ───────── */
 
+export const DEFAULT_MEALS = [0.5, 1, 2, 4, 8];
+/** عدد الوجبات buttons, set in ثوابت النظام › التصنيع (Saqr 2026-11-25) */
+export const mealOptionsOf = (prod: Prod): number[] => {
+  const v = (prod.settings?.lists?.mealOptions ?? []).filter((n) => n > 0);
+  return v.length ? [...v].sort((a, b) => a - b) : DEFAULT_MEALS;
+};
+
+function MealButtons({ options, value, onChange }: { options: number[]; value: number; onChange: (n: number) => void }) {
+  const { L } = useT();
+  return (
+    <div className="grid gap-1.5 sm:col-span-2">
+      <span className="text-[13px] font-semibold text-ink-2">{L("عدد الوجبات", "Number of meals")} <span className="font-normal text-muted">· {L("يضرب كميات الوصفة", "Multiplies the recipe")}</span></span>
+      <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={L("عدد الوجبات", "Number of meals")}>
+        {options.map((n) => (
+          <button key={n} type="button" role="radio" aria-checked={value === n} onClick={() => onChange(n)}
+            className={cn("num min-h-12 min-w-14 rounded-xl border px-4 text-[17px] font-bold transition-colors", value === n ? "border-brass bg-brass/15 text-brass-text" : "border-line bg-surface hover:bg-surface-2")}>
+            {n}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function SimpleForm({ method, prod, onDone, initial, chosen }: { method: Extract<MfgMethod, "weight" | "portion">; prod: Prod; onDone: () => void; initial?: MfgProduct; /** the product was chosen before the form: no product step */ chosen?: boolean }) {
   const { L } = useT();
   const db = useDb();
   const ctx = useCtx(prod);
   const list = useMemo(() => prod.products.filter((p) => p.active && p.method === method), [prod.products, method]);
   const [productId, setProductId] = useState(initial?.id ?? "");
-  const [meals, setMeals] = useState(1);
+  const [meals, setMeals] = useState(() => { const o = mealOptionsOf(prod); return o.includes(1) ? 1 : o[0]; });
   const [net, setNet] = useState(0);
   const [editedLines, setLines] = useState<MfgRecipeLine[]>(initial?.lines ?? []);
   const [editedPackaging, setPackaging] = useState<MfgRecipeLine[]>(initial?.packaging ?? []);
@@ -397,9 +421,9 @@ function SimpleForm({ method, prod, onDone, initial, chosen }: { method: Extract
         <>
           <Block step={chosen ? 1 : 2} title={L("الكمية", "Quantity")}>
             <div className="grid gap-3 sm:grid-cols-3">
-              <Num big label={L("عدد الوجبات", "Number of meals")} value={meals} onChange={setMeals} hint={L("يضرب كميات الوصفة", "Multiplies the recipe")} />
+              <MealButtons options={mealOptionsOf(prod)} value={meals} onChange={setMeals} />
               {method === "weight" ? (
-                <Num big label={L("الوزن الصافي بعد التجهيز", "Net weight after cooking")} suffix={L("كجم", "kg")} value={net} onChange={setNet} />
+                <Num big label={L("الوزن الصافي بعد التجهيز", "Net weight after cooking")} suffix={L("جم", "g")} value={r3(net * 1000)} onChange={(g) => setNet(g / 1000)} />
               ) : (
                 <Num big label={L("العدد الصافي الناتج", "Net count produced")} suffix={L("قطعة", "pcs")} value={net} onChange={setNet} hint={p.portionGrams ? L(`وزن الحصة ${p.portionGrams} جم`, `Portion ${p.portionGrams} g`) : L("حدد وزن الحصة من صفحة المنتجات", "Set the portion weight in Products")} />
               )}

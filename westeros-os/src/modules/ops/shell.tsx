@@ -2,6 +2,7 @@
  * Mounted once by the app shell (AppShell.tsx): diagnostics capture, the walkie-talkie runtime for the signed-in member,
  * the floating push-to-talk button (manager, waiter, kitchen/chef, delivery) and toasts for incoming radio clips + alerts.
  */
+import { COST_CONTROL_ONLY } from "@/costControl";
 import { useEffect, useMemo, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useDb } from "@/data/hooks";
@@ -81,6 +82,9 @@ function PttFab() {
 
 /** md+ : a hold-to-talk pill in the top bar instead of a floating button over the content. */
 export function OpsTopBarPtt() {
+  return COST_CONTROL_ONLY ? null : <TopBarPtt />;
+}
+function TopBarPtt() {
   const { role, staff, can } = useSession();
   const { loc } = useT();
   if (!role || !staff || !FAB_ROLES.includes(role) || !can("radio.use") || !recorderSupported()) return null;
@@ -97,9 +101,10 @@ export function OpsShellExtras() {
   if (!staff || !restaurant || role === "platform_admin") return null;
   return (
     <>
-      <RadioRuntime />
+      {/* اللاسلكي is the old system's (Saqr 2026-11-25 asked why the mic shows): the Cost Control version has no radio */}
+      {COST_CONTROL_ONLY ? null : <RadioRuntime />}
       <AlertToasts />
-      <PttFab />
+      {COST_CONTROL_ONLY ? null : <PttFab />}
     </>
   );
 }

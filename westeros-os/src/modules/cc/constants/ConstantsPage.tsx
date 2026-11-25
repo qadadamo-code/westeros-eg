@@ -154,6 +154,9 @@ function ConstantsPageBody() {
           </ul>
         </Card>
 
+        <Chips title="عدد الوجبات في تصنيع صنف" subtitle="الأزرار الجاهزة اللي بيختار منها الشيف عدد الوجبات (بيضرب كميات الوصفة)" placeholder="رقم جديد، مثلا 3"
+          values={(lists.mealOptions?.length ? lists.mealOptions : [0.5, 1, 2, 4, 8]).map(String)}
+          onChange={(v) => { const n = [...new Set(v.map((x) => Number(x.replace(",", "."))).filter((x) => Number.isFinite(x) && x > 0))].sort((a, b) => a - b); if (n.length) setLists({ mealOptions: n }); }} />
         <Chips title="طريقة التخزين" subtitle="القائمة المعرفة مسبقاً في بيانات المنتج المصنع" values={s.storageMethods} onChange={(storageMethods) => patch({ storageMethods })} placeholder="طريقة تخزين جديدة" />
         <Card className="lg:col-span-2">
           <CardHeader title="تعريف فئات الأصناف المصنعة" subtitle="كود الفئة هو أول رقم في رقم التشغيلة. ولكل فئة مدى أكواد لمنتجاتها: بداية الكود وعدد الأصناف"

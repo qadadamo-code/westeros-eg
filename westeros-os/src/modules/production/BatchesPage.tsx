@@ -148,7 +148,7 @@ function BatchDialog({ batch, prod, onClose }: { batch: MfgBatch | null; prod: P
             <Fact label={L("ستيكرات مطبوعة", "Stickers printed")} value={b.labelsPrinted} />
             {b.meals != null ? <Fact label={L("عدد الوجبات", "Meals")} value={b.meals} /> : null}
             {b.mainWeightKg != null ? <Fact label={L("وزن الخامة الرئيسية", "Main raw weight")} value={fmtKg(b.mainWeightKg, lang)} /> : null}
-            {b.grossWeightKg != null ? <Fact label={L("الوزن الإجمالي", "Gross weight")} value={fmtKg(b.grossWeightKg, lang)} /> : null}
+            {b.grossWeightKg != null ? <Fact label={L("الوزن الإجمالي", "Gross weight")} value={fmtG(b.grossWeightKg * 1000, lang)} /> : null}
             {b.netWeightKg != null ? <Fact label={L("الوزن الصافي", "Net weight")} value={fmtKg(b.netWeightKg, lang)} /> : null}
             {b.expectedCount != null ? <Fact label={L("العدد المتوقع", "Expected count")} value={b.expectedCount} /> : null}
             {b.waste != null ? <Fact label={L("الهدر", "Waste")} value={b.method === "portion" ? `${b.waste} ${L("قطعة", "pcs")}` : fmtG(b.waste, lang)} /> : null}
