@@ -44,8 +44,8 @@ export function KitchenTicketView({ data, design, paper }: { data: KitchenTicket
             <span dir="ltr" style={{ minWidth: "8mm" }}>{l.qty}×</span>
             <span style={{ flex: 1 }}>{l.name}{l.toGo ? " (سفري)" : ""}</span>
           </div>
+          {design.notes && l.notes ? <div style={{ paddingInlineStart: "10mm", fontWeight: 700 }}>* {l.notes}</div> : null}
           {design.modifiers && l.modifiers.length ? <div style={{ paddingInlineStart: "10mm" }}>{l.modifiers.map((m, j) => <div key={j}>+ {m}</div>)}</div> : null}
-          {design.notes && l.notes ? <div style={{ paddingInlineStart: "10mm", fontWeight: 700 }}>ملاحظة: {l.notes}</div> : null}
         </div>
       ))}
       <div style={{ borderTop: "1.5px dashed #000", marginTop: "2mm" }} />
@@ -78,7 +78,7 @@ export const SAMPLE_TICKET: KitchenTicketData = {
   cashier: "كاشير 1",
   at: new Date().toISOString(),
   printer: "طابعة المطبخ",
-  note: "بدون بصل",
+  note: "الطلب مستعجل",
   appCode: "TLB-48213",
   lines: [
     { qty: 2, name: "كلاسيك بيف برجر", modifiers: ["دبل بيف", "جبنة شيدر"], notes: "استوا ميديم" },

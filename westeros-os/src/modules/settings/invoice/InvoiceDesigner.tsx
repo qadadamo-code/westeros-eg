@@ -4,7 +4,7 @@ import { motion } from "motion/react";
 import { ArrowDown, ArrowUp, ImagePlus, Printer, RotateCcw, Save, Trash2, Type } from "lucide-react";
 import { useSession, useBranch } from "@/auth/session";
 import { useDb, useLive } from "@/data/hooks";
-import type { InvoiceDesign, InvoiceTemplate, Localized } from "@/data/types";
+import type { InvoiceDesign, InvoiceTemplate, Localized, ReceiptPromoBlock } from "@/data/types";
 import { useT } from "@/i18n/i18n";
 import { cn } from "@/lib/cn";
 import { buildReceiptModel, DEFAULT_DESIGN, printNode, ReceiptView, resolveDesign } from "@/lib/receipt";
@@ -204,6 +204,8 @@ export default function InvoiceDesigner({ embedded = false }: { embedded?: boole
 
           <Card className="grid gap-4 p-5">
             <div className="grid gap-3 xl:grid-cols-2">
+              <TextBox label={L("اسم الفاتورة (عربي)", "Receipt title (Arabic)")} value={design.receiptTitle?.ar ?? ""} onChange={(v) => setDesign({ receiptTitle: { ar: v, en: design.receiptTitle?.en ?? "" } })} dir="rtl" />
+              <TextBox label={L("اسم الفاتورة (إنجليزي)", "Receipt title (English)")} value={design.receiptTitle?.en ?? ""} onChange={(v) => setDesign({ receiptTitle: { ar: design.receiptTitle?.ar ?? "", en: v } })} dir="ltr" />
               <TextBox label={L("الهيدر (عربي)", "Header (Arabic)")} value={tpl.header.ar} onChange={(v) => setText("header", "ar", v)} dir="rtl" rows={2} />
               <TextBox label={L("الهيدر (إنجليزي)", "Header (English)")} value={tpl.header.en} onChange={(v) => setText("header", "en", v)} dir="ltr" rows={2} />
               <TextBox label={L("الفوتر (عربي)", "Footer (Arabic)")} value={tpl.footer.ar} onChange={(v) => setText("footer", "ar", v)} dir="rtl" rows={2} />
@@ -235,13 +237,9 @@ export default function InvoiceDesigner({ embedded = false }: { embedded?: boole
                 <Switch key={k} label={<span className="text-[14.5px] font-medium">{label}</span>} checked={fieldOn(k)} onChange={(v) => toggle(k, v)} />
               ))}
             </div>
-            {design.fields.discounts !== false ? (
-              <label className="mt-3 grid gap-1.5">
-                <span className="text-[13px] font-semibold text-ink-2">{L("عنوان خانة الخصومات والعروض (تحت الفاتورة)", "Discounts block title")}</span>
-                <input value={design.discountTitle ?? "الخصومات والعروض"} maxLength={40} onChange={(e) => setDesign({ discountTitle: e.target.value })} className="rounded-xl border border-line bg-surface px-3.5 py-2.5 text-[15px] outline-none focus:border-primary" />
-              </label>
-            ) : null}
           </Card>
+
+          <PromoCard promo={tpl.promo} set={(p) => setTpl((t) => (t ? { ...t, promo: { ...promoOf(t.promo), ...p } } : t))} />
 
           <FieldOrder design={design} setDesign={setDesign} />
         </fieldset>
@@ -305,6 +303,37 @@ function FieldOrder({ design, setDesign }: { design: InvoiceDesign; setDesign: (
           </div>
         ))}
       </div>
+    </Card>
+  );
+}
+
+const PROMO_DEFAULT: ReceiptPromoBlock = { enabled: false, title: { ar: "", en: "" }, body: { ar: "", en: "" }, code: null, qr: "none", url: null, startsAt: null, endsAt: null };
+const promoOf = (p: ReceiptPromoBlock | undefined): ReceiptPromoBlock => ({ ...PROMO_DEFAULT, ...(p ?? {}) });
+
+/** العرض أسفل الفاتورة (Saqr 2026-11-25): show/hide and edit the offer printed under the receipt */
+function PromoCard({ promo, set }: { promo: ReceiptPromoBlock | undefined; set: (p: Partial<ReceiptPromoBlock>) => void }) {
+  const p = promoOf(promo);
+  return (
+    <Card className="grid gap-3 p-5">
+      <Switch label={<span className="text-[14.5px] font-semibold">العرض أسفل الفاتورة</span>} description="زي “زيارتك الجاية علينا”، بيتطبع تحت الإجمالي" checked={p.enabled} onChange={(v) => set({ enabled: v })} />
+      {p.enabled ? (
+        <div className="grid gap-3 xl:grid-cols-2">
+          <TextBox label="العنوان (عربي)" value={p.title.ar} onChange={(v) => set({ title: { ...p.title, ar: v } })} dir="rtl" />
+          <TextBox label="العنوان (إنجليزي)" value={p.title.en} onChange={(v) => set({ title: { ...p.title, en: v } })} dir="ltr" />
+          <TextBox label="النص (عربي)" value={p.body.ar} onChange={(v) => set({ body: { ...p.body, ar: v } })} dir="rtl" rows={2} />
+          <TextBox label="النص (إنجليزي)" value={p.body.en} onChange={(v) => set({ body: { ...p.body, en: v } })} dir="ltr" rows={2} />
+          <TextBox label="كود الخصم (اختياري)" value={p.code ?? ""} onChange={(v) => set({ code: v.trim() || null })} dir="ltr" />
+          <label className="grid gap-1.5">
+            <span className="text-[13px] font-semibold text-ink-2">الـ QR تحت العرض</span>
+            <select value={p.qr === "url" ? "none" : p.qr} onChange={(e) => set({ qr: e.target.value as ReceiptPromoBlock["qr"] })} className="rounded-xl border border-line bg-surface px-3.5 py-2.5 text-[15px]">
+              <option value="none">بدون</option>
+              <option value="menu">المنيو</option>
+              <option value="feedback">التقييم</option>
+              <option value="loyalty">نقاط العميل</option>
+            </select>
+          </label>
+        </div>
+      ) : null}
     </Card>
   );
 }

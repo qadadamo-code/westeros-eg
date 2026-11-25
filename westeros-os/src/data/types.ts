@@ -614,6 +614,8 @@ export interface InvoiceDesign {
   };
   /** ترتيب الحقول ومكانها (Saqr 2026-11-25): meta row keys in print order; keys in `bottom` print under the totals */
   layout?: { order: string[]; bottom: string[] };
+  /** اسم الفاتورة (Saqr 2026-11-25): replaces "إيصال ضريبي إلكتروني" on sales receipts; empty = default */
+  receiptTitle?: Localized;
   /** عنوان خانة الخصومات والعروض تحت الفاتورة */
   discountTitle?: string;
 }

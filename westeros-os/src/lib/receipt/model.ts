@@ -213,7 +213,7 @@ export function buildReceiptModel(src: ReceiptSource): ReceiptModel {
     kind: src.kind,
     design,
     language: src.invoice.language,
-    title: z && src.kind !== "prebill" ? zatcaTitle(z) : receiptTitle(src.kind, src.tax.vatRegistered),
+    title: z && src.kind !== "prebill" ? zatcaTitle(z) : src.kind === "SC" && (design.receiptTitle?.ar?.trim() || design.receiptTitle?.en?.trim()) ? { ar: design.receiptTitle.ar.trim() || design.receiptTitle.en.trim(), en: design.receiptTitle.en.trim() || design.receiptTitle.ar.trim() } : receiptTitle(src.kind, src.tax.vatRegistered),
     brand: {
       name: src.restaurant.name,
       header: src.invoice.header,
