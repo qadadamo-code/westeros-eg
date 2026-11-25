@@ -59,7 +59,7 @@ export async function deductForItems(db: Db, lines: Line[], opts: { trigger: "se
       const b = order?.branchId ?? opts.branchId ?? db.branchId;
       if (!b) continue;
       branchId = branchId ?? b;
-      for (const [itemId, qty] of explodeLine(l, ctx)) {
+      for (const [itemId, qty] of explodeLine(l, ctx, order?.mode)) {
         const loc = homeLocation(ctx.stockItems.get(itemId), b, locations);
         if (!loc) continue;
         inputs.push({ itemId, locationId: loc.id, branchId: b, kind: "sale", qty: -qty, refType: "order_item", refId: l.id, groupId, note: `#${order?.number ?? ""} ${l.name.ar}`.trim() });

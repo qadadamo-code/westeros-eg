@@ -3,7 +3,7 @@ import { searchFilter } from "@/lib/search";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { AlertTriangle, Plus, Search, Trash2 } from "lucide-react";
-import type { MfgBatchOutput, MfgRecipeLine, StockItem } from "@/data/types";
+import type { MfgBatchOutput, LineUse, MfgRecipeLine, StockItem } from "@/data/types";
 import { useT } from "@/i18n/i18n";
 import { cn } from "@/lib/cn";
 import { formatMoney, moneyHidden, type Units } from "@/lib/money";
@@ -134,8 +134,11 @@ export function ItemPicker({ items, onPick, placeholder, exclude }: { items: Sto
  * Recipe lines. `lines` hold the quantity for ONE unit (a meal, or a kilo of net meat); `by` is what the batch
  * multiplies them with, so the chef sees and edits the real quantities of this batch.
  */
-export function LinesEditor({ title, hint, lines, onChange, by = 1, items, itemById, unitCost, readOnly, whole }: {
+const USE_LABEL: Record<LineUse, string> = { dine: "محلي بس", pickup: "استلام بس" };
+
+export function LinesEditor({ title, hint, lines, onChange, by = 1, items, itemById, unitCost, readOnly, whole, uses }: {
   title: ReactNode; hint?: ReactNode; lines: MfgRecipeLine[]; onChange: (l: MfgRecipeLine[]) => void; by?: number; items: StockItem[]; itemById: Map<string, StockItem>; unitCost: (id: string) => Units; readOnly?: boolean; /** show each quantity rounded up to a whole number */ whole?: boolean;
+  /** sale items: each line picks محلي / استلام / الاتنين (packaging of one kind of order) */ uses?: boolean;
 }) {
   const { L, lang, loc } = useT();
   const k = by > 0 ? by : 1;
@@ -165,6 +168,18 @@ export function LinesEditor({ title, hint, lines, onChange, by = 1, items, itemB
                     </span>
                   )}
                 </span>
+                {uses ? (
+                  readOnly ? (
+                    l.use ? <span className="rounded-full border border-line px-2 py-0.5 text-[12px] text-muted">{USE_LABEL[l.use]}</span> : null
+                  ) : (
+                    <select aria-label="يدخل في" className="h-9 rounded-lg border border-line bg-surface px-1.5 text-[13px]" value={l.use ?? ""}
+                      onChange={(e) => onChange(lines.map((x, j) => (j === i ? { itemId: x.itemId, qty: x.qty, ...(e.target.value ? { use: e.target.value as LineUse } : {}) } : x)))}>
+                      <option value="">محلي واستلام</option>
+                      <option value="dine">محلي بس</option>
+                      <option value="pickup">استلام بس</option>
+                    </select>
+                  )
+                ) : null}
                 {readOnly ? (
                   <span className="num text-[14px] font-semibold">{r3(q(l))} {it ? BASE_NAME[it.baseUnit][lang] : ""}</span>
                 ) : (

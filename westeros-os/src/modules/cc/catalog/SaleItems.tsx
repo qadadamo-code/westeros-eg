@@ -18,7 +18,10 @@ import { useCc, type Cc } from "../useCc";
 import { BulkBar, useSelection, type DeleteResult } from "./Bulk";
 
 const money = (u: number) => formatMoney(u, { lang: "ar" });
-const linesCost = (lines: { itemId: string; qty: number }[], unitCost: (id: string) => number) => Math.round(lines.reduce((a, l) => a + l.qty * unitCost(l.itemId), 0));
+type CostLine = { itemId: string; qty: number; use?: "dine" | "pickup" };
+/** تكلفة محلي / تكلفة استلام (Saqr 2026-11-25): the same components, with the packaging of that kind of order only */
+const linesCost = (lines: CostLine[], unitCost: (id: string) => number, kind: "dine" | "pickup") =>
+  Math.round(lines.reduce((a, l) => (l.use && l.use !== kind ? a : a + l.qty * unitCost(l.itemId)), 0));
 const blank = (categoryId: string): Omit<MenuItem, "id" | "createdAt" | "updatedAt" | "restaurantId"> => ({
   categoryId, name: { ar: "", en: "" }, description: { ar: "", en: "" }, price: 0, cost: null, sku: null, stationId: null, modifierGroupIds: [], tags: [], prepMinutes: 10, available: true,
   vatExempt: false, imageUrl: null, sort: 999, active: true, channelPrices: {}, branchPrices: {}, schedule: [], allergens: [], calories: null, comboOf: [], hiddenOn: [],
@@ -54,7 +57,7 @@ export default function SaleItems() {
   const catName = (id: string) => cats.find((c) => c.id === id)?.name.ar ?? "—";
   const recipeOf = (id: string) => recipes.find((r) => r.ownerType === "menu_item" && r.ownerId === id && !r.scopeItemId) ?? null;
   // تكلفة الصنف: قيمة مكوناته (الكمية × تكلفة الوحدة لكل مكون)
-  const costOf = (id: string) => linesCost(recipeOf(id)?.lines ?? [], cc.prod.unitCost);
+  const costOf = (id: string, kind: "dine" | "pickup" = "dine") => linesCost(recipeOf(id)?.lines ?? [], cc.prod.unitCost, kind);
   const rows = useMemo(() => {
     const n = q.trim().toLowerCase();
     return items.filter((i) => (!cat || i.categoryId === cat) && searchHit(n, i.name.ar, i.sku));
@@ -88,14 +91,15 @@ export default function SaleItems() {
     { key: "name", header: "اسم الصنف", cell: (i) => <span className="font-semibold">{i.name.ar}</span> },
     { key: "cat", header: "فئة الصنف", cell: (i) => catName(i.categoryId) },
     { key: "comp", header: "مكونات الصنف", hideOnMobile: true, cell: (i) => { const n = recipeOf(i.id)?.lines.length ?? 0; return n ? <span className="num">{n} مكون</span> : <span className="text-faint">—</span>; } },
-    { key: "cost", header: "تكلفة الصنف", align: "end", cell: (i) => (recipeOf(i.id)?.lines.length ? <span className="num font-semibold">{money(costOf(i.id))}</span> : <span className="text-faint">—</span>) },
+    { key: "cost", header: "تكلفة محلي", align: "end", cell: (i) => (recipeOf(i.id)?.lines.length ? <span className="num font-semibold">{money(costOf(i.id, "dine"))}</span> : <span className="text-faint">—</span>) },
+    { key: "costOut", header: "تكلفة استلام", align: "end", cell: (i) => (recipeOf(i.id)?.lines.length ? <span className="num font-semibold">{money(costOf(i.id, "pickup"))}</span> : <span className="text-faint">—</span>) },
   ];
   return (
     <div className="grid gap-4">
       <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_200px_auto_auto]">
         <Input icon={<Search />} placeholder="ابحث باسم الصنف أو الكود" value={q} onChange={(e) => setQ(e.target.value)} />
         <Select value={cat} onChange={(e) => setCat(e.target.value)} options={[{ value: "", label: "كل الفئات" }, ...cats.map((c) => ({ value: c.id, label: c.name.ar }))]} />
-        <ExportButton file="أصناف البيع" head={["كود الصنف", "اسم الصنف", "فئة الصنف", "عدد المكونات", "تكلفة الصنف"]} rows={() => rows.map((i) => [i.sku ?? "", i.name.ar, catName(i.categoryId), recipeOf(i.id)?.lines.length ?? 0, costOf(i.id) / 100])} />
+        <ExportButton file="أصناف البيع" head={["كود الصنف", "اسم الصنف", "فئة الصنف", "عدد المكونات", "تكلفة محلي", "تكلفة استلام"]} rows={() => rows.map((i) => [i.sku ?? "", i.name.ar, catName(i.categoryId), recipeOf(i.id)?.lines.length ?? 0, costOf(i.id, "dine") / 100_000, costOf(i.id, "pickup") / 100_000])} />
         {manage && area.add ? <Button icon={<Plus />} disabled={!cats.length} onClick={() => setEdit("new")}>اضافة صنف</Button> : null}
       </div>
       {manage ? <BulkBar count={sel.rows.length} noun="صنف" onClear={sel.clear} onEdit={() => setEdit(sel.rows[0])} categories={cats.map((c) => ({ value: c.id, label: c.name.ar }))} onMove={move} onDelete={remove} /> : null}
@@ -112,7 +116,7 @@ function SaleDialog({ item, recipe, cats, items, cc, readOnly, onClose }: { item
   const { toast } = useToast();
   const prod = cc.prod;
   const [d, setD] = useState(() => ({ name: item?.name.ar ?? "", imageUrl: item?.imageUrl ?? null, sku: item ? item.sku ?? "" : (null as string | null), categoryId: item?.categoryId ?? cats[0]?.id ?? "" }));
-  const [lines, setLines] = useState<MfgRecipeLine[]>(() => (recipe?.lines ?? []).map((l) => ({ itemId: l.itemId, qty: l.qty })));
+  const [lines, setLines] = useState<MfgRecipeLine[]>(() => (recipe?.lines ?? []).map((l) => ({ itemId: l.itemId, qty: l.qty, ...(l.use ? { use: l.use } : {}) })));
   const [busy, setBusy] = useState(false);
   const set = (p: Partial<typeof d>) => setD((x) => ({ ...x, ...p }));
   // مكونات الصنف: المواد الخام + المنتجات المصنعة ذات الوصفة الرئيسية (Mohammed 2026-11-23). الوصفات الفرعية والتتبيلات تدخل في الرئيسية
@@ -164,9 +168,12 @@ function SaleDialog({ item, recipe, cats, items, cc, readOnly, onClose }: { item
         <ImageField value={d.imageUrl} onChange={(imageUrl) => set({ imageUrl })} />
         <div className="grid gap-3 sm:grid-cols-2">
           <Select label="فئة الصنف" value={d.categoryId} onChange={(e) => set({ categoryId: e.target.value })} options={cats.map((c) => ({ value: c.id, label: c.name.ar }))} />
-          <Result label="تكلفة الصنف">{money(linesCost(lines.filter((l) => l.qty > 0), prod.unitCost))}</Result>
+          <div className="grid grid-cols-2 gap-3">
+            <Result label="تكلفة محلي">{money(linesCost(lines.filter((l) => l.qty > 0), prod.unitCost, "dine"))}</Result>
+            <Result label="تكلفة استلام">{money(linesCost(lines.filter((l) => l.qty > 0), prod.unitCost, "pickup"))}</Result>
+          </div>
         </div>
-        <LinesEditor readOnly={readOnly} title="مكونات الصنف" hint="من المواد الخام والمنتجات المصنعة ذات الوصفة الرئيسية" lines={lines} onChange={setLines} items={choices} itemById={prod.itemById} unitCost={prod.unitCost} />
+        <LinesEditor readOnly={readOnly} title="مكونات الصنف" hint="من المواد الخام والمنتجات المصنعة ذات الوصفة الرئيسية" lines={lines} onChange={setLines} items={choices} itemById={prod.itemById} unitCost={prod.unitCost} uses />
       </fieldset>
     </Dialog>
   );

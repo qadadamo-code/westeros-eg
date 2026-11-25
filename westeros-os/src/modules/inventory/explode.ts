@@ -7,7 +7,7 @@
  *   + combos: each component's recipe × component qty
  * Trim yield and cooking loss are grossed up (costing.grossQty). Prep items stay prep items (they are stocked).
  */
-import type { MenuItem, OrderItem, Recipe, StockItem } from "@/data/types";
+import type { MenuItem, OrderItem, OrderMode, Recipe, StockItem } from "@/data/types";
 import { grossQty } from "./costing";
 import { q3 } from "./units";
 import { COMBO_GROUP } from "@/modules/menu/sold";
@@ -32,24 +32,27 @@ export function explodeContext(menuItems: MenuItem[], stockItems: StockItem[], r
 /** The modifier recipe that applies on this menu item. */
 export const modifierRecipe = (ctx: Pick<ExplodeContext, "recipes">, modifierId: string, itemId: string) => ctx.recipes.get(recipeKey("modifier", modifierId, itemId)) ?? ctx.recipes.get(recipeKey("modifier", modifierId));
 
-function addRecipe(out: Map<string, number>, r: Recipe | undefined, portions: number, ctx: ExplodeContext) {
+/** محلي / استلام: a line marked for one kind of order is skipped on the other; with no mode every line counts */
+export const lineApplies = (l: { use?: "dine" | "pickup" }, mode?: OrderMode | null) => !l.use || !mode || (l.use === "dine" ? mode === "dine_in" : mode !== "dine_in");
+
+function addRecipe(out: Map<string, number>, r: Recipe | undefined, portions: number, ctx: ExplodeContext, mode?: OrderMode | null) {
   if (!r) return;
   const per = portions / Math.max(1, r.yieldQty || 1);
-  for (const l of r.lines) out.set(l.itemId, q3((out.get(l.itemId) ?? 0) + grossQty(l, ctx.stockItems.get(l.itemId)) * per));
+  for (const l of r.lines) if (lineApplies(l, mode)) out.set(l.itemId, q3((out.get(l.itemId) ?? 0) + grossQty(l, ctx.stockItems.get(l.itemId)) * per));
 }
 
 /** Stock items one order line consumes. Totals ≤ 0 (a "no X" on an item without X) are dropped. */
-export function explodeLine(line: Pick<OrderItem, "itemId" | "qty" | "modifiers">, ctx: ExplodeContext): Map<string, number> {
+export function explodeLine(line: Pick<OrderItem, "itemId" | "qty" | "modifiers">, ctx: ExplodeContext, mode?: OrderMode | null): Map<string, number> {
   const out = new Map<string, number>();
   const item = ctx.menuItems.get(line.itemId);
   const own = ctx.recipes.get(recipeKey("menu_item", line.itemId));
-  if (own) addRecipe(out, own, line.qty, ctx);
-  else if (item?.comboOf?.length) for (const c of item.comboOf) addRecipe(out, ctx.recipes.get(recipeKey("menu_item", c.itemId)), line.qty * c.qty, ctx);
+  if (own) addRecipe(out, own, line.qty, ctx, mode);
+  else if (item?.comboOf?.length) for (const c of item.comboOf) addRecipe(out, ctx.recipes.get(recipeKey("menu_item", c.itemId)), line.qty * c.qty, ctx, mode);
   for (const m of line.modifiers) {
     if (m.groupId === COMBO_GROUP) continue; // a part of a box: the box's own recipe or comboOf above covers it
     const r = modifierRecipe(ctx, m.modifierId, line.itemId);
     // an option that is a menu item (a burger chosen in a box) uses that item's recipe when it has no recipe of its own
-    addRecipe(out, r ?? (m.itemId ? ctx.recipes.get(recipeKey("menu_item", m.itemId)) : undefined), line.qty, ctx);
+    addRecipe(out, r ?? (m.itemId ? ctx.recipes.get(recipeKey("menu_item", m.itemId)) : undefined), line.qty, ctx, mode);
   }
   for (const [k, v] of out) if (v <= 0) out.delete(k);
   return out;

@@ -235,6 +235,8 @@ export interface RecipeLine {
   /** optional cooking/handling loss on top, bp */
   lossBp?: number;
   note?: string;
+  /** "dine" = dine-in orders only, "pickup" = takeaway/delivery only, missing = both (sale item packaging) */
+  use?: "dine" | "pickup";
 }
 export interface Recipe extends Row {
   ownerType: "menu_item" | "modifier" | "prep";

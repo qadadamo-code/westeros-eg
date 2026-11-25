@@ -58,7 +58,11 @@ export type MfgStorageTemp = "chilled" | "frozen" | "room";
 export interface MfgRecipeLine {
   itemId: string;
   qty: number;
+  /** sale items only: "dine" = only on a dine-in order (ورق صواني), "pickup" = only on takeaway/delivery (علبة، شنطة). Missing = both. */
+  use?: LineUse;
 }
+/** محلي / استلام (Saqr 2026-11-25): the packaging that goes with one kind of order only */
+export type LineUse = "dine" | "pickup";
 
 export interface MfgProduct extends Row {
   code: string;
