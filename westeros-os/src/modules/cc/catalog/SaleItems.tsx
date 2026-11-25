@@ -13,6 +13,7 @@ import { Button, Card, Dialog, EmptyState, Input, Select, Table, useToast, type 
 import { ExportButton, ImageField, Result } from "../ui";
 import { nextCode } from "../menu/codes";
 import { useAutoCodes } from "../menu/useAutoCodes";
+import { mainBranchOf, onMenuOf, sameItem } from "../menu/menuBranch";
 import { useCc, type Cc } from "../useCc";
 import { BulkBar, useSelection, type DeleteResult } from "./Bulk";
 
@@ -27,15 +28,29 @@ export default function SaleItems() {
   const cc = useCc();
   const db = useDb();
   const { can } = useSession();
-  const items = useLive("menuItems", { orderBy: [{ field: "sort" }] }).data;
-  const cats = useLive("menuCategories", { orderBy: [{ field: "sort" }] }).data;
+  const allItems = useLive("menuItems", { orderBy: [{ field: "sort" }] }).data;
+  const allCats = useLive("menuCategories", { orderBy: [{ field: "sort" }] }).data;
+  // كل فرع إله منيو (0054): أصناف البيع بتعرض كل صنف مرة وحدة (Saqr 2026-11-25). The main branch's row, and a branch's
+  // own item only when the main menu doesn't have it; the recipe of the main row serves every branch's copy.
+  const main = mainBranchOf(useSession().branches);
+  const onMain = onMenuOf(main, main);
+  const items = useMemo(() => {
+    const mine = allItems.filter(onMain);
+    const extra: MenuItem[] = [];
+    for (const i of allItems) if (!onMain(i) && !mine.some((m) => sameItem(m, i)) && !extra.some((m) => sameItem(m, i))) extra.push(i);
+    return [...mine, ...extra];
+  }, [allItems, main]); // eslint-disable-line react-hooks/exhaustive-deps
+  const cats = useMemo(() => {
+    const mine = allCats.filter(onMain);
+    return [...mine, ...allCats.filter((c) => !onMain(c) && !mine.some((m) => m.name.ar.trim() === c.name.ar.trim()) && items.some((i) => i.categoryId === c.id))];
+  }, [allCats, items, main]); // eslint-disable-line react-hooks/exhaustive-deps
   const recipes = useLive("recipes").data;
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("");
   const [edit, setEdit] = useState<MenuItem | "new" | null>(null);
   const area = useArea();
   const manage = can("menu.edit");
-  useAutoCodes(manage, cats, items);
+  useAutoCodes(manage, allCats, allItems);
   const catName = (id: string) => cats.find((c) => c.id === id)?.name.ar ?? "—";
   const recipeOf = (id: string) => recipes.find((r) => r.ownerType === "menu_item" && r.ownerId === id && !r.scopeItemId) ?? null;
   // تكلفة الصنف: قيمة مكوناته (الكمية × تكلفة الوحدة لكل مكون)
