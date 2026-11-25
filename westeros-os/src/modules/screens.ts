@@ -8,5 +8,5 @@ export function setAllowedScreens(ids: readonly string[] | null) {
   allowed = ids ? new Set(ids) : null;
 }
 /** صفحتي (/me): every employee opens their own page, whatever their role */
-const ALWAYS = new Set(["cc-me", "cc-floor", "cc-talk"]);
+const ALWAYS = new Set(["cc-me", "cc-floor", "cc-talk", "cc-station"]);
 export const screenAllowed = (moduleId: string) => !allowed || ALWAYS.has(moduleId) || allowed.has(moduleId);

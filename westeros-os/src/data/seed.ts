@@ -595,7 +595,7 @@ export function buildSeed(now: Date = new Date()): Seed {
     ...crm.rows,
     ...inv.rows,
     ...hr.rows,
-    cameras: ops.cameras, peopleCounts: ops.peopleCounts, radioClips: ops.radioClips, supportTickets: ops.supportTickets, opsSettings: ops.opsSettings, opsAcks: ops.opsAcks,
+    cameras: ops.cameras, peopleCounts: ops.peopleCounts, radioClips: ops.radioClips, printJobs: [], supportTickets: ops.supportTickets, opsSettings: ops.opsSettings, opsAcks: ops.opsAcks,
     ...demoPaymentRows({ restaurantId: R, branchId: B, checks, payments, T, checkId: (k) => id(`check:${k}`), paymentId: (k) => id(k), staffId: S }),
   };
   data.ledgerEntries = [...(data.ledgerEntries ?? []), ...hr.ledgerEntries];

@@ -1146,6 +1146,7 @@ export interface Collections {
   cameras: Camera;
   peopleCounts: PeopleCount;
   radioClips: RadioClip;
+  printJobs: PrintJob;
   supportTickets: SupportTicket;
   opsSettings: OpsSettings;
   opsAcks: OpsAck;
@@ -1266,6 +1267,7 @@ export const TABLE_NAMES: { [C in CollectionName]: string } = {
   cameras: "cameras",
   peopleCounts: "people_counts",
   radioClips: "radio_clips",
+  printJobs: "print_jobs",
   supportTickets: "support_tickets",
   opsSettings: "ops_settings",
   opsAcks: "ops_acks",
@@ -1292,3 +1294,14 @@ export const TABLE_NAMES: { [C in CollectionName]: string } = {
   hrDocs: "hr_docs",
 };
 export const COLLECTIONS = Object.keys(TABLE_NAMES) as CollectionName[];
+
+/** محطة الطباعة (0060): a print asked by any device, printed by the restaurant's print-station PC */
+export interface PrintJob extends TenantRow {
+  printerId: string;
+  kind: "receipt" | "kitchen" | "sticker" | "test";
+  payload: Record<string, unknown>;
+  copies: number;
+  status: "queued" | "printing" | "done" | "failed";
+  error: string | null;
+  createdBy: string | null;
+}

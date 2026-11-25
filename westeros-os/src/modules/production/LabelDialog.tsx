@@ -8,6 +8,10 @@ import { cn } from "@/lib/cn";
 import { Button, Dialog, IconButton, Select, useToast } from "@/ui";
 import { BatchLabel, labelCopies, labelSizes, printLabels, saveLabelShift, saveLabelSize, savedLabelShift, savedLabelSize } from "./Label";
 import { countLabels } from "./ops";
+import { useSession } from "@/auth/session";
+import { listsOf } from "@/modules/cc/lib";
+import { printOf } from "@/modules/cc/print/setup";
+import { queuePrint, viaStation, type StickerPayload } from "@/modules/cc/print/station";
 import { Num } from "./ui";
 
 /** Preview and print the stickers of a batch: one per bag / container, for each product of the batch. */
@@ -23,6 +27,10 @@ export function LabelDialog({ batch, onClose, justSaved }: { batch: MfgBatch | n
   const [typed, setTyped] = useState(1);
   const [pick, setPick] = useState(0);
   const [busy, setBusy] = useState(false);
+  const { staff } = useSession();
+  // طابعة ستيكرات الصلاحية (Saqr 2026-11-25): through the print station when it is on
+  const pset = printOf(listsOf(settings));
+  const station = viaStation(pset, pset.stickerPrinterId);
   const [shift, setShift] = useState(savedLabelShift);
   const move = (dx: number, dy: number) => {
     const r = (n: number) => Math.max(-15, Math.min(15, Math.round(n * 2) / 2));
@@ -46,7 +54,12 @@ export function LabelDialog({ batch, onClose, justSaved }: { batch: MfgBatch | n
     const outs = all ? batch.outputs : [output];
     const ns = outs.map(copiesOf);
     try {
-      await printLabels(batch, outs, size, ns, shift, outs.map((o) => products.find((p) => p.id === o.productId)?.code));
+      const codes = outs.map((o) => products.find((p) => p.id === o.productId)?.code);
+      if (station) {
+        const payload: StickerPayload = { batch: { number: batch.number, madeAt: batch.madeAt, chefName: batch.chefName, chefCode: batch.chefCode }, outputs: outs, size, copies: ns, codes };
+        await queuePrint(db, { printerId: station.id, kind: "sticker", payload: payload as unknown as Record<string, unknown> }, staff?.id ?? null);
+        toast({ title: L(`اتبعتت ${ns.reduce((a, n) => a + n, 0)} ستيكر لـ ${station.name}`, `Sent to ${station.name}`), tone: "success", duration: 2000 });
+      } else await printLabels(batch, outs, size, ns, shift, codes);
       await countLabels(db, batch.id, ns.reduce((a, n) => a + n, 0));
     } finally {
       setBusy(false);

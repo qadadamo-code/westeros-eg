@@ -47,6 +47,7 @@ const LISTED: Area[] = [
   { id: "stores.summary", screen: "cc-stores", label: "ملخص المخازن والفروع", acts: ["view"], summary: true },
 
   { id: "constants", screen: "cc-constants", label: "ثوابت النظام", acts: ["view", "edit"] },
+  { id: "print.station", screen: "cc-constants", label: "محطة الطباعة", acts: ["view"], note: "تنزيل برنامج محطة الطباعة وفتح شاشة المحطة على كمبيوتر الطباعة." },
 
   { id: "mfg.make", screen: "cc-mfg", label: "تصنيع صنف", acts: ["view", "add"] },
   { id: "mfg.recipes", screen: "cc-mfg", label: "الوصفات", acts: ["view", "add", "edit", "delete"] },

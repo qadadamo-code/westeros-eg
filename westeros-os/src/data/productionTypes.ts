@@ -331,7 +331,7 @@ export interface RadioSetup {
 }
 
 /** a printer of the system: a name and its paper; it prints from the device set as that printer (see cc/print) */
-export interface PrinterDef { id: string; name: string; paper: "58" | "80"; /** عنوان الطابعة على الشبكة */ ip?: string }
+export interface PrinterDef { id: string; name: string; paper: "58" | "80"; /** عنوان الطابعة على الشبكة */ ip?: string; /** فواتير وطلبيات (ESC/POS) أو ستيكرات (TSPL) */ kind?: "receipt" | "label" }
 export interface KitchenTicketDesign {
   fontSize: number;
   header: string;
@@ -353,4 +353,8 @@ export interface PrintSetup {
   /** menu category id → printer ids (more than one allowed) */
   categoryPrinters: Record<string, string[]>;
   kitchen: KitchenTicketDesign;
+  /** محطة الطباعة: a Windows PC with the station program prints every job by IP */
+  stationOn?: boolean;
+  /** طابعة ستيكرات الصلاحية (التصنيع) */
+  stickerPrinterId?: string | null;
 }

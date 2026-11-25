@@ -6,7 +6,10 @@ import type { InvoiceDesign } from "@/data/types";
 import { useT } from "@/i18n/i18n";
 import { printNode, ReceiptView, type ReceiptModel } from "@/lib/receipt";
 import { Button, Dialog, Segmented, useHotkeys, useReduced } from "@/ui";
-import { useLive } from "@/data/hooks";
+import { useDb, useLive } from "@/data/hooks";
+import { useSession } from "@/auth/session";
+import { useToast } from "@/ui";
+import { queuePrint, viaStation } from "@/modules/cc/print/station";
 import { listsOf } from "@/modules/cc/lib";
 import { printOf } from "@/modules/cc/print/setup";
 
@@ -21,7 +24,16 @@ export function ReceiptDialog({ open, onClose, model, title, etaError, actions }
     if (open && model) setPaper(printer?.paper ?? model.design.paper);
   }, [open, model?.design.paper, printer?.paper]); // eslint-disable-line react-hooks/exhaustive-deps
   const m = model ? { ...model, design: { ...model.design, paper } } : null;
-  const print = () => m && printNode(<ReceiptView model={m} />, paper);
+  const db = useDb();
+  const { staff } = useSession();
+  const { toast } = useToast();
+  // محطة الطباعة: from any device the receipt goes to the station, which prints it on the receipt printer by IP
+  const station = viaStation(setup, setup.receiptPrinterId);
+  const print = () => {
+    if (!m) return;
+    if (station) return void queuePrint(db, { printerId: station.id, kind: "receipt", payload: { model: m } }, staff?.id ?? null).then(() => toast({ title: L(`اتبعتت للطباعة على ${station.name}`, `Sent to ${station.name}`), tone: "success", duration: 1800 }), () => printNode(<ReceiptView model={m} />, paper));
+    return printNode(<ReceiptView model={m} />, paper);
+  };
   useHotkeys({ "mod+p": (e) => (e.preventDefault(), print()) }, { enabled: open });
   return (
     <Dialog
