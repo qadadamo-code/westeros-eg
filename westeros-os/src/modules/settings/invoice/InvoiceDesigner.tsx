@@ -1,13 +1,14 @@
 /** Receipt / invoice designer with a live preview (58 mm, 80 mm, A4), saved to the restaurant's settings. */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "motion/react";
-import { ImagePlus, Printer, RotateCcw, Save, Trash2, Type } from "lucide-react";
+import { ArrowDown, ArrowUp, ImagePlus, Printer, RotateCcw, Save, Trash2, Type } from "lucide-react";
 import { useSession, useBranch } from "@/auth/session";
 import { useDb, useLive } from "@/data/hooks";
 import type { InvoiceDesign, InvoiceTemplate, Localized } from "@/data/types";
 import { useT } from "@/i18n/i18n";
 import { cn } from "@/lib/cn";
 import { buildReceiptModel, DEFAULT_DESIGN, printNode, ReceiptView, resolveDesign } from "@/lib/receipt";
+import { layoutOf, META_KEYS } from "@/lib/receipt/design";
 import { ETA_PORTAL } from "@/lib/receipt/eta";
 import { PageHeader } from "@/shell/PageHeader";
 import { Button, Card, Segmented, Switch, useReduced, useToast } from "@/ui";
@@ -65,7 +66,7 @@ export default function InvoiceDesigner({ embedded = false }: { embedded?: boole
 
   const model = useMemo(() => {
     if (!settings || !tpl || !restaurant) return null;
-    const { bill } = sampleBill(settings.tax);
+    const { bill } = sampleBill(settings.tax, "dine_in", 0, { kind: "percent", rate: 1000 });
     if (!bill) return null;
     return buildReceiptModel({
       kind,
@@ -82,7 +83,10 @@ export default function InvoiceDesigner({ embedded = false }: { embedded?: boole
       tableLabels: ["7"],
       guests: 4,
       mode: "dine_in",
-      customer: { name: "دينا الشافعي", phone: "01005551201" },
+      customer: { name: "دينا الشافعي", phone: "01005551201", address: "مدينة نصر، شارع عباس العقاد 12" },
+      externalRef: "TLB-48213",
+      driver: "محمود (طيار)",
+      channelName: "طلبات",
       payments: kind === "SC" ? [{ method: "card", amount: bill.payable, tip: 5_000_000 }] : [],
       tendered: null,
       change: null,
@@ -114,7 +118,12 @@ export default function InvoiceDesigner({ embedded = false }: { embedded?: boole
     ["guests", L("عدد الأفراد", "Guests")],
     ["cashier", L("الكاشير", "Cashier")],
     ["showWaiter", L("الجرسون", "Waiter")],
-    ["customer", L("بيانات العميل", "Customer")],
+    ["receiptNo", L("رقم الإيصال", "Receipt no")],
+    ["customer", L("اسم وموبايل العميل", "Customer")],
+    ["customerAddress", L("عنوان العميل (توصيل)", "Customer address")],
+    ["appOrderCode", L("كود الطلب (تطبيق توصيل)", "App order code")],
+    ["driver", L("اسم الطيار (توصيل)", "Driver")],
+    ["discounts", L("خانة الخصومات والعروض", "Discounts & offers")],
     ["modifiers", L("إضافات الصنف", "Item modifiers")],
     ["itemNotes", L("ملاحظات الصنف", "Item notes")],
     ["serviceVatLines", L("سطر الخدمة والضريبة", "Service & VAT lines")],
@@ -122,7 +131,7 @@ export default function InvoiceDesigner({ embedded = false }: { embedded?: boole
     ["showQr", L("QR الإيصال الإلكتروني", "ETA QR code")],
     ["etaUuid", L("UUID الإيصال", "ETA UUID")],
   ];
-  const fieldOn = (k: (typeof FIELDS)[number][0]) => (k === "showWaiter" || k === "showQr" || k === "showLogo" ? !!tpl?.[k] : design.fields[k]);
+  const fieldOn = (k: (typeof FIELDS)[number][0]) => (k === "showWaiter" || k === "showQr" || k === "showLogo" ? !!tpl?.[k] : design.fields[k] !== false);
   const toggle = (k: (typeof FIELDS)[number][0], v: boolean) => (k === "showWaiter" || k === "showQr" || k === "showLogo" ? setTpl((t) => (t ? { ...t, [k]: v } : t)) : setField(k, v));
 
   if (!tpl || !settings) return null;
@@ -226,7 +235,15 @@ export default function InvoiceDesigner({ embedded = false }: { embedded?: boole
                 <Switch key={k} label={<span className="text-[14.5px] font-medium">{label}</span>} checked={fieldOn(k)} onChange={(v) => toggle(k, v)} />
               ))}
             </div>
+            {design.fields.discounts !== false ? (
+              <label className="mt-3 grid gap-1.5">
+                <span className="text-[13px] font-semibold text-ink-2">{L("عنوان خانة الخصومات والعروض (تحت الفاتورة)", "Discounts block title")}</span>
+                <input value={design.discountTitle ?? "الخصومات والعروض"} maxLength={40} onChange={(e) => setDesign({ discountTitle: e.target.value })} className="rounded-xl border border-line bg-surface px-3.5 py-2.5 text-[15px] outline-none focus:border-primary" />
+              </label>
+            ) : null}
           </Card>
+
+          <FieldOrder design={design} setDesign={setDesign} />
         </fieldset>
 
         <div className="lg:sticky lg:top-20">
@@ -258,5 +275,36 @@ function TextBox({ label, value, onChange, dir, rows = 1 }: { label: string; val
       <span className="text-[13px] font-semibold text-ink-2">{label}</span>
       <textarea dir={dir} rows={rows} value={value} onChange={(e) => onChange(e.target.value)} maxLength={160} className="resize-none rounded-xl border border-line bg-surface px-3.5 py-2.5 text-[15px] outline-none focus:border-primary focus:shadow-[var(--sf-glow)]" />
     </label>
+  );
+}
+
+/** ترتيب الحقول ومكانها (Saqr 2026-11-25): move a data row up or down, or under the totals */
+function FieldOrder({ design, setDesign }: { design: InvoiceDesign; setDesign: (p: Partial<InvoiceDesign>) => void }) {
+  const { order, bottom } = layoutOf(design);
+  const label = (k: string) => META_KEYS.find((m) => m.key === k)?.label ?? k;
+  const move = (i: number, d: number) => {
+    const j = i + d;
+    if (j < 0 || j >= order.length) return;
+    const next = [...order];
+    [next[i], next[j]] = [next[j], next[i]];
+    setDesign({ layout: { order: next, bottom } });
+  };
+  const place = (k: string, under: boolean) => setDesign({ layout: { order, bottom: under ? [...bottom.filter((x) => x !== k), k] : bottom.filter((x) => x !== k) } });
+  return (
+    <Card className="grid gap-2 p-5">
+      <p className="text-[13px] font-semibold text-ink-2">ترتيب البيانات ومكانها في الفاتورة</p>
+      <p className="text-[12.5px] text-muted">رتّب البيانات بالأسهم، واختار كل سطر يظهر فوق الأصناف ولا تحت الإجمالي.</p>
+      <div className="divide-y divide-line">
+        {order.map((k, i) => (
+          <div key={k} className="flex items-center gap-2 py-1.5" data-field-order={k}>
+            <span className="num w-6 text-[12.5px] text-muted">{i + 1}</span>
+            <span className="flex-1 text-[14.5px] font-medium">{label(k)}</span>
+            <Segmented size="sm" label={label(k)} value={bottom.includes(k) ? "bottom" : "top"} onChange={(v) => place(k, v === "bottom")} options={[{ value: "top", label: "فوق" }, { value: "bottom", label: "تحت" }]} />
+            <Button size="sm" variant="ghost" aria-label="لفوق" disabled={i === 0} onClick={() => move(i, -1)} icon={<ArrowUp className="size-4" />} />
+            <Button size="sm" variant="ghost" aria-label="لتحت" disabled={i === order.length - 1} onClick={() => move(i, 1)} icon={<ArrowDown className="size-4" />} />
+          </div>
+        ))}
+      </div>
+    </Card>
   );
 }

@@ -21,7 +21,34 @@ export const DEFAULT_DESIGN: InvoiceDesign = {
     serviceVatLines: true,
     payments: true,
     etaUuid: true,
+    receiptNo: true,
+    discounts: true,
+    appOrderCode: true,
+    driver: true,
+    customerAddress: true,
   },
+};
+
+/** the receipt's data rows, in their default order (the designer reorders them and moves some under the totals) */
+export const META_KEYS: { key: string; label: string }[] = [
+  { key: "receiptNo", label: "رقم الإيصال" },
+  { key: "orderNo", label: "رقم الطلب" },
+  { key: "appOrderCode", label: "كود طلب التطبيق" },
+  { key: "date", label: "التاريخ" },
+  { key: "orderType", label: "قناة البيع / النوع" },
+  { key: "table", label: "الترابيزة" },
+  { key: "guests", label: "عدد الأفراد" },
+  { key: "cashier", label: "الكاشير" },
+  { key: "waiter", label: "الجرسون" },
+  { key: "customer", label: "العميل" },
+  { key: "phone", label: "موبايل العميل" },
+  { key: "address", label: "عنوان العميل" },
+  { key: "driver", label: "الطيار" },
+];
+export const layoutOf = (d: Pick<InvoiceDesign, "layout">) => {
+  const saved = d.layout?.order ?? [];
+  const order = [...saved.filter((k) => META_KEYS.some((m) => m.key === k)), ...META_KEYS.map((m) => m.key).filter((k) => !saved.includes(k))];
+  return { order, bottom: d.layout?.bottom ?? [] };
 };
 
 /** The invoice template with every designer field filled (older settings rows have no `design`). */

@@ -605,7 +605,17 @@ export interface InvoiceDesign {
     serviceVatLines: boolean;
     payments: boolean;
     etaUuid: boolean;
+    /** Saqr 2026-11-25: optional, older designs have none (shown) */
+    receiptNo?: boolean;
+    discounts?: boolean;
+    appOrderCode?: boolean;
+    driver?: boolean;
+    customerAddress?: boolean;
   };
+  /** ترتيب الحقول ومكانها (Saqr 2026-11-25): meta row keys in print order; keys in `bottom` print under the totals */
+  layout?: { order: string[]; bottom: string[] };
+  /** عنوان خانة الخصومات والعروض تحت الفاتورة */
+  discountTitle?: string;
 }
 
 /** Egyptian Tax Authority e-receipt settings. Client id/secret are NOT here: they are server-side secrets (see README → ETA). */

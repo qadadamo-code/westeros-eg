@@ -59,6 +59,7 @@ export function useReceiptSourceBuilder() {
   const tables = useLive("tables").data;
   const customers = useLive("customers").data;
   const zatcaDocs = useLive("zatcaInvoices").data; // KSA only (empty elsewhere)
+  const drivers = useLive("finDocs").data; // الطيارين (المندوبين) live in finDocs
   return useMemo(() => {
     if (!settings || !restaurant) return null;
     const base = (check: Check, orders: Order[]) => {
@@ -77,6 +78,7 @@ export function useReceiptSourceBuilder() {
         mode: order?.mode ?? "dine_in",
         pickup: !!order?.pickupAt,
         channelName: channelFor(settings, order)?.name ?? null,
+        driver: order?.driverId ? (drivers.find((d) => d.id === order.driverId)?.name ?? null) : null,
         currency: restaurant.currency,
         customer: cust ? { name: cust.name, phone: cust.phone, address: order?.delivery?.address ?? null } : order?.delivery ? { name: "", phone: "", address: order.delivery.address } : null,
       };
@@ -122,5 +124,5 @@ export function useReceiptSourceBuilder() {
         });
       },
     };
-  }, [settings, restaurant, branch, staff, tables, customers, zatcaDocs]);
+  }, [settings, restaurant, branch, staff, tables, customers, zatcaDocs, drivers]);
 }

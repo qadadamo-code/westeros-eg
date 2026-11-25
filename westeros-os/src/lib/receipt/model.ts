@@ -4,7 +4,7 @@
  */
 import { BRAND_LOGO } from "./brandLogo";
 import type { Currency, InvoiceDesign, InvoiceTemplate, Localized, OrderMode, PaymentMethod, ReceiptBill, TaxSettings, Units } from "@/data/types";
-import { resolveDesign } from "./design";
+import { layoutOf, resolveDesign } from "./design";
 
 const L = (ar: string, en: string): Localized => ({ ar, en });
 
@@ -42,6 +42,8 @@ export interface ReceiptSource {
   guests: number | null;
   mode: OrderMode;
   pickup?: boolean;
+  /** اسم الطيار (delivery orders) */
+  driver?: string | null;
   /** اسم قناة البيع (Saqr 2026-11-25): printed instead of the order type when known */
   channelName?: string | null;
   customer: { name: string; phone: string; address?: string | null } | null;
@@ -73,6 +75,8 @@ export interface ReceiptZatca {
 }
 
 export interface MetaRow {
+  /** which data row (META_KEYS): the designer orders and places rows by it */
+  key?: string;
   label: Localized;
   value: string | Localized;
   mono?: boolean;
@@ -100,6 +104,10 @@ export interface ReceiptModel {
   brand: { name: Localized; header: Localized; logo: string | null; branch: Localized | null; address: Localized | null; phone: string | null };
   legal: MetaRow[];
   meta: MetaRow[];
+  /** data rows the design prints under the totals */
+  metaBottom: MetaRow[];
+  /** الخصومات والعروض: what was taken off, under the totals */
+  discounts: { title: string; rows: { label: Localized; amount: Units }[] } | null;
   lines: LineRow[];
   totals: TotalRow[];
   payments: { label: Localized; amount: Units; tip: Units }[];
@@ -136,26 +144,34 @@ export function buildReceiptModel(src: ReceiptSource): ReceiptModel {
   if (!z && f.activityCode && src.tax.activityCode) legal.push({ label: L("كود النشاط", "Activity code"), value: src.tax.activityCode, mono: true });
   if (!z && src.tax.commercialRegister) legal.push({ label: L("سجل تجاري", "Commercial reg."), value: src.tax.commercialRegister, mono: true });
 
-  const meta: MetaRow[] = [];
-  if (src.receiptNo) meta.push({ label: L("رقم الإيصال", "Receipt no"), value: src.receiptNo, mono: true });
-  if (src.refundOf) meta.push({ label: L("مرتجع من", "Return of"), value: src.refundOf, mono: true });
+  const on = (k: keyof typeof f) => f[k] !== false;
+  const all: MetaRow[] = [];
+  if (src.receiptNo && on("receiptNo")) all.push({ key: "receiptNo", label: L("رقم الإيصال", "Receipt no"), value: src.receiptNo, mono: true });
+  if (src.refundOf) all.push({ key: "receiptNo", label: L("مرتجع من", "Return of"), value: src.refundOf, mono: true });
   if (z?.buyer) {
-    meta.push({ label: L("المشتري", "Buyer"), value: z.buyer.name });
-    if (z.buyer.vatNumber) meta.push({ label: L("الرقم الضريبي للمشتري", "Buyer VAT No."), value: z.buyer.vatNumber, mono: true });
+    all.push({ key: "customer", label: L("المشتري", "Buyer"), value: z.buyer.name });
+    if (z.buyer.vatNumber) all.push({ key: "customer", label: L("الرقم الضريبي للمشتري", "Buyer VAT No."), value: z.buyer.vatNumber, mono: true });
   }
-  if (src.orderNumber != null) meta.push({ label: L("رقم الطلب", "Order"), value: `#${src.orderNumber}`, mono: true });
-  if (src.externalRef) meta.push({ label: L("كود طلب التطبيق", "App order code"), value: src.externalRef, mono: true });
-  meta.push({ label: L("التاريخ", "Date"), value: formatStamp(src.issuedAt), mono: true });
-  if (f.orderType) meta.push({ label: src.channelName ? L("قناة البيع", "Channel") : L("النوع", "Type"), value: src.channelName ? L(src.channelName, src.channelName) : MODE_LABEL[src.pickup ? "pickup" : src.mode] });
-  if (f.table && src.tableLabels.length) meta.push({ label: L("ترابيزة", "Table"), value: src.tableLabels.join(" + "), mono: true });
-  if (f.guests && src.guests && src.mode === "dine_in") meta.push({ label: L("أفراد", "Guests"), value: String(src.guests), mono: true });
-  if (f.cashier && src.cashier) meta.push({ label: L("الكاشير", "Cashier"), value: src.cashier });
-  if (src.invoice.showWaiter && src.waiter) meta.push({ label: L("الجرسون", "Waiter"), value: src.waiter });
-  if (f.customer && src.customer) {
-    meta.push({ label: L("العميل", "Customer"), value: src.customer.name || src.customer.phone });
-    if (src.customer.phone) meta.push({ label: L("موبايل", "Phone"), value: src.customer.phone, mono: true });
-    if (src.customer.address) meta.push({ label: L("العنوان", "Address"), value: src.customer.address });
+  if (src.orderNumber != null) all.push({ key: "orderNo", label: L("رقم الطلب", "Order"), value: `#${src.orderNumber}`, mono: true });
+  if (src.externalRef && on("appOrderCode")) all.push({ key: "appOrderCode", label: L("كود طلب التطبيق", "App order code"), value: src.externalRef, mono: true });
+  all.push({ key: "date", label: L("التاريخ", "Date"), value: formatStamp(src.issuedAt), mono: true });
+  if (f.orderType) all.push({ key: "orderType", label: src.channelName ? L("قناة البيع", "Channel") : L("النوع", "Type"), value: src.channelName ? L(src.channelName, src.channelName) : MODE_LABEL[src.pickup ? "pickup" : src.mode] });
+  if (f.table && src.tableLabels.length) all.push({ key: "table", label: L("ترابيزة", "Table"), value: src.tableLabels.join(" + "), mono: true });
+  if (f.guests && src.guests && src.mode === "dine_in") all.push({ key: "guests", label: L("أفراد", "Guests"), value: String(src.guests), mono: true });
+  if (f.cashier && src.cashier) all.push({ key: "cashier", label: L("الكاشير", "Cashier"), value: src.cashier });
+  if (src.invoice.showWaiter && src.waiter) all.push({ key: "waiter", label: L("الجرسون", "Waiter"), value: src.waiter });
+  if (f.customer && src.customer && (src.customer.name || src.customer.phone)) {
+    all.push({ key: "customer", label: L("العميل", "Customer"), value: src.customer.name || src.customer.phone });
+    if (src.customer.phone) all.push({ key: "phone", label: L("موبايل", "Phone"), value: src.customer.phone, mono: true });
   }
+  if (on("customerAddress") && src.customer?.address) all.push({ key: "address", label: L("العنوان", "Address"), value: src.customer.address });
+  if (on("driver") && src.driver) all.push({ key: "driver", label: L("الطيار", "Driver"), value: src.driver });
+  // ترتيب الحقول ومكانها
+  const lay = layoutOf(design);
+  const rank = (r: MetaRow) => lay.order.indexOf(r.key ?? "");
+  const sorted = all.map((r, i) => ({ r, i })).sort((a, b) => rank(a.r) - rank(b.r) || a.i - b.i).map((x) => x.r);
+  const meta = sorted.filter((r) => !lay.bottom.includes(r.key ?? ""));
+  const metaBottom = sorted.filter((r) => lay.bottom.includes(r.key ?? ""));
 
   const lines: LineRow[] = b.lines.map((l) => ({
     name: l.name,
@@ -167,6 +183,16 @@ export function buildReceiptModel(src: ReceiptSource): ReceiptModel {
     discount: l.discountTotal,
   }));
 
+  // الخصومات والعروض: each discounted line, then what was taken off the whole bill
+  const discountsBlock = (): ReceiptModel["discounts"] => {
+    if (!on("discounts") || !b.discount) return null;
+    // a discount on every line is a whole-bill discount spread over the lines: one row
+    const hit = b.lines.filter((l) => l.discountTotal > 0);
+    const rows = hit.length === b.lines.length ? [] : hit.map((l) => ({ label: l.name, amount: -l.discountTotal }));
+    const rest = b.discount - rows.reduce((a, r) => a - r.amount, 0);
+    if (rest > 0) rows.push({ label: L("خصم على الفاتورة", "Bill discount"), amount: -rest });
+    return { title: design.discountTitle?.trim() || "الخصومات والعروض", rows };
+  };
   const inclusive = src.tax.priceMode === "inclusive";
   const totals: TotalRow[] = [{ key: "subtotal", label: L("الإجمالي قبل الخصم", "Subtotal"), amount: b.gross }];
   if (b.discount) totals.push({ key: "discount", label: L("خصم", "Discount"), amount: -b.discount });
@@ -198,6 +224,8 @@ export function buildReceiptModel(src: ReceiptSource): ReceiptModel {
     },
     legal,
     meta,
+    metaBottom,
+    discounts: discountsBlock(),
     lines,
     totals,
     payments: f.payments ? src.payments.map((p) => ({ label: METHOD_LABEL[p.method], amount: p.amount, tip: p.tip })) : [],

@@ -2,7 +2,7 @@
 import { major } from "@/lib/money";
 import { priceItems } from "@/data/pricing";
 import { freezeBill } from "@/lib/receipt/bill";
-import type { OrderItem, OrderMode, TaxSettings } from "@/data/types";
+import type { Discount, OrderItem, OrderMode, TaxSettings } from "@/data/types";
 
 let n = 0;
 const line = (ar: string, en: string, price: number, qty: number, station: string, mods: [string, string, number][] = [], notes = ""): OrderItem => ({
@@ -18,8 +18,8 @@ export const SAMPLE_ITEMS: OrderItem[] = [
   line("في7 كولا دايت", "V7 Cola diet", 30, 3, "bar"),
 ];
 
-export function sampleBill(tax: TaxSettings, mode: OrderMode = "dine_in", deliveryFee = 0) {
-  const { bill, totals } = priceItems(SAMPLE_ITEMS, { mode, tax, deliveryFee: major(deliveryFee) });
+export function sampleBill(tax: TaxSettings, mode: OrderMode = "dine_in", deliveryFee = 0, discount: Discount | null = null) {
+  const { bill, totals } = priceItems(SAMPLE_ITEMS, { mode, tax, deliveryFee: major(deliveryFee), discount });
   return { bill: bill ? freezeBill(bill, SAMPLE_ITEMS) : null, totals };
 }
 

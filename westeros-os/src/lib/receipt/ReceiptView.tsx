@@ -195,6 +195,30 @@ export function ReceiptView({ model, className, style }: { model: ReceiptModel; 
     </div>
   ) : null;
 
+  // الخصومات والعروض and the data rows the design moved under the totals
+  const below: ReactNode = (
+    <>
+      {model.discounts ? (
+        <>
+          <div className="hr" />
+          <div className="title" style={{ fontSize: "1em" }}>{model.discounts.title}</div>
+          {model.discounts.rows.map((r, i) => (
+            <div className="row" key={i}>
+              <span><Bi v={r.label} lang={lang} inline /></span>
+              {M(r.amount, { bare: true })}
+            </div>
+          ))}
+        </>
+      ) : null}
+      {model.metaBottom?.length ? (
+        <>
+          <div className="hr" />
+          {rows(model.metaBottom)}
+        </>
+      ) : null}
+    </>
+  );
+
   const footer: ReactNode = model.footer.ar || model.footer.en ? (
     <div className="c" style={{ marginTop: "2mm", fontWeight: 600 }}>
       <Bi v={model.footer} lang={lang} />
@@ -260,6 +284,7 @@ export function ReceiptView({ model, className, style }: { model: ReceiptModel; 
             </tbody>
           </table>
           {totals}
+          {below}
           <div className="foot">
             {eta}
             <div style={{ flex: 1 }}>
@@ -306,6 +331,7 @@ export function ReceiptView({ model, className, style }: { model: ReceiptModel; 
           ))}
           <div className="hr" />
           {totals}
+          {below}
           {eta ? <div className="hr" /> : null}
           {eta}
           {promo}
