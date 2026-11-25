@@ -96,6 +96,9 @@ const LISTED: Area[] = [
   { id: "orders", screen: "cc-orders", label: "الطلبات", acts: ["view"] },
   { id: "kitchen", screen: "cc-kitchen", label: "شاشة المطبخ", acts: ["view"] },
 
+  { id: "radio.settings", screen: "cc-radio", label: "صلاحيات اللاسلكي والمجموعات", acts: ["view", "edit"] },
+  { id: "radio.log", screen: "cc-radio", label: "سجل المحادثات", acts: ["view"] },
+
   { id: "delivery", screen: "cc-delivery", label: "خدمة التوصيل", acts: ["view", "edit"], note: "التعديل: إضافة وتعديل وحذف طرق التوصيل والمندوبين." },
 ];
 

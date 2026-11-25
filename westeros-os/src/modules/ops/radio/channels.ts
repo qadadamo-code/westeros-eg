@@ -10,7 +10,7 @@ import type { Localized } from "@/data/types";
 import type { Role } from "@/auth/roles";
 import type { RadioChannelId, RadioClip } from "../types";
 
-export type GroupChannel = Exclude<RadioChannelId, `dm:${string}`>;
+export type GroupChannel = Exclude<RadioChannelId, `dm:${string}` | `grp:${string}`>;
 
 export interface ChannelDef {
   id: GroupChannel;
@@ -34,6 +34,19 @@ export const channelDef = (id: string) => CHANNELS.find((c) => c.id === id) ?? n
 
 export const isDm = (id: string): id is `dm:${string}` => id.startsWith("dm:");
 
+/**
+ * مجموعات المحادثة (Cost Control version, اللاسلكي settings): `grp:<id>` channels whose members are set by management.
+ * The runtime registers who is in each group; nothing else knows them.
+ */
+export const isGrp = (id: string): id is `grp:${string}` => id.startsWith("grp:");
+export const grpId = (groupId: string): `grp:${string}` => `grp:${groupId}`;
+let groupMembers: (channel: string) => string[] | null = () => null;
+export function setRadioGroups(groups: { id: string; memberIds: string[] }[]) {
+  const m = new Map<string, string[]>(groups.map((g) => [grpId(g.id), g.memberIds]));
+  groupMembers = (ch) => m.get(ch) ?? null;
+}
+export const inGroup = (channel: string, me: string | null | undefined) => !!me && !!groupMembers(channel)?.includes(me);
+
 /** Stable 1:1 channel id for two members (order-independent). */
 export function dmId(a: string, b: string): `dm:${string}` {
   const [x, y] = [a, b].sort();
@@ -49,6 +62,7 @@ export function dmPeer(id: string, me: string): string | null {
 export function canJoin(role: Role | null, channel: string, me?: string | null): boolean {
   if (!role) return false;
   if (isDm(channel)) return !!me && dmPeer(channel, me) !== null && RESTAURANT_ROLES.includes(role);
+  if (isGrp(channel)) return inGroup(channel, me);
   return !!channelDef(channel)?.members.includes(role);
 }
 
@@ -64,6 +78,7 @@ export function defaultMonitored(role: Role | null): GroupChannel[] {
 export function isForMe(clip: Pick<RadioClip, "channel" | "fromId">, me: string, role: Role | null, monitored: string[]): boolean {
   if (clip.fromId === me) return false;
   if (isDm(clip.channel)) return dmPeer(clip.channel, me) !== null;
+  if (isGrp(clip.channel)) return inGroup(clip.channel, me);
   return canJoin(role, clip.channel) && monitored.includes(clip.channel);
 }
 
@@ -72,7 +87,7 @@ export function unreadCounts(clips: Pick<RadioClip, "channel" | "fromId" | "at">
   const out: Record<string, number> = {};
   for (const c of clips) {
     if (c.fromId === me) continue;
-    if (isDm(c.channel) ? dmPeer(c.channel, me) === null : !canJoin(role, c.channel)) continue;
+    if (isDm(c.channel) ? dmPeer(c.channel, me) === null : !canJoin(role, c.channel, me)) continue;
     const lr = lastRead[c.channel];
     if (lr && c.at <= lr) continue;
     out[c.channel] = (out[c.channel] ?? 0) + 1;

@@ -18,6 +18,7 @@ import { useOpsSettings } from "./settings";
 import type { RadioChannelId } from "./types";
 import { useAlertToasts } from "./alerts/useAlerts";
 import { recorderSupported } from "./radio/recorder";
+import { CcRadio } from "@/modules/cc/talk/runtime";
 
 installDiagnostics();
 
@@ -101,8 +102,8 @@ export function OpsShellExtras() {
   if (!staff || !restaurant || role === "platform_admin") return null;
   return (
     <>
-      {/* اللاسلكي is the old system's (Saqr 2026-11-25 asked why the mic shows): the Cost Control version has no radio */}
-      {COST_CONTROL_ONLY ? null : <RadioRuntime />}
+      {/* the Cost Control version: اللاسلكي only for employees allowed in الإعدادات ← اللاسلكي (Saqr 2026-11-25) */}
+      {COST_CONTROL_ONLY ? <CcRadio /> : <RadioRuntime />}
       <AlertToasts />
       {COST_CONTROL_ONLY ? null : <PttFab />}
     </>

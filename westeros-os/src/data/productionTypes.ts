@@ -233,6 +233,8 @@ export interface MfgLists {
   /** المنيو: الخيارات الجانبية (زي Side Options في Bonbell), the names a group's options are picked from; price in pounds */
   /** عدد الوجبات في تصنيع صنف: the ready buttons (Saqr 2026-11-25), default 0.5 · 1 · 2 · 4 · 8 */
   mealOptions?: number[];
+  /** اللاسلكي (Saqr 2026-11-25): who may use it, with whom, and the group chats */
+  radio?: RadioSetup;
   sideOptions?: { id: string; name: string; nameAr?: string; price: number; available?: boolean; menuItemId?: string | null }[];
   /** وحدة التخزين لمواد الخام */
   storageUnits: string[];
@@ -318,4 +320,10 @@ export interface ChecklistRun extends Row {
   startedByName: string;
   startedAt: string;
   completedAt: string | null;
+}
+
+/** اللاسلكي: per employee (membership id) allowed or not and the people they may talk to; named groups. */
+export interface RadioSetup {
+  access: Record<string, { on: boolean; peers: "all" | string[] }>;
+  groups: { id: string; name: string; memberIds: string[] }[];
 }

@@ -54,7 +54,7 @@ export interface PeopleCount extends TenantRow {
 
 /* ───────────── walkie-talkie ───────────── */
 
-export type RadioChannelId = "all" | "floor" | "kitchen" | "delivery" | "managers" | `dm:${string}`;
+export type RadioChannelId = "all" | "floor" | "kitchen" | "delivery" | "managers" | `dm:${string}` | `grp:${string}`;
 
 export interface RadioClip extends TenantRow {
   branchId: string | null;

@@ -140,6 +140,7 @@ export const SCREENS: { id: string; label: string }[] = [
   { id: "cc-pos", label: "الكاشير" },
   { id: "cc-orders", label: "الطلبات" },
   { id: "cc-kitchen", label: "شاشة المطبخ" },
+  { id: "cc-radio", label: "اللاسلكي" },
 ];
 /** the screens of the till: a type that opens only these (and the summary) works at the cashier level */
 export const POS_SCREENS = ["cc-pos", "cc-orders", "cc-kitchen"];
