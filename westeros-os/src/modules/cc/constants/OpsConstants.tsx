@@ -63,7 +63,7 @@ function Cashier({ setup, save, readOnly }: Props) {
             <Input label="الاسم" defaultValue={p.name} disabled={readOnly} onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== p.name) setPrinter(p.id, { name: v }); }} />
             <Input label="IP" dir="ltr" placeholder="192.168.1.50" defaultValue={p.ip ?? ""} disabled={readOnly} onBlur={(e) => { const v = e.target.value.trim(); if (v !== (p.ip ?? "")) setPrinter(p.id, { ip: v }); }} />
             <Select label="النوع" value={p.kind ?? "receipt"} disabled={readOnly} onChange={(e) => setPrinter(p.id, { kind: e.target.value as PrinterDef["kind"] })} options={[{ value: "receipt", label: "فواتير وطلبيات" }, { value: "label", label: "ستيكرات" }]} />
-            <Select label="الورق" value={p.paper} disabled={readOnly} onChange={(e) => setPrinter(p.id, { paper: e.target.value as PrinterDef["paper"] })} options={[{ value: "80", label: "80 مم" }, { value: "58", label: "58 مم" }]} />
+            {p.kind === "label" ? <Input label="الورق" value="مقاس الستيكر" disabled hint="بيتحدد وقت طباعة الستيكر" /> : <Select label="الورق" value={p.paper} disabled={readOnly} onChange={(e) => setPrinter(p.id, { paper: e.target.value as PrinterDef["paper"] })} options={[{ value: "80", label: "80 مم" }, { value: "58", label: "58 مم" }]} />}
             {readOnly ? <span /> : <IconButton label="حذف الطابعة" onClick={() => setDel(p)}><Trash2 /></IconButton>}
           </div>
         ))}
