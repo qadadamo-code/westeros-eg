@@ -48,8 +48,8 @@ export async function deductForItems(db: Db, lines: Line[], opts: { trigger: "se
     const done = new Set((await db.list("stockMoves", { where: { refType: "order_item", refId: live.map((l) => l.id) } })).map((m) => m.refId));
     const todo = live.filter((l) => !done.has(l.id));
     if (!todo.length) return 0;
-    const [menuItems, stockItems, recipes, locations] = await Promise.all([db.list("menuItems"), db.list("stockItems"), db.list("recipes"), db.list("storageLocations")]);
-    const ctx = explodeContext(menuItems, stockItems, recipes);
+    const [menuItems, stockItems, recipes, locations, modifiers] = await Promise.all([db.list("menuItems"), db.list("stockItems"), db.list("recipes"), db.list("storageLocations"), db.list("modifiers")]);
+    const ctx = explodeContext(menuItems, stockItems, recipes, modifiers);
     const orders = new Map((await db.list("orders", { where: { id: [...new Set(todo.map((l) => l.orderId))] } })).map((o) => [o.id, o]));
     const groupId = uuid();
     const inputs: MoveInput[] = [];

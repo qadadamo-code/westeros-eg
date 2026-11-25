@@ -15,9 +15,11 @@ import { nextCode } from "../menu/codes";
 import { useAutoCodes } from "../menu/useAutoCodes";
 import { mainBranchOf, onMenuOf, sameItem } from "../menu/menuBranch";
 import { useCc, type Cc } from "../useCc";
+import type { SideOpt } from "../menu/sideOptions";
 import { BulkBar, useSelection, type DeleteResult } from "./Bulk";
 
 const money = (u: number) => formatMoney(u, { lang: "ar" });
+const SIDES = "__sides";
 type CostLine = { itemId: string; qty: number; use?: "dine" | "pickup" };
 /** تكلفة محلي / تكلفة استلام (Saqr 2026-11-25): the same components, with the packaging of that kind of order only */
 const linesCost = (lines: CostLine[], unitCost: (id: string) => number, kind: "dine" | "pickup") =>
@@ -51,6 +53,15 @@ export default function SaleItems() {
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("");
   const [edit, setEdit] = useState<MenuItem | "new" | null>(null);
+  const [editSide, setEditSide] = useState<SideOpt | null>(null);
+  // الإضافات الجانبية (Saqr 2026-11-25): every side option with a price, straight from المنيو > الخيارات الجانبية, so its
+  // components and cost are set here. An option that stands for a menu item uses that item's recipe, so it isn't listed.
+  const sides = (cc.lists.sideOptions ?? []).filter((o) => o.price > 0 && !o.menuItemId);
+  const sideRecipeOf = (id: string) => recipes.find((r) => r.ownerType === "modifier" && r.ownerId === id && !r.scopeItemId) ?? null;
+  const sideRows = useMemo(() => {
+    const n = q.trim().toLowerCase();
+    return (cat && cat !== SIDES ? [] : sides).filter((o) => searchHit(n, o.nameAr || o.name, o.name));
+  }, [sides, q, cat]); // eslint-disable-line react-hooks/exhaustive-deps
   const area = useArea();
   const manage = can("menu.edit");
   useAutoCodes(manage, allCats, allItems);
@@ -60,7 +71,7 @@ export default function SaleItems() {
   const costOf = (id: string, kind: "dine" | "pickup" = "dine") => linesCost(recipeOf(id)?.lines ?? [], cc.prod.unitCost, kind);
   const rows = useMemo(() => {
     const n = q.trim().toLowerCase();
-    return items.filter((i) => (!cat || i.categoryId === cat) && searchHit(n, i.name.ar, i.sku));
+    return cat === SIDES ? [] : items.filter((i) => (!cat || i.categoryId === cat) && searchHit(n, i.name.ar, i.sku));
   }, [items, q, cat]);
   const sel = useSelection(rows, (i) => i.id);
   const move = async (categoryId: string) => {
@@ -94,11 +105,19 @@ export default function SaleItems() {
     { key: "cost", header: "تكلفة محلي", align: "end", cell: (i) => (recipeOf(i.id)?.lines.length ? <span className="num font-semibold">{money(costOf(i.id, "dine"))}</span> : <span className="text-faint">—</span>) },
     { key: "costOut", header: "تكلفة استلام", align: "end", cell: (i) => (recipeOf(i.id)?.lines.length ? <span className="num font-semibold">{money(costOf(i.id, "pickup"))}</span> : <span className="text-faint">—</span>) },
   ];
+  const sideCost = (id: string, kind: "dine" | "pickup") => linesCost(sideRecipeOf(id)?.lines ?? [], cc.prod.unitCost, kind);
+  const sideColumns: Column<SideOpt>[] = [
+    { key: "name", header: "اسم الإضافة", cell: (o) => <span className="font-semibold">{o.nameAr || o.name}</span> },
+    { key: "price", header: "سعر البيع", cell: (o) => <span className="num">{money(Math.round(o.price * 100_000))}</span> },
+    { key: "comp", header: "المكونات", hideOnMobile: true, cell: (o) => { const n = sideRecipeOf(o.id)?.lines.length ?? 0; return n ? <span className="num">{n} مكون</span> : <span className="text-faint">—</span>; } },
+    { key: "cost", header: "تكلفة محلي", align: "end", cell: (o) => (sideRecipeOf(o.id)?.lines.length ? <span className="num font-semibold">{money(sideCost(o.id, "dine"))}</span> : <span className="text-faint">—</span>) },
+    { key: "costOut", header: "تكلفة استلام", align: "end", cell: (o) => (sideRecipeOf(o.id)?.lines.length ? <span className="num font-semibold">{money(sideCost(o.id, "pickup"))}</span> : <span className="text-faint">—</span>) },
+  ];
   return (
     <div className="grid gap-4">
       <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_200px_auto_auto]">
         <Input icon={<Search />} placeholder="ابحث باسم الصنف أو الكود" value={q} onChange={(e) => setQ(e.target.value)} />
-        <Select value={cat} onChange={(e) => setCat(e.target.value)} options={[{ value: "", label: "كل الفئات" }, ...cats.map((c) => ({ value: c.id, label: c.name.ar }))]} />
+        <Select value={cat} onChange={(e) => setCat(e.target.value)} options={[{ value: "", label: "كل الفئات" }, ...cats.map((c) => ({ value: c.id, label: c.name.ar })), ...(sides.length ? [{ value: SIDES, label: "الإضافات الجانبية" }] : [])]} />
         <ExportButton file="أصناف البيع" head={["كود الصنف", "اسم الصنف", "فئة الصنف", "عدد المكونات", "تكلفة محلي", "تكلفة استلام"]} rows={() => rows.map((i) => [i.sku ?? "", i.name.ar, catName(i.categoryId), recipeOf(i.id)?.lines.length ?? 0, costOf(i.id, "dine") / 100_000, costOf(i.id, "pickup") / 100_000])} />
         {manage && area.add ? <Button icon={<Plus />} disabled={!cats.length} onClick={() => setEdit("new")}>اضافة صنف</Button> : null}
       </div>
@@ -106,6 +125,16 @@ export default function SaleItems() {
       <Card className="overflow-hidden">
         <Table columns={columns} rows={rows} rowKey={(i) => i.id} dense onRowClick={(i) => setEdit(i)} empty={<EmptyState compact icon={<UtensilsCrossed />} title="لا توجد أصناف بيع" body={cats.length ? undefined : "عرّف فئات أصناف البيع من ثوابت النظام أولاً"} />} />
       </Card>
+      {sideRows.length ? (
+        <div className="grid gap-2">
+          <h3 className="font-sans text-[15px] font-bold">الإضافات الجانبية <span className="num text-[13px] font-normal text-muted">({sideRows.length})</span></h3>
+          <p className="text-[12.5px] text-muted">الإضافات اللي إلها سعر في المنيو. الاسم والسعر بيتعدلوا من المنيو &gt; الخيارات الجانبية، والمكونات والتكلفة من هنا.</p>
+          <Card className="overflow-hidden">
+            <Table columns={sideColumns} rows={sideRows} rowKey={(o) => o.id} dense onRowClick={(o) => setEditSide(o)} />
+          </Card>
+        </div>
+      ) : null}
+      {editSide ? <SideDialog key={editSide.id} opt={editSide} recipe={sideRecipeOf(editSide.id)} cc={cc} readOnly={!manage || !area.edit} onClose={() => setEditSide(null)} /> : null}
       {edit ? <SaleDialog key={edit === "new" ? "new" : edit.id} item={edit === "new" ? null : edit} recipe={edit === "new" ? null : recipeOf(edit.id)} cats={cats} items={items} cc={cc} readOnly={!manage || (edit === "new" ? !area.add : !area.edit)} onClose={() => setEdit(null)} /> : null}
     </div>
   );
@@ -174,6 +203,53 @@ function SaleDialog({ item, recipe, cats, items, cc, readOnly, onClose }: { item
           </div>
         </div>
         <LinesEditor readOnly={readOnly} title="مكونات الصنف" hint="من المواد الخام والمنتجات المصنعة ذات الوصفة الرئيسية" lines={lines} onChange={setLines} items={choices} itemById={prod.itemById} unitCost={prod.unitCost} uses />
+      </fieldset>
+    </Dialog>
+  );
+}
+
+/** a side option's components: a recipe owned by the side option (owner_type modifier, owner_id = the option's id) */
+function SideDialog({ opt, recipe, cc, readOnly, onClose }: { opt: SideOpt; recipe: Recipe | null; cc: Cc; readOnly: boolean; onClose: () => void }) {
+  const db = useDb();
+  const { toast } = useToast();
+  const prod = cc.prod;
+  const [lines, setLines] = useState<MfgRecipeLine[]>(() => (recipe?.lines ?? []).map((l) => ({ itemId: l.itemId, qty: l.qty, ...(l.use ? { use: l.use } : {}) })));
+  const [busy, setBusy] = useState(false);
+  const choices = useMemo(() => {
+    const made = new Set(prod.products.filter((p) => p.active && p.recipeType === "main").map((p) => p.stockItemId));
+    const onRecipe = new Set((recipe?.lines ?? []).map((l) => l.itemId));
+    return prod.items.filter((i) => (i.active && (i.kind === "raw" || made.has(i.id))) || onRecipe.has(i.id));
+  }, [prod.products, prod.items, recipe]);
+  const save = async () => {
+    setBusy(true);
+    try {
+      const clean = lines.filter((l) => l.qty > 0);
+      if (recipe) await db.update("recipes", recipe.id, { lines: clean, updatedBy: db.actorId });
+      else if (clean.length) await db.insert("recipes", { ownerType: "modifier", ownerId: opt.id, scopeItemId: null, lines: clean, yieldQty: 1, method: "", updatedBy: db.actorId });
+      toast({ tone: "success", title: "تم حفظ مكونات الإضافة" });
+      onClose();
+    } catch (e) {
+      toast({ tone: "error", title: "تعذر الحفظ", description: String((e as Error).message ?? e) });
+    } finally {
+      setBusy(false);
+    }
+  };
+  const ok = lines.filter((l) => l.qty > 0);
+  return (
+    <Dialog open onClose={onClose} size="xl" title={`إضافة جانبية: ${opt.nameAr || opt.name}`}
+      footer={<div className="flex justify-end gap-2"><Button variant="ghost" onClick={onClose}>{readOnly ? "إغلاق" : "إلغاء"}</Button>{readOnly ? null : <Button loading={busy} onClick={save}>حفظ</Button>}</div>}>
+      <fieldset disabled={readOnly} className="grid gap-4">
+        <div className="grid gap-2 rounded-xl border border-line p-3 text-[13.5px] sm:grid-cols-3">
+          <Info label="الاسم">{opt.nameAr || opt.name}</Info>
+          <Info label="بالإنجليزي"><span dir="ltr">{opt.name}</span></Info>
+          <Info label="سعر البيع"><span className="num">{money(Math.round(opt.price * 100_000))}</span></Info>
+          <p className="text-[12px] text-muted sm:col-span-3">الاسم والسعر بيتعدلوا من المنيو &gt; الخيارات الجانبية.</p>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Result label="تكلفة محلي">{money(linesCost(ok, prod.unitCost, "dine"))}</Result>
+          <Result label="تكلفة استلام">{money(linesCost(ok, prod.unitCost, "pickup"))}</Result>
+        </div>
+        <LinesEditor readOnly={readOnly} title="مكونات الإضافة" hint="من المواد الخام والمنتجات المصنعة ذات الوصفة الرئيسية" lines={lines} onChange={setLines} items={choices} itemById={prod.itemById} unitCost={prod.unitCost} uses />
       </fieldset>
     </Dialog>
   );

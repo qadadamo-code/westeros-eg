@@ -329,7 +329,9 @@ function ItemDetail({ item, cats, groups, mods, manage, canDelete, onEdit, onClo
         toast({ tone: "success", title: "الصنف اتباع قبل كده، فاتخفى بدل ما يتحذف" });
       } else {
         await db.remove("menuItems", item.id);
-        toast({ tone: "success", title: "اتحذف الصنف" });
+        // أصناف البيع في التصنيع هي نفس أصناف المنيو: the item leaves there too, with its components (Saqr 2026-11-25)
+        for (const r of await db.list("recipes", { where: { ownerType: "menu_item", ownerId: item.id } })) await db.remove("recipes", r.id);
+        toast({ tone: "success", title: "اتحذف الصنف من المنيو ومن أصناف البيع" });
       }
       onClose();
     } catch (e) {
@@ -411,7 +413,7 @@ function ItemDetail({ item, cats, groups, mods, manage, canDelete, onEdit, onClo
       <Confirm open={!!drop} onClose={() => setDrop(null)} onConfirm={() => drop && removeGroup(drop)} loading={busy} danger title="حذف المجموعة؟" confirmLabel="حذف"
         description={drop ? `هتتشال "${drop.name.ar}" وخياراتها من الصنف ده. الطلبات القديمة بتفضل زي ما هي.` : undefined} />
       <Confirm open={dropItem} onClose={() => setDropItem(false)} onConfirm={removeItem} loading={busy} danger title="حذف الصنف؟" confirmLabel="حذف"
-        description="لو الصنف اتباع قبل كده هيتخفى بس، علشان الطلبات القديمة." />
+        description="الصنف هيتحذف من المنيو ومن أصناف البيع في التصنيع، ومعاه مكوناته وتكلفته. لو الصنف اتباع قبل كده هيتخفى بس، علشان الطلبات القديمة." />
     </Dialog>
   );
 }

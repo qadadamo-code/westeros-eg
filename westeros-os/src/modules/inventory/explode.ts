@@ -7,7 +7,7 @@
  *   + combos: each component's recipe × component qty
  * Trim yield and cooking loss are grossed up (costing.grossQty). Prep items stay prep items (they are stocked).
  */
-import type { MenuItem, OrderItem, OrderMode, Recipe, StockItem } from "@/data/types";
+import type { MenuItem, Modifier, OrderItem, OrderMode, Recipe, StockItem } from "@/data/types";
 import { grossQty } from "./costing";
 import { q3 } from "./units";
 import { COMBO_GROUP } from "@/modules/menu/sold";
@@ -17,12 +17,15 @@ export interface ExplodeContext {
   stockItems: Map<string, StockItem>;
   /** recipeKey(ownerType, ownerId, scopeItemId?) → recipe */
   recipes: Map<string, Recipe>;
+  /** modifier id → its side option id: a side option's own recipe (أصناف البيع > الإضافات الجانبية) serves every item it is on */
+  sideOf?: Map<string, string>;
 }
 
 export const recipeKey = (t: Recipe["ownerType"], id: string, scope?: string | null) => (scope ? `${t}:${id}@${scope}` : `${t}:${id}`);
 
-export function explodeContext(menuItems: MenuItem[], stockItems: StockItem[], recipes: Recipe[]): ExplodeContext {
+export function explodeContext(menuItems: MenuItem[], stockItems: StockItem[], recipes: Recipe[], modifiers: Pick<Modifier, "id" | "sideOptionId">[] = []): ExplodeContext {
   return {
+    sideOf: new Map(modifiers.filter((m) => m.sideOptionId).map((m) => [m.id, m.sideOptionId as string])),
     menuItems: new Map(menuItems.map((m) => [m.id, m])),
     stockItems: new Map(stockItems.map((s) => [s.id, s])),
     recipes: new Map(recipes.map((r) => [recipeKey(r.ownerType, r.ownerId, r.scopeItemId), r])),
@@ -30,7 +33,10 @@ export function explodeContext(menuItems: MenuItem[], stockItems: StockItem[], r
 }
 
 /** The modifier recipe that applies on this menu item. */
-export const modifierRecipe = (ctx: Pick<ExplodeContext, "recipes">, modifierId: string, itemId: string) => ctx.recipes.get(recipeKey("modifier", modifierId, itemId)) ?? ctx.recipes.get(recipeKey("modifier", modifierId));
+export const modifierRecipe = (ctx: Pick<ExplodeContext, "recipes" | "sideOf">, modifierId: string, itemId: string) => {
+  const side = ctx.sideOf?.get(modifierId);
+  return ctx.recipes.get(recipeKey("modifier", modifierId, itemId)) ?? ctx.recipes.get(recipeKey("modifier", modifierId)) ?? (side ? ctx.recipes.get(recipeKey("modifier", side)) : undefined);
+};
 
 /** محلي / استلام: a line marked for one kind of order is skipped on the other; with no mode every line counts */
 export const lineApplies = (l: { use?: "dine" | "pickup" }, mode?: OrderMode | null) => !l.use || !mode || (l.use === "dine" ? mode === "dine_in" : mode !== "dine_in");
