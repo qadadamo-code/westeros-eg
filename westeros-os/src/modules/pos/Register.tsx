@@ -42,6 +42,9 @@ import { closeCheck, takePayment, voidPayment } from "./sale";
 import { PromoDialog } from "@/modules/marketing/pos/PromoDialog";
 import { redeemGiftCard, refundGiftCard } from "@/modules/marketing/ops";
 import { useMenu, useReceiptSourceBuilder, useSettings, useShift, useStaffNames } from "./usePos";
+import { useBranchStock } from "./stockInfo";
+import { memberCan } from "@/modules/cc/perms";
+import { listsOf } from "@/modules/cc/lib";
 
 const ACTIVE_KEY = "sufra-os.pos.active";
 type Kind = "dine_in" | "takeaway" | "pickup" | "delivery";
@@ -260,8 +263,13 @@ export default function Register() {
     );
   };
 
+  const mfgSettings = useLive("mfgSettings").data[0] ?? null;
+  const stockOf = useBranchStock(session.branchId, menu.items);
   const pick = (item: MenuItem, { forceSheet }: { forceSheet: boolean }) => {
     if (!item.available) return toast({ title: L("الصنف ده خلصان النهارده", "This item is 86'd today"), tone: "warn" });
+    // Saqr 2026-11-25: an item short in the branch stock sells only with the permission
+    if (stockOf(item)?.short && !memberCan(session.staff, listsOf(mfgSettings), "pos.sellOut"))
+      return toast({ title: L("الصنف مش متوفر في الفرع", "Not in stock at this branch"), description: L("مكوناته مش كفاية في مخزون الفرع، والبيع محتاج صلاحية \"البيع لمنتجات غير متوفرة\".", "Needs the sell-out permission."), tone: "warn" });
     if (!onSchedule(item)) return toast({ title: L("الصنف ده مش متاح دلوقتي", "Not served at this hour"), description: scheduleLabel(item.schedule, lang), tone: "warn" });
     // an item with option groups (size, combo, extras, notes) opens them, so the cashier sees each option and its price
     const hasGroups = item.modifierGroupIds.some((g) => menu.groups.some((x) => x.id === g) && menu.mods.some((m) => m.groupId === g && m.available));
@@ -650,7 +658,7 @@ export default function Register() {
 
       <div className="flex min-h-0 flex-1">
         <div className="@container flex min-h-0 min-w-0 flex-1 flex-col">
-          <MenuPanel ref={searchRef} cats={menu.cats} items={channelItems} counts={counts} onPick={pick} fame={fame} />
+          <MenuPanel ref={searchRef} cats={menu.cats} items={channelItems} counts={counts} onPick={pick} fame={fame} stock={stockOf} />
         </div>
         {!isMobile ? <aside aria-label={L("الشيك", "Check")} data-pos-ticket className="w-[340px] shrink-0 border-s border-line lg:w-[380px] 2xl:w-[420px]">{ticketPanel}</aside> : null}
       </div>
@@ -725,8 +733,8 @@ export default function Register() {
           setDlg(null);
           pendingItem.current = null;
         }}
-        tables={tables}
-        zones={zones}
+        tables={session.branchId ? tables.filter((t) => t.branchId === session.branchId) : tables}
+        zones={session.branchId ? zones.filter((z) => z.branchId === session.branchId) : zones}
         checks={openChecks}
         current={tableIds[0] ?? null}
         title={dlg === "moveTable" ? L("انقل الشيك لترابيزة", "Move check to table") : dlg === "itemsToTable" ? L("انقل الأصناف لترابيزة", "Move lines to table") : L("اختار الترابيزة", "Pick a table")}

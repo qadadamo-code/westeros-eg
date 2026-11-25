@@ -1,7 +1,7 @@
 /** Category rail + search + item grid. Tap = add (or open modifiers), long-press/right-click = always open the sheet. */
 import { forwardRef, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Ban, Leaf, Percent, Search, Sparkles, Star, X, TrendingUp } from "lucide-react";
+import { Ban, Leaf, SlidersHorizontal, Percent, Search, Sparkles, Star, X, TrendingUp } from "lucide-react";
 import type { Fame } from "@/modules/menu/sold";
 import type { MenuCategory, MenuItem } from "@/data/types";
 import { useT } from "@/i18n/i18n";
@@ -11,6 +11,7 @@ import { formatMoney } from "@/lib/money";
 import { spring, useReduced } from "@/ui";
 import { menuPhoto } from "@/data/westeros/menuImages";
 import { catIcon, Chip } from "./bits";
+import { qtyLabel, type StockInfo } from "../stockInfo";
 
 export interface MenuPanelProps {
   cats: MenuCategory[];
@@ -19,11 +20,15 @@ export interface MenuPanelProps {
   onPick: (item: MenuItem, opts: { forceSheet: boolean }) => void;
   /** الأكثر طلباً / تريند, from the last 30 days of sales */
   fame?: Map<string, Fame>;
+  /** مكونات الصنف والمتاح في الفرع (hover / long-press), null = no recipe */
+  stock?: (item: MenuItem) => StockInfo | null;
 }
+type Peek = { item: MenuItem; rect: DOMRect; pinned: boolean };
 
-export const MenuPanel = forwardRef<HTMLInputElement, MenuPanelProps>(function MenuPanel({ cats, items, counts, onPick, fame }, searchRef) {
+export const MenuPanel = forwardRef<HTMLInputElement, MenuPanelProps>(function MenuPanel({ cats, items, counts, onPick, fame, stock }, searchRef) {
   const { L, loc, lang } = useT();
   const reduced = useReduced();
+  const [peek, setPeek] = useState<Peek | null>(null);
   const [cat, setCat] = useState<string | "all" | "discounts">("all");
   const discounted = useMemo(() => items.filter((i) => (i.discount ?? 0) > 0), [items]);
   const [q, setQ] = useState("");
@@ -95,17 +100,59 @@ export const MenuPanel = forwardRef<HTMLInputElement, MenuPanelProps>(function M
           <motion.ul layout={!reduced} className="grid grid-cols-2 gap-2.5 @lg:grid-cols-3 @3xl:grid-cols-4 @6xl:grid-cols-5" aria-label={L("الأصناف", "Items")}>
             <AnimatePresence initial={false}>
               {shown.map((it) => (
-                <ItemTile key={it.id} item={it} cat={catById.get(it.categoryId)} count={counts.get(it.id) ?? 0} onPick={onPick} lang={lang} fame={fame?.get(it.id)} />
+                <ItemTile key={it.id} item={it} cat={catById.get(it.categoryId)} count={counts.get(it.id) ?? 0} onPick={onPick} lang={lang} fame={fame?.get(it.id)} info={stock ? stock(it) : undefined} onPeek={stock ? setPeek : undefined} />
               ))}
             </AnimatePresence>
           </motion.ul>
         )}
       </div>
+      {peek && stock ? <PeekCard peek={peek} info={stock(peek.item)} onClose={() => setPeek(null)} onOptions={() => (setPeek(null), onPick(peek.item, { forceSheet: true }))} /> : null}
     </section>
   );
 });
 
-function ItemTile({ item, cat, count, onPick, lang, fame }: { item: MenuItem; cat?: MenuCategory; count: number; onPick: MenuPanelProps["onPick"]; lang: "ar" | "en"; fame?: Fame }) {
+/** the ingredients card: follows the mouse over a tile, or stays after a long press until a tap outside */
+function PeekCard({ peek, info, onClose, onOptions }: { peek: Peek; info: StockInfo | null; onClose: () => void; onOptions: () => void }) {
+  const { L, loc } = useT();
+  const W = 272;
+  const vw = typeof window === "undefined" ? 1024 : window.innerWidth;
+  const vh = typeof window === "undefined" ? 768 : window.innerHeight;
+  const left = Math.min(Math.max(8, peek.rect.left + peek.rect.width / 2 - W / 2), vw - W - 8);
+  const below = peek.rect.bottom + 8;
+  const style = below + 260 < vh ? { left, top: below } : { left, bottom: Math.max(8, vh - peek.rect.top + 8) };
+  return (
+    <>
+      {peek.pinned ? <button type="button" aria-label={L("اقفل", "Close")} className="fixed inset-0 z-40 cursor-default" onClick={onClose} /> : null}
+      <div role="tooltip" className={cn("fixed z-50 grid gap-2 rounded-2xl border border-line bg-surface p-3 text-[13px] shadow-sf-lg", !peek.pinned && "pointer-events-none")} style={{ width: W, ...style }}>
+        <div className="flex items-start justify-between gap-2">
+          <span className="font-bold leading-snug">{loc(peek.item.name)}</span>
+          {info ? (
+            info.short ? <span className="shrink-0 rounded-full bg-warn-soft px-2 py-0.5 text-[11.5px] font-bold text-warn">{L("مش متوفر", "Short")}</span>
+              : <span className="num shrink-0 rounded-full bg-ok/10 px-2 py-0.5 text-[11.5px] font-bold text-ok">{L(`يكفي ${info.portions}`, `${info.portions} left`)}</span>
+          ) : null}
+        </div>
+        {info ? (
+          <ul className="grid gap-1">
+            <li className="flex justify-between text-[11.5px] text-muted"><span>{L("المكون", "Ingredient")}</span><span>{L("للحبة · المتاح بالفرع", "per item · in branch")}</span></li>
+            {info.lines.map((l) => (
+              <li key={l.itemId} className="flex items-baseline justify-between gap-2">
+                <span className="truncate">{l.name}</span>
+                <span className={cn("num shrink-0 text-[12.5px]", l.have < l.need ? "font-bold text-danger" : "text-ink-2")}>{qtyLabel(l.need, l.unit)} · {qtyLabel(l.have, l.unit)}</span>
+              </li>
+            ))}
+          </ul>
+        ) : <p className="text-muted">{L("الصنف ماله وصفة، فالمكونات والمتاح مش محسوبين.", "No recipe, so stock isn't tracked.")}</p>}
+        {peek.pinned ? (
+          <button type="button" onClick={onOptions} className="mt-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-line py-2 font-semibold text-ink-2 hover:bg-surface-2 [&_svg]:size-4">
+            <SlidersHorizontal /> {L("الخيارات والملاحظات", "Options & notes")}
+          </button>
+        ) : null}
+      </div>
+    </>
+  );
+}
+
+function ItemTile({ item, cat, count, onPick, lang, fame, info, onPeek }: { item: MenuItem; cat?: MenuCategory; count: number; onPick: MenuPanelProps["onPick"]; lang: "ar" | "en"; fame?: Fame; info?: StockInfo | null; onPeek?: (p: Peek | null) => void }) {
   const { L, loc } = useT();
   const reduced = useReduced();
   const Icon = catIcon(cat?.icon);
@@ -115,14 +162,29 @@ function ItemTile({ item, cat, count, onPick, lang, fame }: { item: MenuItem; ca
   const off = !item.available;
   const [broken, setBroken] = useState(false);
   const photo = broken ? undefined : item.imageUrl ?? menuPhoto(item.name.ar);
-  const start = () => {
+  const hover = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const start = (e: React.PointerEvent<HTMLButtonElement>) => {
     long.current = false;
+    const el = e.currentTarget;
+    const touch = e.pointerType !== "mouse";
     press.current = setTimeout(() => {
       long.current = true;
-      onPick(item, { forceSheet: true });
+      // Saqr 2026-11-25: a long press shows the ingredients and what the branch has (the card has the options button)
+      if (touch && onPeek) onPeek({ item, rect: el.getBoundingClientRect(), pinned: true });
+      else onPick(item, { forceSheet: true });
     }, 480);
   };
   const end = () => press.current && clearTimeout(press.current);
+  const enter = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (e.pointerType !== "mouse" || !onPeek) return;
+    const el = e.currentTarget;
+    hover.current = setTimeout(() => onPeek({ item, rect: el.getBoundingClientRect(), pinned: false }), 350);
+  };
+  const leave = () => {
+    end();
+    if (hover.current) clearTimeout(hover.current);
+    if (onPeek) onPeek(null);
+  };
   return (
     <motion.li layout={!reduced} initial={reduced ? false : { opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }} transition={spring.snappy}>
       <motion.button
@@ -132,7 +194,8 @@ function ItemTile({ item, cat, count, onPick, lang, fame }: { item: MenuItem; ca
         transition={spring.snappy}
         onPointerDown={start}
         onPointerUp={end}
-        onPointerLeave={end}
+        onPointerEnter={enter}
+        onPointerLeave={leave}
         onClick={() => {
           if (long.current) return;
           onPick(item, { forceSheet: false });
@@ -171,6 +234,9 @@ function ItemTile({ item, cat, count, onPick, lang, fame }: { item: MenuItem; ca
             {item.tags.includes("chef") ? <span className="inline-flex items-center rounded-full bg-surface/90 px-1.5 py-0.5 text-brass-text [&_svg]:size-3.5"><Sparkles aria-label={L("اختيار الشيف", "Chef's pick")} /></span> : null}
             {item.tags.includes("veg") ? <span className="inline-flex items-center rounded-full bg-surface/90 px-1.5 py-0.5 text-ok [&_svg]:size-3.5"><Leaf aria-label={L("نباتي", "Vegetarian")} /></span> : null}
           </span>
+          {info?.short && !off ? (
+            <span className="absolute bottom-1.5 start-1.5 grid size-7 place-items-center rounded-full bg-warn text-[16px] font-black leading-none text-white shadow-sf" aria-label={L("مش متوفر بالفرع", "Short in branch")}>!</span>
+          ) : null}
           {off ? (
             <span className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 bg-danger py-0.5 text-[12px] font-bold text-white">
               <Ban className="size-3.5" /> {L("خلصان", "86'd")}
