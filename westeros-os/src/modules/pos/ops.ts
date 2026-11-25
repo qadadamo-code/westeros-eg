@@ -26,6 +26,8 @@ export interface TicketDraft {
   channelId?: string | null;
   /** كود الطلب في تطبيق التوصيل */
   externalRef?: string | null;
+  /** مندوب التوصيل (مندوبو خدمة التوصيل) the order is put on for now */
+  driverId?: string | null;
 }
 
 export interface Ticket {
@@ -53,7 +55,7 @@ export async function openTicket(db: Db, d: TicketDraft): Promise<{ check: Check
   const order = await db.insert("orders", {
     branchId, number: await nextOrderNumber(db, branchId), mode: d.mode, source: d.source ?? "pos", status: "open", tableIds: d.mode === "dine_in" ? d.tableIds : [],
     checkId: check.id, customerId: d.customerId, guests: d.guests, openedBy: db.actorId, waiterId: null, note: "", delivery: d.mode === "delivery" ? d.delivery : null,
-    deliveryStatus: d.mode === "delivery" ? "pending" : null, driverId: null, deliveryFee: d.mode === "delivery" ? d.deliveryFee : 0, openedAt: now, closedAt: null,
+    deliveryStatus: d.mode === "delivery" ? "pending" : null, driverId: d.mode === "delivery" ? d.driverId ?? null : null, deliveryFee: d.mode === "delivery" ? d.deliveryFee : 0, openedAt: now, closedAt: null,
     pickupAt: d.pickup ? d.pickupAt : null, ...(d.channelId ? { channelId: d.channelId } : {}), ...(d.externalRef ? { externalRef: d.externalRef } : {}),
   });
   if (d.mode === "dine_in") for (const t of d.tableIds) await setTableStatus(db, t, "seated");
@@ -239,7 +241,7 @@ export async function moveCheckToTable(db: Db, t: Ticket, tableId: string) {
   await db.audit("check.transfer_table", "checks", t.check.id, { from: old, to: tableId });
 }
 
-export async function setTicketMeta(db: Db, t: Ticket, patch: { guests?: number; customerId?: string | null; delivery?: Order["delivery"]; deliveryFee?: number; note?: string }) {
+export async function setTicketMeta(db: Db, t: Ticket, patch: { guests?: number; customerId?: string | null; delivery?: Order["delivery"]; deliveryFee?: number; note?: string; driverId?: string | null; externalRef?: string | null }) {
   if (patch.guests != null || patch.customerId !== undefined) await db.update("checks", t.check.id, { ...(patch.guests != null ? { guests: patch.guests } : {}), ...(patch.customerId !== undefined ? { customerId: patch.customerId } : {}) });
   for (const o of t.orders)
     await db.update("orders", o.id, {
@@ -248,7 +250,41 @@ export async function setTicketMeta(db: Db, t: Ticket, patch: { guests?: number;
       ...(patch.delivery !== undefined ? { delivery: patch.delivery } : {}),
       ...(patch.deliveryFee != null ? { deliveryFee: patch.deliveryFee } : {}),
       ...(patch.note != null ? { note: patch.note } : {}),
+      ...(patch.driverId !== undefined ? { driverId: patch.driverId } : {}),
+      ...(patch.externalRef !== undefined ? { externalRef: patch.externalRef } : {}),
     });
+  await recomputeCheck(db, t.check.id);
+}
+
+/**
+ * تحويل الطلب من قناة بيع لتانية (Saqr 2026-11-25): the order takes the channel's type, and every line not voided takes
+ * the channel's price. What belongs to the old type goes (a table off a non dine-in order, the address off a non delivery
+ * one, the app code off a non app one).
+ */
+export async function changeChannel(db: Db, t: Ticket, ch: { id: string; kind: "dine_in" | "takeaway" | "delivery" | "aggregator"; level: 1 | 2 | 3 }, menu: MenuItem[]) {
+  const mode: OrderMode = ch.kind === "aggregator" ? "takeaway" : ch.kind;
+  const source: OrderSource | undefined = ch.kind === "aggregator" ? "aggregator" : undefined;
+  for (const o of t.orders) {
+    await db.update("orders", o.id, {
+      mode, channelId: ch.id, pickupAt: null,
+      ...(source ? { source } : o.source === "aggregator" ? { source: "pos" as OrderSource } : {}),
+      ...(mode !== "dine_in" ? { tableIds: [] } : {}),
+      ...(mode !== "delivery" ? { delivery: null, deliveryFee: 0, deliveryStatus: null, driverId: null } : { deliveryStatus: o.deliveryStatus ?? "pending" }),
+      ...(ch.kind !== "aggregator" ? { externalRef: null } : {}),
+    });
+    const next = { ...o, mode, channelId: ch.id, source: source ?? (o.source === "aggregator" ? "pos" : o.source) } as Order;
+    for (const i of t.items.filter((x) => x.orderId === o.id && x.status !== "void")) {
+      const item = menu.find((m) => m.id === i.itemId);
+      if (!item) continue;
+      const unitPrice = ch.level !== 1 ? Math.max(0, levelPrice(item, ch.level) - (item.discount ?? 0)) : priceFor(item, channelOf(next.mode, next.source), next.branchId);
+      if (unitPrice !== i.unitPrice) await db.update("orderItems", i.id, { unitPrice, discount: Math.min(i.discount, unitPrice * i.qty) });
+    }
+  }
+  if (mode !== "dine_in" && t.check.tableIds.length) {
+    await db.update("checks", t.check.id, { tableIds: [] });
+    for (const tid of t.check.tableIds) await setTableStatus(db, tid, "free");
+  }
+  await db.audit("check.channel", "checks", t.check.id, { channel: ch.id });
   await recomputeCheck(db, t.check.id);
 }
 

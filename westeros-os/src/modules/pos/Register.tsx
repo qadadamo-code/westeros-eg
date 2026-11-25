@@ -7,19 +7,19 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { onSchedule, scheduleLabel } from "@/modules/menu/rules";
 import { Link, useSearchParams } from "react-router-dom";
 import { motion } from "motion/react";
-import { Bike, Building2, ChevronDown, ClipboardList, LayoutGrid, Plus, ReceiptText, ShoppingBag, Store, Timer, UserRound, Users, Utensils, Wallet } from "lucide-react";
+import { ArrowLeftRight, Bike, Building2, ClipboardList, Hash, LayoutGrid, Plus, ReceiptText, UserRound, Users, Wallet } from "lucide-react";
 import { useApproval } from "@/auth/approval";
 import { useSession } from "@/auth/session";
 import { useDb, useLive, useRow } from "@/data/hooks";
 import { priceItems } from "@/data/pricing";
 import { activeOrderFor, recomputeCheck } from "@/data/ops";
-import type { Check, Discount, MenuItem, OrderItem, OrderMode, Payment } from "@/data/types";
+import type { Check, Discount, MenuItem, OrderItem, Payment } from "@/data/types";
 import { useT } from "@/i18n/i18n";
 import { cn } from "@/lib/cn";
 import { formatMoney, type Units } from "@/lib/money";
 import { loadRaw, saveRaw } from "@/lib/storage";
 import type { ReceiptModel } from "@/lib/receipt";
-import { AnimatedMoney, Button, Dialog, Input, useCommands, useHotkeys, useIsMobile, useReduced, useToast, spring } from "@/ui";
+import { AnimatedMoney, Button, Dialog, Input, useCommands, useHotkeys, useIsMobile, useToast } from "@/ui";
 import { MenuPanel } from "./components/MenuPanel";
 import { ModifierSheet, type ModifierChoice } from "./components/ModifierSheet";
 import { TicketPanel } from "./components/TicketPanel";
@@ -37,12 +37,13 @@ import { ShiftBranch } from "./components/ShiftBranch";
 import { OpenShiftDialog } from "./components/OpenShiftDialog";
 import { Stepper } from "./components/bits";
 import { discountPct, lineDiscountUnits } from "./math";
-import { addLine, discardTicket, loadTicket, mergeChecks, moveCheckToTable, moveItems, openTicket, sendToKitchen, setBillDiscount, setLineDiscount, setLineQty, replaceLine, setTicketMeta, splitIntoChecks, updateLine, voidLine, type TicketDraft } from "./ops";
+import { addLine, changeChannel, discardTicket, loadTicket, mergeChecks, moveCheckToTable, moveItems, openTicket, sendToKitchen, setBillDiscount, setLineDiscount, setLineQty, replaceLine, setTicketMeta, splitIntoChecks, updateLine, voidLine, type TicketDraft } from "./ops";
 import { closeCheck, takePayment, voidPayment } from "./sale";
 import { PromoDialog } from "@/modules/marketing/pos/PromoDialog";
 import { redeemGiftCard, refundGiftCard } from "@/modules/marketing/ops";
 import { useMenu, useReceiptSourceBuilder, useSettings, useShift, useStaffNames } from "./usePos";
 import { useBranchStock } from "./stockInfo";
+import { DRIVER } from "@/modules/cc/finance/delivery";
 import { memberCan } from "@/modules/cc/perms";
 import { listsOf } from "@/modules/cc/lib";
 
@@ -57,7 +58,6 @@ export default function Register() {
   const { toast } = useToast();
   const session = useSession();
   const [buyerOpen, setBuyerOpen] = useState(false); // KSA B2B buyer (ZATCA standard invoice)
-  const reduced = useReduced();
   const isMobile = useIsMobile();
   const menu = useMenu();
   const settings = useSettings();
@@ -100,7 +100,6 @@ export default function Register() {
   const tableLabel = tableIds.map((id) => tables.find((t) => t.id === id)?.label ?? "?").join(" + ");
   const customer = customers.find((c) => c.id === (check?.customerId ?? draft.customerId)) ?? null;
   const guests = check?.guests ?? draft.guests;
-  const anySent = items.some((i) => i.status !== "new" && i.status !== "void");
   const counts = useMemo(() => {
     const m = new Map<string, number>();
     for (const i of items) if (i.status !== "void") m.set(i.itemId, (m.get(i.itemId) ?? 0) + i.qty);
@@ -114,11 +113,13 @@ export default function Register() {
   const [lineTab, setLineTab] = useState<"edit" | "discount" | "void">("edit");
   // a line reopened in the options sheet to change its size, extras or notes
   const [editLine, setEditLine] = useState<OrderItem | null>(null);
-  const [dlg, setDlg] = useState<null | "table" | "customer" | "discount" | "split" | "pay" | "checks" | "transfer" | "merge" | "moveTable" | "itemsToTable" | "guests" | "shift" | "ticket" | "promo">(null);
+  const [dlg, setDlg] = useState<null | "table" | "customer" | "discount" | "split" | "pay" | "checks" | "transfer" | "merge" | "moveTable" | "itemsToTable" | "guests" | "shift" | "ticket" | "promo" | "code" | "channel">(null);
   const [chOpen, setChOpen] = useState(false);
   /** تطبيق توصيل: the channel waiting for the app's order code before the order starts */
   const [aggCh, setAggCh] = useState<SalesChannelDef | null>(null);
   const [aggRef, setAggRef] = useState("");
+  const [codeVal, setCodeVal] = useState("");
+  const drivers = useLive("finDocs").data.filter((x) => x.kind === DRIVER);
   const [shares, setShares] = useState<{ amounts: Units[]; labels: string[] } | null>(null);
   const [receipt, setReceipt] = useState<{ model: ReceiptModel; etaError: string | null; title?: string } | null>(null);
   const pendingItem = useRef<{ item: MenuItem; choice: ModifierChoice | null } | null>(null);
@@ -278,22 +279,28 @@ export default function Register() {
   };
 
   /* ── order type / table / customer ── */
-  const setKind = async (k: Kind) => {
+  /** تحويل الطلب لقناة بيع تانية: then asks for what the new channel needs (table, delivery details, app code) */
+  const moveToChannel = async (c: SalesChannelDef) => {
+    setDlg(null);
     if (!check) {
-      setDraft((d) => ({ ...NEW_DRAFT(k), customerId: d.customerId }));
-      if (k === "dine_in") setDlg("table");
-      if (k === "delivery" || k === "pickup") setDlg("customer");
-      return;
+      setActiveId(null);
+      setDraft((d) => ({ ...NEW_DRAFT(modeOf(c.kind)), customerId: d.customerId, channelId: c.id, ...(c.kind === "aggregator" ? { source: "aggregator" as const, externalRef: null } : {}) }));
+    } else {
+      const t = await loadTicket(db, check.id);
+      if (!t) return;
+      await run(() => changeChannel(db, t, c, menu.items));
+      toast({ title: L(`الطلب اتحول لـ ${c.name}`, `Order moved to ${c.name}`), tone: "success" });
     }
-    if (anySent) return toast({ title: L("الطلب في المطبخ — مينفعش تغيّر النوع", "Already in the kitchen — type can't change"), tone: "warn" });
-    const mode: OrderMode = k === "pickup" ? "takeaway" : k;
-    await run(async () => {
-      for (const o of orders) await db.update("orders", o.id, { mode, pickupAt: k === "pickup" ? (o.pickupAt ?? new Date(Date.now() + 20 * 60_000).toISOString()) : null, tableIds: mode === "dine_in" ? check.tableIds : [], deliveryStatus: mode === "delivery" ? "pending" : null, channelId: channelsOf(settings).find((c) => c.kind === mode)?.id ?? null });
-      if (mode !== "dine_in") await db.update("checks", check.id, { tableIds: [] });
-      await recomputeCheck(db, check.id);
-    });
-    if (k === "dine_in" && !check.tableIds.length) setDlg("moveTable");
-    if (k === "delivery" || k === "pickup") setDlg("customer");
+    if (c.kind === "dine_in") setDlg(check ? "moveTable" : "table");
+    else if (c.kind === "delivery") setDlg("customer");
+    else if (c.kind === "aggregator") (setCodeVal(""), setDlg("code"));
+  };
+  const saveCode = async () => {
+    const v = codeVal.trim();
+    setDlg(null);
+    if (!check) return setDraft((d) => ({ ...d, externalRef: v || null }));
+    const t = await loadTicket(db, check.id);
+    if (t) await run(() => setTicketMeta(db, t, { externalRef: v || null }));
   };
 
   const onTable = async (tableId: string, existing: Check | null) => {
@@ -340,9 +347,9 @@ export default function Register() {
     setDlg(null);
     if (check) {
       const t = await loadTicket(db, check.id);
-      if (t) await run(() => setTicketMeta(db, t, { customerId: r.customer?.id ?? null, ...(order?.mode === "delivery" ? { delivery: r.delivery, deliveryFee: r.deliveryFee } : {}) }));
+      if (t) await run(() => setTicketMeta(db, t, { customerId: r.customer?.id ?? null, ...(order?.mode === "delivery" ? { delivery: r.delivery, deliveryFee: r.deliveryFee, driverId: r.driverId ?? null } : {}) }));
       if (r.pickupAt) for (const o of orders) await db.update("orders", o.id, { pickupAt: r.pickupAt });
-    } else setDraft((d) => ({ ...d, customerId: r.customer?.id ?? null, delivery: r.delivery, deliveryFee: r.deliveryFee, pickupAt: r.pickupAt }));
+    } else setDraft((d) => ({ ...d, customerId: r.customer?.id ?? null, delivery: r.delivery, deliveryFee: r.deliveryFee, pickupAt: r.pickupAt, driverId: r.driverId ?? null }));
   };
 
   /* ── ticket actions ── */
@@ -519,53 +526,47 @@ export default function Register() {
     [kind],
   );
 
-  /* ── header ── */
-  const KINDS: { k: Kind; label: string; icon: typeof Utensils }[] = [
-    { k: "dine_in", label: L("صالة", "Dine-in"), icon: Utensils },
-    { k: "takeaway", label: L("تيك أواي", "Takeaway"), icon: ShoppingBag },
-    { k: "pickup", label: L("استلام", "Pickup"), icon: Store },
-    { k: "delivery", label: L("دليفري", "Delivery"), icon: Bike },
-  ];
+  /* ── header (Saqr 2026-11-25): who the order is for, its number, and the one or two small buttons its channel needs.
+     The type comes from "طلب جديد"; "تحويل الطلب" in (...) moves it to another channel. ── */
+  const chKind = (check ? order?.source : draft.source) === "aggregator" ? "aggregator" : channel?.kind ?? (kind === "pickup" ? "takeaway" : kind);
+  const openerName = (order?.openedBy ? staffNames.get(order.openedBy)?.name : null) ?? session.staff?.name ?? "";
+  const delivery = order?.delivery ?? draft.delivery;
+  const driverId = check ? order?.driverId ?? null : draft.driverId ?? null;
+  const driverName = driverId ? drivers.find((d) => d.id === driverId)?.name ?? "" : "";
+  const chip = "flex h-9 min-w-0 items-center gap-1.5 rounded-lg border border-line bg-surface px-2.5 text-[13px] font-semibold hover:bg-surface-2 [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-primary";
   const header = (
-    <div className="border-b border-line px-3 pt-3 pb-2.5">
-      <div className="grid grid-cols-4 gap-1 rounded-[14px] bg-surface-2 p-1" role="radiogroup" aria-label={L("نوع الطلب", "Order type")}>
-        {KINDS.map(({ k: kk, label, icon: Icon }) => (
-          <button key={kk} type="button" role="radio" aria-checked={kind === kk} onClick={() => void setKind(kk)} className={cn("relative flex h-11 flex-col items-center justify-center rounded-[10px] text-[12px] font-semibold leading-none", kind === kk ? "text-ink" : "text-muted hover:text-ink")}>
-            {kind === kk ? <motion.span layoutId="pos-kind" className="absolute inset-0 rounded-[10px] bg-surface shadow-sf-sm ring-1 ring-line" transition={reduced ? { duration: 0 } : spring.layout} /> : null}
-            <Icon className="relative mb-1 size-4" />
-            <span className="relative">{label}</span>
-          </button>
-        ))}
-      </div>
-      <div className="mt-2.5 flex items-center gap-2">
-        {kind === "dine_in" ? (
-          <button type="button" onClick={() => setDlg(check ? "moveTable" : "table")} className="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-xl border border-line bg-surface px-3 text-start hover:bg-surface-2">
-            <LayoutGrid className="size-[18px] shrink-0 text-primary" />
-            <span className="min-w-0 flex-1 truncate font-semibold">{tableLabel ? `${L("ترابيزة", "Table")} ${tableLabel}` : L("اختار ترابيزة", "Pick a table")}</span>
-            <ChevronDown className="size-4 text-muted" />
-          </button>
-        ) : (
-          <button type="button" onClick={() => setDlg("customer")} className="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-xl border border-line bg-surface px-3 text-start hover:bg-surface-2">
-            {kind === "delivery" ? <Bike className="size-[18px] shrink-0 text-primary" /> : kind === "pickup" ? <Timer className="size-[18px] shrink-0 text-primary" /> : <UserRound className="size-[18px] shrink-0 text-primary" />}
-            <span className="min-w-0 flex-1 truncate font-semibold">
-              {customer ? customer.name || customer.phone : kind === "delivery" ? L("العميل والعنوان", "Customer & address") : L("عميل (اختياري)", "Customer (optional)")}
-              {kind === "pickup" && (order?.pickupAt ?? draft.pickupAt) ? <span className="num ms-1.5 text-[12.5px] font-medium text-muted">· {new Date((order?.pickupAt ?? draft.pickupAt)!).toLocaleTimeString(lang === "ar" ? "ar-EG-u-nu-latn" : "en-GB", { hour: "numeric", minute: "2-digit" })}</span> : null}
-            </span>
-            <ChevronDown className="size-4 text-muted" />
-          </button>
-        )}
-        {kind === "dine_in" ? (
-          <button type="button" onClick={() => setDlg("guests")} className="flex h-11 items-center gap-1.5 rounded-xl border border-line bg-surface px-3 font-semibold hover:bg-surface-2" aria-label={L("عدد الأفراد", "Guests")}>
-            <Users className="size-[18px] text-muted" />
-            <span className="num">{guests}</span>
-          </button>
-        ) : null}
-        {order ? (
-          <span className="num rounded-lg bg-surface-3 px-2 py-1 text-[12.5px] font-semibold text-ink-2" title={L("رقم الطلب", "Order number")}>
-            #{order.number}
+    <div className="grid gap-2 border-b border-line px-3 pt-3 pb-2.5">
+      <div className="flex items-stretch gap-2">
+        <button type="button" onClick={() => setDlg("customer")} className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-line bg-surface px-3 py-2 text-start hover:bg-surface-2">
+          <UserRound className="size-5 shrink-0 text-primary" />
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[15px] font-bold">{customer?.name || openerName || L("الزبون", "Customer")}</span>
+            <span className="num block truncate text-[12.5px] text-muted" dir={customer?.phone ? "ltr" : undefined}>{customer?.phone || L("أضف اسم ورقم الزبون", "Add the customer's name and phone")}</span>
           </span>
-        ) : null}
+        </button>
+        <div className="grid shrink-0 place-items-center rounded-xl bg-primary-soft px-3 py-1 text-center">
+          <span className="max-w-24 truncate text-[11px] font-semibold text-primary">{channel?.name ?? ""}</span>
+          <span className="num text-[22px] font-black leading-none text-ink" title={L("رقم الطلب", "Order number")}>{order ? `#${order.number}` : L("جديد", "New")}</span>
+        </div>
       </div>
+      {chKind === "dine_in" ? (
+        <div className="flex gap-2">
+          <button type="button" onClick={() => setDlg(check ? "moveTable" : "table")} className={cn(chip, "flex-1")}>
+            <LayoutGrid /> <span className="truncate">{tableLabel ? `${L("ترابيزة", "Table")} ${tableLabel}` : L("اختار الترابيزة", "Pick a table")}</span>
+          </button>
+          <button type="button" onClick={() => setDlg("guests")} className={chip} aria-label={L("عدد الأفراد", "Guests")}>
+            <Users /> <span className="num">{guests}</span>
+          </button>
+        </div>
+      ) : chKind === "aggregator" ? (
+        <button type="button" onClick={() => (setCodeVal(orderRef ?? ""), setDlg("code"))} className={chip}>
+          <Hash /> <span className="num truncate">{orderRef ? `${L("كود الطلب", "Order code")}: ${orderRef}` : L("اكتب كود الطلب", "Enter the order code")}</span>
+        </button>
+      ) : chKind === "delivery" ? (
+        <button type="button" onClick={() => setDlg("customer")} className={chip}>
+          <Bike /> <span className="truncate">{delivery?.address ? [delivery.area || delivery.address, driverName].filter(Boolean).join(" · ") : L("بيانات التوصيل", "Delivery details")}</span>
+        </button>
+      ) : null}
     </div>
   );
 
@@ -595,6 +596,7 @@ export default function Register() {
       onSplit={() => setDlg("split")}
       onTransfer={() => setDlg("transfer")}
       onMerge={() => setDlg("merge")}
+      onChannel={() => setDlg("channel")}
       onPrebill={() => void prebill()}
       onDiscard={() => void discard()}
       onGuests={() => setDlg("guests")}
@@ -727,6 +729,23 @@ export default function Register() {
           <Input label={L("كود الطلب في التطبيق", "The app's order code")} dir="ltr" className="num" autoFocus value={aggRef} onChange={(e) => setAggRef(e.target.value)} />
         </form>
       </Dialog>
+      <Dialog open={dlg === "code"} onClose={() => setDlg(null)} size="sm" title={L("كود الطلب في التطبيق", "The app's order code")}
+        footer={<div className="flex justify-end gap-2"><Button variant="ghost" onClick={() => setDlg(null)}>{L("إلغاء", "Cancel")}</Button><Button onClick={() => void saveCode()}>{L("حفظ", "Save")}</Button></div>}>
+        <form onSubmit={(e) => { e.preventDefault(); void saveCode(); }}>
+          <Input label={L("كود الطلب", "Order code")} dir="ltr" className="num" autoFocus value={codeVal} onChange={(e) => setCodeVal(e.target.value)} />
+        </form>
+      </Dialog>
+      <Dialog open={dlg === "channel"} onClose={() => setDlg(null)} size="sm" title={L("تحويل الطلب لقناة بيع تانية", "Move the order to another channel")}>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {visibleChannels.map((c) => (
+            <button key={c.id} type="button" disabled={c.id === channel?.id} onClick={() => void moveToChannel(c)} className="flex h-16 flex-col items-start justify-center rounded-2xl border border-line bg-surface px-4 text-start hover:border-primary hover:bg-primary-soft disabled:border-primary disabled:bg-primary-soft disabled:opacity-70">
+              <span className="flex items-center gap-1.5 text-[16px] font-semibold"><ArrowLeftRight className="size-4 text-primary" />{c.name}</span>
+              <span className="text-[12px] text-muted">{c.id === channel?.id ? L("القناة الحالية", "Current") : L(`سعر ${c.level}`, `Price ${c.level}`)}</span>
+            </button>
+          ))}
+        </div>
+        <p className="mt-3 text-[12.5px] text-muted">{L("أسعار الأصناف بتتغير لسعر القناة الجديدة.", "Lines take the new channel's prices.")}</p>
+      </Dialog>
       <TablePicker
         open={dlg === "table" || dlg === "moveTable" || dlg === "itemsToTable"}
         onClose={() => {
@@ -743,8 +762,8 @@ export default function Register() {
       <CustomerDialog
         open={dlg === "customer"}
         onClose={() => setDlg(null)}
-        kind={kind === "delivery" ? "delivery" : kind === "pickup" ? "pickup" : "takeaway"}
-        initial={{ customerId: check?.customerId ?? draft.customerId, delivery: order?.delivery ?? draft.delivery, deliveryFee: order?.deliveryFee ?? draft.deliveryFee, pickupAt: order?.pickupAt ?? draft.pickupAt }}
+        kind={chKind === "delivery" || kind === "delivery" ? "delivery" : kind === "pickup" ? "pickup" : "takeaway"}
+        initial={{ customerId: check?.customerId ?? draft.customerId, delivery: order?.delivery ?? draft.delivery, deliveryFee: order?.deliveryFee ?? draft.deliveryFee, pickupAt: order?.pickupAt ?? draft.pickupAt, driverId: check ? order?.driverId ?? null : draft.driverId ?? null }}
         onDone={(r) => void onCustomer(r)}
       />
       <Dialog open={dlg === "guests"} onClose={() => setDlg(null)} size="sm" title={L("عدد الأفراد", "Guests")}>

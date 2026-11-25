@@ -1,9 +1,9 @@
 /** Customer by phone (find or create), delivery address + fee, pickup time. The fee follows مقدم خدمة التوصيل: by the area, by the straight distance from the branch, fixed or typed (خدمة التوصيل, 2026-11-23). */
 import { useEffect, useMemo, useState } from "react";
-import { Bike, Clock, MapPin, Phone, UserPlus, UserRound } from "lucide-react";
+import { Bike, Clock, MapPin, Phone, Plus, UserPlus, UserRound } from "lucide-react";
 import { useSession } from "@/auth/session";
 import { useDb, useLive } from "@/data/hooks";
-import { coordsOf, feeFor, FEE_BASIS_LABEL, methodsOf, straightKm, zoneByArea } from "@/modules/cc/finance/delivery";
+import { coordsOf, DRIVER, driverOf, feeFor, FEE_BASIS_LABEL, methodsOf, straightKm, zoneByArea } from "@/modules/cc/finance/delivery";
 import type { Customer, DeliveryInfo } from "@/data/types";
 import { useT } from "@/i18n/i18n";
 import { latinDigits } from "@/lib/arabic";
@@ -16,13 +16,15 @@ export interface CustomerResult {
   delivery: DeliveryInfo | null;
   deliveryFee: Units;
   pickupAt: string | null;
+  /** مندوب التوصيل (finDocs delivery-driver id) */
+  driverId?: string | null;
 }
 
 export function CustomerDialog({ open, onClose, kind, initial, onDone }: {
   open: boolean;
   onClose: () => void;
   kind: "delivery" | "pickup" | "takeaway";
-  initial: { customerId: string | null; delivery: DeliveryInfo | null; deliveryFee: Units; pickupAt: string | null };
+  initial: { customerId: string | null; delivery: DeliveryInfo | null; deliveryFee: Units; pickupAt: string | null; driverId?: string | null };
   onDone: (r: CustomerResult) => void;
 }) {
   const { L, lang } = useT();
@@ -46,6 +48,10 @@ export function CustomerDialog({ open, onClose, kind, initial, onDone }: {
   const [zoneId, setZoneId] = useState("");
   const [loc, setLoc] = useState("");
   const [busy, setBusy] = useState(false);
+  // Saqr 2026-11-25: the customer's saved addresses (each keeps its delivery service), or a new one; the driver the order goes on
+  const [addrIdx, setAddrIdx] = useState(-1);
+  const [driverId, setDriverId] = useState("");
+  const allDrivers = useLive("finDocs").data.filter((x) => x.kind === DRIVER && x.status === "active" && driverOf(x).role === "driver");
 
   useEffect(() => {
     if (!open) return;
@@ -61,6 +67,8 @@ export function CustomerDialog({ open, onClose, kind, initial, onDone }: {
     setProviderId(initial.delivery?.providerId ?? "");
     setZoneId(d?.zoneId ?? zoneByArea(zones, d?.area ?? "")?.id ?? "");
     setLoc(d && d.lat != null && d.lng != null ? `${d.lat}, ${d.lng}` : "");
+    setAddrIdx(c ? c.addresses.findIndex((a) => a.address === (initial.delivery?.address ?? c.addresses[0]?.address)) : -1);
+    setDriverId(initial.driverId ?? "");
     setPickupIn(initial.pickupAt ? Math.max(5, Math.round((Date.parse(initial.pickupAt) - Date.now()) / 60_000)) : 20);
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -68,22 +76,28 @@ export function CustomerDialog({ open, onClose, kind, initial, onDone }: {
   const matches = useMemo(() => (digits.length >= 3 ? customers.filter((c) => c.phone.includes(digits) || (name && c.name.includes(name))).slice(0, 5) : []), [customers, digits, name]);
   const exact = customers.find((c) => c.phone === digits) ?? null;
 
+  const pickAddress = (c: Customer | null, i: number) => {
+    setAddrIdx(i);
+    const a = c && i >= 0 ? c.addresses[i] : null;
+    setAddress(a?.address ?? "");
+    setArea(a?.area ?? "");
+    setNotes(a?.notes ?? "");
+    setZoneId(a ? a.zoneId ?? zoneByArea(zones, a.area)?.id ?? "" : "");
+    setLoc(a && a.lat != null && a.lng != null ? `${a.lat}, ${a.lng}` : "");
+    if (a?.providerId) setProviderId(a.providerId);
+  };
   const choose = (c: Customer) => {
     setPicked(c);
     setPhone(c.phone);
     setName(c.name);
-    if (c.addresses[0]) {
-      const a = c.addresses[0];
-      setAddress(a.address);
-      setArea(a.area);
-      setNotes(a.notes);
-      setZoneId(a.zoneId ?? zoneByArea(zones, a.area)?.id ?? "");
-      setLoc(a.lat != null && a.lng != null ? `${a.lat}, ${a.lng}` : "");
-    }
+    if (c.addresses[0]) pickAddress(c, 0);
   };
 
   const provider = providers.find((m) => m.id === providerId) ?? (providers.length === 1 ? providers[0] : null);
   const zone = zones.find((z) => z.id === zoneId) ?? null;
+  // drivers of the chosen service: a company's own drivers for an outside company, the restaurant's for its own delivery
+  const drivers = provider ? allDrivers.filter((d) => { const x = driverOf(d); return provider.type === "external" ? x.affiliation === "company" && x.companyMethodId === provider.id : x.affiliation !== "company"; }) : allDrivers;
+  const saved = picked ?? exact;
   const branch = branches.find((b) => b.id === branchId) ?? branches[0];
   const origin = coordsOf(branch?.mapUrl) ?? settingsRow?.delivery?.origin ?? null;
   const point = coordsOf(loc);
@@ -101,10 +115,13 @@ export function CustomerDialog({ open, onClose, kind, initial, onDone }: {
       const addr: DeliveryInfo | null = kind === "delivery" ? { address: address.trim(), area: (zone?.name.ar ?? area).trim(), notes: notes.trim(), lat: point?.lat ?? null, lng: point?.lng ?? null, providerId: provider?.id ?? null, zoneId: zone?.id ?? null } : null;
       if (!c && digits.length >= 10) {
         c = await db.insert("customers", { phone: digits, name: name.trim(), email: null, visits: 0, lastVisitAt: null, totalSpent: 0, loyaltyPoints: 0, tags: kind === "delivery" ? ["delivery"] : [], notes: "", birthday: null, addresses: addr ? [addr] : [] });
-      } else if (c && addr && !c.addresses.some((a) => a.address === addr.address)) {
-        c = await db.update("customers", c.id, { addresses: [addr, ...c.addresses].slice(0, 5), ...(name.trim() && !c.name ? { name: name.trim() } : {}) });
+      } else if (c && addr) {
+        // a saved address picked and changed is saved in its place (with its delivery service); a new one goes first
+        const i = addrIdx >= 0 && addrIdx < c.addresses.length ? addrIdx : c.addresses.findIndex((a) => a.address === addr.address);
+        const list = i >= 0 ? c.addresses.map((a, k) => (k === i ? addr : a)) : [addr, ...c.addresses].slice(0, 8);
+        if (JSON.stringify(list) !== JSON.stringify(c.addresses) || (name.trim() && !c.name)) c = await db.update("customers", c.id, { addresses: list, ...(name.trim() && !c.name ? { name: name.trim() } : {}) });
       }
-      onDone({ customer: c, delivery: addr, deliveryFee: kind === "delivery" ? major(Number(fee || 0)) : 0, pickupAt: kind === "pickup" ? new Date(Date.now() + pickupIn * 60_000).toISOString() : null });
+      onDone({ customer: c, delivery: addr, deliveryFee: kind === "delivery" ? major(Number(fee || 0)) : 0, pickupAt: kind === "pickup" ? new Date(Date.now() + pickupIn * 60_000).toISOString() : null, driverId: kind === "delivery" ? (drivers.some((d) => d.id === driverId) ? driverId : null) : null });
     } finally {
       setBusy(false);
     }
@@ -154,6 +171,24 @@ export function CustomerDialog({ open, onClose, kind, initial, onDone }: {
         ) : null}
         {kind === "delivery" ? (
           <>
+            {saved?.addresses.length ? (
+              <div className="grid gap-1.5">
+                <span className="text-[13px] font-semibold text-ink-2">{L("عناوين الزبون", "Saved addresses")}</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {saved.addresses.map((a, i) => (
+                    <button key={`${a.address}-${i}`} type="button" onClick={() => pickAddress(saved, i)} aria-pressed={addrIdx === i}
+                      className={cn("max-w-full rounded-xl border px-3 py-2 text-start text-[13px]", addrIdx === i ? "border-primary bg-primary-soft" : "border-line hover:bg-surface-2")}>
+                      <span className="block truncate font-semibold">{a.address}</span>
+                      <span className="block truncate text-[12px] text-muted">{[a.area, providers.find((m) => m.id === a.providerId)?.name].filter(Boolean).join(" · ") || "—"}</span>
+                    </button>
+                  ))}
+                  <button type="button" onClick={() => pickAddress(null, -1)} aria-pressed={addrIdx === -1}
+                    className={cn("inline-flex items-center gap-1.5 rounded-xl border border-dashed px-3 py-2 text-[13px] font-semibold", addrIdx === -1 ? "border-primary bg-primary-soft text-primary" : "border-line-strong text-ink-2 hover:bg-surface-2")}>
+                    <Plus className="size-4" /> {L("عنوان جديد", "New address")}
+                  </button>
+                </div>
+              </div>
+            ) : null}
             <Input label={L("العنوان", "Address")} icon={<MapPin />} value={address} onChange={(e) => setAddress(e.target.value)} />
             {providers.length ? (
               <div className="grid gap-3 sm:grid-cols-2">
@@ -173,6 +208,11 @@ export function CustomerDialog({ open, onClose, kind, initial, onDone }: {
               <Input label={L("ملاحظات للطيار", "Driver notes")} value={notes} onChange={(e) => setNotes(e.target.value)} />
               <Input label={L("رسوم التوصيل", "Delivery fee")} icon={<Bike />} value={fee} disabled={auto != null} onChange={(e) => setFee(e.target.value.replace(/[^\d.]/g, ""))} inputMode="decimal" hint={needs || (auto != null && provider ? L(`محسوبة ${FEE_BASIS_LABEL[basis]}`, "Worked out automatically") : formatMoney(major(Number(fee || 0)), { lang }))} />
             </div>
+            {drivers.length ? (
+              <Select label={L("مندوب التوصيل", "Driver")} value={drivers.some((d) => d.id === driverId) ? driverId : ""} onChange={(e) => setDriverId(e.target.value)}
+                hint={L("الطلب بيتسجل على حسابه مؤقتاً", "The order goes on his account for now")}
+                options={[{ value: "", label: L("بعدين", "Later") }, ...drivers.map((d) => ({ value: d.id, label: d.name }))]} />
+            ) : null}
           </>
         ) : null}
         {kind === "pickup" ? (

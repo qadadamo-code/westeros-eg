@@ -1,7 +1,7 @@
 /** The current check: lines by course, live totals (@finance/tax), and the actions that move it along. */
 import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowLeftRight, BadgePercent, ChefHat, Flame, Minus, MoreHorizontal, PauseCircle, Plus, Printer, ReceiptText, Scissors, Send, ShoppingBag, Ticket, Trash2, Users, Wallet } from "lucide-react";
+import { ArrowLeftRight, BadgePercent, ChefHat, Flame, Minus, MoreHorizontal, PauseCircle, Plus, Printer, ReceiptText, Scissors, Send, ShoppingBag, Shuffle, Ticket, Trash2, Users, Wallet } from "lucide-react";
 import type { Check, Order, OrderItem, OrderItemStatus } from "@/data/types";
 import { useT } from "@/i18n/i18n";
 import { cn } from "@/lib/cn";
@@ -41,6 +41,8 @@ export interface TicketActions {
   onPrebill: () => void;
   onDiscard: () => void;
   onGuests: (n: number) => void;
+  /** تحويل الطلب لقناة بيع تانية */
+  onChannel?: () => void;
   /** offers, coupons & loyalty (marketing/pos/PromoDialog) */
   onPromo?: () => void;
 }
@@ -225,6 +227,7 @@ export function TicketPanel({ check, orders, items, header, busy, className, ...
             { icon: <BadgePercent />, label: L("خصم", "Discount"), key: "D", run: a.onDiscount },
             ...(a.onPromo ? [{ icon: <Ticket />, label: L("عروض وكوبونات ونقاط", "Offers, coupons & points"), key: "C", run: a.onPromo }] : []),
             { icon: <Scissors />, label: L("تقسيم", "Split"), key: "X", run: a.onSplit },
+            ...(a.onChannel ? [{ icon: <Shuffle />, label: L("تحويل الطلب", "Change channel"), run: a.onChannel }] : []),
             { icon: <ArrowLeftRight />, label: L("نقل", "Transfer"), key: "T", run: a.onTransfer },
             { icon: <ReceiptText />, label: L("دمج", "Merge"), run: a.onMerge },
             { icon: <Printer />, label: L("شيك مبدئي", "Pre-bill"), run: a.onPrebill },
