@@ -17,7 +17,7 @@ import { Confirm } from "../finance/ui";
 import { KitchenTicketView, SAMPLE_TICKET, TICKET_KEYS, ticketLayout } from "../print/KitchenTicket";
 import { devicePrinter, isReceipt, printOf, setDevicePrinter, withPrintFor } from "../print/setup";
 import { queuePrint } from "../print/station";
-import { StationSetup } from "../print/StationSetup";
+import { StationLink, StationSetup } from "../print/StationSetup";
 import { useMay } from "../useAccess";
 import { useSession } from "@/auth/session";
 import { mainBranchOf, onMenuOf } from "../menu/menuBranch";
@@ -186,10 +186,11 @@ function StationCard({ setup, save, readOnly }: Props) {
         <div className="grid gap-2 rounded-xl bg-surface-2 p-3 text-[13.5px]">
           <p className="font-semibold">تشغيل المحطة على جهاز الطباعة:</p>
           <StationSetup />
+          <StationLink />
           {setup.stationOn ? (
             <div className="flex flex-wrap gap-2 pt-1">
               {setup.printers.filter((p) => p.ip && p.kind !== "label").map((p) => (
-                <Button key={p.id} size="sm" variant="outline" icon={<Printer />} onClick={() => void queuePrint(db, { printerId: p.id, kind: "test", payload: {} }, staff?.id ?? null)}>تجربة {p.name}</Button>
+                <Button key={p.id} size="sm" variant="outline" icon={<Printer />} onClick={() => void queuePrint(db, { printer: p, kind: "test", payload: {} }, staff?.id ?? null, setup)}>تجربة {p.name}</Button>
               ))}
             </div>
           ) : null}

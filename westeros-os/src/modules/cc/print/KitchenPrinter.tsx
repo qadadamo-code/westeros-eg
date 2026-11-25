@@ -35,7 +35,8 @@ export function KitchenPrinter() {
     return () => (window.removeEventListener("westeros-printer", f), window.removeEventListener("storage", f));
   }, []);
   const printer = setup.printers.find((p) => p.id === mine);
-  if (!setup.kitchenPrint || !printer) return null;
+  // with the print station on, the station prints the kitchen tickets (no double tickets)
+  if (!setup.kitchenPrint || !printer || setup.stationOn) return null;
   return <Run printerId={printer.id} />;
 }
 

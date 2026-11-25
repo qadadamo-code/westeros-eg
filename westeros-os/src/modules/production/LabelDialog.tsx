@@ -57,7 +57,7 @@ export function LabelDialog({ batch, onClose, justSaved }: { batch: MfgBatch | n
       const codes = outs.map((o) => products.find((p) => p.id === o.productId)?.code);
       if (station) {
         const payload: StickerPayload = { batch: { number: batch.number, madeAt: batch.madeAt, chefName: batch.chefName, chefCode: batch.chefCode }, outputs: outs, size, copies: ns, codes };
-        await queuePrint(db, { printerId: station.id, kind: "sticker", payload: payload as unknown as Record<string, unknown> }, staff?.id ?? null);
+        await queuePrint(db, { printer: station, kind: "sticker", payload: payload as unknown as Record<string, unknown> }, staff?.id ?? null, pset);
         toast({ title: L(`اتبعتت ${ns.reduce((a, n) => a + n, 0)} ستيكر لـ ${station.name}`, `Sent to ${station.name}`), tone: "success", duration: 2000 });
       } else await printLabels(batch, outs, size, ns, shift, codes);
       await countLabels(db, batch.id, ns.reduce((a, n) => a + n, 0));

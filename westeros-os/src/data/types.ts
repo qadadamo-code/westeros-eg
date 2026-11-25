@@ -1313,7 +1313,21 @@ export interface PrintJob extends TenantRow {
   kind: "receipt" | "kitchen" | "sticker" | "test";
   payload: Record<string, unknown>;
   copies: number;
-  status: "queued" | "printing" | "done" | "failed";
+  status: "queued" | "rendering" | "printing" | "done" | "failed";
   error: string | null;
   createdBy: string | null;
+  /** the branch whose station prints it (0062) */
+  branchId?: string | null;
+  /** the printer bytes, already drawn: [{ ip, port, gz | b64 }] (0062); the station drops them once printed */
+  data?: PrintChunk[] | null;
+  /** one kitchen ticket is drawn by one screen only (0062) */
+  dedupe?: string | null;
+}
+export interface PrintChunk {
+  ip: string;
+  port: number;
+  /** gzip, base64 */
+  gz?: string;
+  /** raw, base64 (a browser without gzip) */
+  b64?: string;
 }

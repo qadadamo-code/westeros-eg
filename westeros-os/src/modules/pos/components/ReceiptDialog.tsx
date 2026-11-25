@@ -25,7 +25,7 @@ export function useReceiptPrint() {
   return (model: ReceiptModel) => {
     const paper = printer?.paper ?? model.design.paper;
     const m = { ...model, design: { ...model.design, paper } };
-    if (station) return void queuePrint(db, { printerId: station.id, kind: "receipt", payload: { model: m } }, staff?.id ?? null).then(() => toast({ title: L(`الفاتورة اتبعتت للطباعة على ${station.name}`, `Receipt sent to ${station.name}`), tone: "success", duration: 1800 }), () => printNode(<ReceiptView model={m} />, paper));
+    if (station) return void queuePrint(db, { printer: station, kind: "receipt", payload: { model: m } }, staff?.id ?? null, setup).then(() => toast({ title: L(`الفاتورة اتبعتت للطباعة على ${station.name}`, `Receipt sent to ${station.name}`), tone: "success", duration: 1800 }), () => printNode(<ReceiptView model={m} />, paper));
     return void printNode(<ReceiptView model={m} />, paper);
   };
 }
@@ -48,7 +48,7 @@ export function ReceiptDialog({ open, onClose, model, title, etaError, actions }
   const station = viaStation(setup, setup.receiptPrinterId);
   const print = () => {
     if (!m) return;
-    if (station) return void queuePrint(db, { printerId: station.id, kind: "receipt", payload: { model: m } }, staff?.id ?? null).then(() => toast({ title: L(`اتبعتت للطباعة على ${station.name}`, `Sent to ${station.name}`), tone: "success", duration: 1800 }), () => printNode(<ReceiptView model={m} />, paper));
+    if (station) return void queuePrint(db, { printer: station, kind: "receipt", payload: { model: m } }, staff?.id ?? null, setup).then(() => toast({ title: L(`اتبعتت للطباعة على ${station.name}`, `Sent to ${station.name}`), tone: "success", duration: 1800 }), () => printNode(<ReceiptView model={m} />, paper));
     return printNode(<ReceiptView model={m} />, paper);
   };
   useHotkeys({ "mod+p": (e) => (e.preventDefault(), print()) }, { enabled: open });

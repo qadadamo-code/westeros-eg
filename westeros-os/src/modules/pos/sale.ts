@@ -27,7 +27,7 @@ import { etaConfig, etaSettingsOf, issueEtaReceipt, EtaValidationError } from "@
 import type { IssuedZatca } from "@/lib/zatca/issue";
 import { taxRegime } from "@/lib/zatca/settings";
 import type { ZatcaBuyer, ZatcaInvoiceRow } from "@/lib/zatca/model";
-import { loadTicket } from "./ops";
+import { loadTicket, type Ticket } from "./ops";
 import { onCheckPaid } from "@/modules/marketing/ops";
 import { deductForItems } from "@/modules/inventory/deduct";
 import { remaining, toPiastre } from "./math";
@@ -54,8 +54,12 @@ export async function takePayment(db: Db, check: Check, p: { method: PaymentMeth
   });
   const paid = (await db.list("payments", { where: { checkId: check.id, status: "captured" } })).reduce((a, x) => a + x.amount, 0);
   await db.update("checks", check.id, { paid });
+  lastPaid.set(check.id, paid);
   return row;
 }
+/** the check's paid total right after takePayment saved it (saves the cashier one more round trip) */
+const lastPaid = new Map<string, number>();
+export const paidAfterTake = (checkId: string): number | undefined => lastPaid.get(checkId);
 
 /** Undo a tender before the check is closed. */
 export async function voidPayment(db: Db, p: Payment) {
@@ -73,9 +77,7 @@ async function lastReceipt(db: Db, branchId: string, device: string) {
 }
 
 async function context(db: Db, branchId: string) {
-  const [settings] = await db.list("settings");
-  const [restaurant] = await db.list("restaurants");
-  const branch = await db.get("branches", branchId);
+  const [[settings], [restaurant], branch] = await Promise.all([db.list("settings"), db.list("restaurants"), db.get("branches", branchId)]);
   if (!settings || !restaurant) throw new Error("restaurant settings missing");
   return { settings, restaurant, branch };
 }
@@ -91,8 +93,7 @@ async function issueDocument(
   db: Db,
   x: { kind: "SC" | "RC"; checkId: string; branchId: string; shiftId: string | null; device: string; bill: Bill; frozen: ReceiptBill; payments: { method: PaymentMethod; amount: Units; tip: Units }[]; refundOf: Receipt | null; orderRef: string | null; buyer?: ZatcaBuyer | null; reason?: string },
 ): Promise<IssueOut> {
-  const { settings, restaurant, branch } = await context(db, x.branchId);
-  const prev = await lastReceipt(db, x.branchId, x.device);
+  const [{ settings, restaurant, branch }, prev] = await Promise.all([context(db, x.branchId), lastReceipt(db, x.branchId, x.device)]);
   const seq = (prev?.seq ?? 0) + 1;
   const receiptNo = receiptNumber(x.device, seq);
   const issuedAt = new Date();
@@ -179,22 +180,26 @@ export interface CloseResult {
   etaError: string | null;
   zatca?: ZatcaInvoiceRow | null;
   ledgerError: string | null;
+  /** the ticket and captured payments the receipt was made from (so the till needn't read them again) */
+  ticket?: Ticket;
+  payments?: Payment[];
+  /** with { background: true }: the bookkeeping still running after the receipt is out (resolves to the ledger error) */
+  after?: Promise<string | null>;
 }
 
 /** Called once the tenders cover the total: freezes the bill, issues the receipt + e-receipt, posts the sale, frees the table. */
-export async function closeCheck(db: Db, checkId: string, opts: { shift: Shift | null; device: string }): Promise<CloseResult> {
+export async function closeCheck(db: Db, checkId: string, opts: { shift: Shift | null; device: string; background?: boolean }): Promise<CloseResult> {
   const t = await loadTicket(db, checkId);
   if (!t) throw new Error("check not found");
   if (t.check.status === "paid") {
     const [r] = await db.list("receipts", { where: { checkId, kind: "SC" } });
     if (r) return { receipt: r, etaError: null, ledgerError: null, zatca: (await db.list("zatcaInvoices", { where: { receiptId: r.id } }))[0] ?? null };
   }
-  const [settings] = await db.list("settings");
+  const [[settings], exemptItems, pays] = await Promise.all([db.list("settings"), db.list("menuItems", { where: { vatExempt: true } }), db.list("payments", { where: { checkId, status: "captured" } })]);
   const order = t.orders[0];
-  const vatExempt = new Set((await db.list("menuItems", { where: { vatExempt: true } })).map((m) => m.id));
+  const vatExempt = new Set(exemptItems.map((m) => m.id));
   const { bill } = priceItems(t.items, { mode: order?.mode ?? "dine_in", tax: taxFor(settings, order), discount: t.check.discount, deliveryFee: order?.deliveryFee, vatExemptItemIds: vatExempt });
   if (!bill) throw new Error("empty check");
-  const pays = await db.list("payments", { where: { checkId, status: "captured" } });
   const due = remaining(fromAmount(bill.payable), pays);
   if (due > 0) throw new Error("check is not fully paid");
   const live = t.items.filter((i) => i.status !== "void");
@@ -212,24 +217,39 @@ export async function closeCheck(db: Db, checkId: string, opts: { shift: Shift |
   });
   const now = nowIso();
   await db.update("checks", checkId, { status: "paid", closedAt: now, receiptNo: receipt.receiptNo, etaUuid: receipt.etaUuid, paid: frozen.payable });
-  for (const o of t.orders) {
-    // still cooking = sent to the kitchen and not ready; a line never sent (new) doesn't keep a paid order open (Saqr 2026-11-24)
-    const open = t.items.some((i) => i.orderId === o.id && ["sent", "preparing"].includes(i.status));
-    if (o.mode === "dine_in" || !open) await db.update("orders", o.id, { status: "closed", closedAt: now });
+  // the receipt is out: the rest (orders, tables, stock, loyalty, ledger, audit) can finish while the cashier moves on (Saqr 2026-11-25)
+  const after = (async () => {
+    await Promise.all([
+      ...t.orders.map((o) => {
+        // still cooking = sent to the kitchen and not ready; a line never sent (new) doesn't keep a paid order open (Saqr 2026-11-24)
+        const open = t.items.some((i) => i.orderId === o.id && ["sent", "preparing"].includes(i.status));
+        return o.mode === "dine_in" || !open ? db.update("orders", o.id, { status: "closed", closedAt: now }) : null;
+      }),
+      ...t.check.tableIds.map(async (tid) => {
+        const others = (await db.list("checks", { where: { status: ["open", "bill_requested"] }, contains: { tableIds: tid } })).filter((c) => c.id !== checkId);
+        if (!others.length) await setTableStatus(db, tid, "dirty");
+      }),
+    ]);
+    // inventory: lines that never went to the kitchen (counter drinks) are deducted now; sent ones already were (idempotent)
+    await deductForItems(db, live, { trigger: "paid", branchId: t.check.branchId });
+    // CRM hook: visit + points (program rules, tiers, stamps), promo redemptions finalized, referral / campaign attribution
+    await onCheckPaid(db, checkId, { total: frozen.payable }).catch((e) => db.audit("loyalty.error", "checks", checkId, { error: String((e as Error).message ?? e) }));
+    const ledgerError = await post(db, t.check.branchId, (l) =>
+      postSale(l, bill, toFinancePayments(tenders), { date: businessDate(), receiptId: receipt.receiptNo, branch: t.check.branchId, drawer: opts.device }),
+    );
+    await db.audit("check.close", "checks", checkId, { receiptNo: receipt.receiptNo, total: frozen.payable, eta: receipt.etaUuid });
+    return ledgerError;
+  })();
+  const ticket = { ...t, check: { ...t.check, status: "paid" as const, closedAt: now, receiptNo: receipt.receiptNo, etaUuid: receipt.etaUuid, paid: frozen.payable } };
+  if (opts.background) {
+    const bg = after.catch((e) => {
+      void db.audit("check.close.error", "checks", checkId, { error: String((e as Error).message ?? e) }).catch(() => undefined);
+      return String((e as Error).message ?? e);
+    });
+    return { receipt, etaError, ledgerError: null, zatca, ticket, payments: pays, after: bg };
   }
-  for (const tid of t.check.tableIds) {
-    const others = (await db.list("checks", { where: { status: ["open", "bill_requested"] }, contains: { tableIds: tid } })).filter((c) => c.id !== checkId);
-    if (!others.length) await setTableStatus(db, tid, "dirty");
-  }
-  // inventory: lines that never went to the kitchen (counter drinks) are deducted now; sent ones already were (idempotent)
-  await deductForItems(db, live, { trigger: "paid", branchId: t.check.branchId });
-  // CRM hook: visit + points (program rules, tiers, stamps), promo redemptions finalized, referral / campaign attribution
-  await onCheckPaid(db, checkId, { total: frozen.payable }).catch((e) => db.audit("loyalty.error", "checks", checkId, { error: String((e as Error).message ?? e) }));
-  const ledgerError = await post(db, t.check.branchId, (l) =>
-    postSale(l, bill, toFinancePayments(tenders), { date: businessDate(), receiptId: receipt.receiptNo, branch: t.check.branchId, drawer: opts.device }),
-  );
-  await db.audit("check.close", "checks", checkId, { receiptNo: receipt.receiptNo, total: frozen.payable, eta: receipt.etaUuid });
-  return { receipt, etaError, ledgerError, zatca };
+  const ledgerError = await after;
+  return { receipt, etaError, ledgerError, zatca, ticket, payments: pays };
 }
 
 /* ───────── returns ───────── */

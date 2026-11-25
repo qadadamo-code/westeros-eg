@@ -64,9 +64,8 @@ export async function openTicket(db: Db, d: TicketDraft): Promise<{ check: Check
 }
 
 export async function loadTicket(db: Db, checkId: string): Promise<Ticket | null> {
-  const check = await db.get("checks", checkId);
+  const [check, orders] = await Promise.all([db.get("checks", checkId), db.list("orders", { where: { checkId }, orderBy: [{ field: "openedAt" }] })]);
   if (!check) return null;
-  const orders = await db.list("orders", { where: { checkId }, orderBy: [{ field: "openedAt" }] });
   const items = orders.length ? await db.list("orderItems", { where: { orderId: orders.map((o) => o.id) }, orderBy: [{ field: "createdAt" }] }) : [];
   return { check, orders, items };
 }
@@ -143,11 +142,14 @@ export async function voidLine(db: Db, checkId: string, it: OrderItem, reason: s
 export async function sendToKitchen(db: Db, t: Ticket, course?: number): Promise<number> {
   const list = course == null ? sendableItems(t.items) : t.items.filter((i) => i.status === "new" && i.course === course);
   const at = nowIso();
-  for (const i of list) await db.update("orderItems", i.id, { status: "sent", firedAt: at });
+  // one round trip for all of them, not one per line (Saqr 2026-11-25: faster cashier)
+  await Promise.all(list.map((i) => db.update("orderItems", i.id, { status: "sent", firedAt: at })));
   if (list.length) {
     const orderIds = new Set(list.map((i) => i.orderId));
-    for (const o of t.orders) if (orderIds.has(o.id) && (o.status === "open" || o.status === "ready" || o.status === "served")) await db.update("orders", o.id, { status: "sent" });
-    for (const tid of t.check.tableIds) await setTableStatus(db, tid, "ordered");
+    await Promise.all([
+      ...t.orders.filter((o) => orderIds.has(o.id) && (o.status === "open" || o.status === "ready" || o.status === "served")).map((o) => db.update("orders", o.id, { status: "sent" })),
+      ...t.check.tableIds.map((tid) => setTableStatus(db, tid, "ordered")),
+    ]);
     await db.audit(course == null ? "order.send" : "order.fire_course", "checks", t.check.id, { items: list.length, course: course ?? null });
     // inventory: deduct recipes at send (never throws; see src/modules/inventory/deduct.ts)
     await deductForItems(db, list, { trigger: "send", branchId: t.check.branchId });
@@ -159,7 +161,7 @@ export async function sendToKitchen(db: Db, t: Ticket, course?: number): Promise
 export async function resendToKitchen(db: Db, t: Ticket): Promise<number> {
   const list = t.items.filter((i) => i.status !== "void" && i.status !== "new" && i.firedAt);
   const at = nowIso();
-  for (const i of list) await db.update("orderItems", i.id, { firedAt: at });
+  await Promise.all(list.map((i) => db.update("orderItems", i.id, { firedAt: at })));
   if (list.length) await db.audit("order.resend", "checks", t.check.id, { items: list.length });
   return list.length;
 }

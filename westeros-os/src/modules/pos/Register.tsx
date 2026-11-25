@@ -30,6 +30,7 @@ import { SplitDialog } from "./components/SplitDialog";
 import { TablePicker } from "./components/TablePicker";
 import { CustomerDialog, type CustomerResult } from "./components/CustomerDialog";
 import { PaymentDialog, type TenderInput } from "./components/PaymentDialog";
+import { usePrintRenderer } from "@/modules/cc/print/renderer";
 import { ReceiptDialog, useReceiptPrint } from "./components/ReceiptDialog";
 import { useMay } from "@/modules/cc/useAccess";
 import { BuyerDialog } from "@/modules/settings/zatca/BuyerDialog";
@@ -39,7 +40,7 @@ import { OpenShiftDialog } from "./components/OpenShiftDialog";
 import { Stepper } from "./components/bits";
 import { discountPct, lineDiscountUnits } from "./math";
 import { addLine, changeChannel, discardTicket, loadTicket, mergeChecks, moveCheckToTable, moveItems, openTicket, sendToKitchen, resendToKitchen, setBillDiscount, setLineDiscount, setLineQty, replaceLine, setTicketMeta, splitIntoChecks, updateLine, voidLine, type TicketDraft } from "./ops";
-import { closeCheck, takePayment, voidPayment } from "./sale";
+import { closeCheck, paidAfterTake, takePayment, voidPayment } from "./sale";
 import { PromoDialog } from "@/modules/marketing/pos/PromoDialog";
 import { redeemGiftCard, refundGiftCard } from "@/modules/marketing/ops";
 import { useMenu, useReceiptSourceBuilder, useSettings, useShift, useStaffNames } from "./usePos";
@@ -57,6 +58,8 @@ export default function Register() {
   const db = useDb();
   const may = useMay();
   const printReceipt = useReceiptPrint();
+  // this screen draws the kitchen tickets for the background print station (Saqr 2026-11-25)
+  usePrintRenderer();
   const approve = useApproval();
   const { toast } = useToast();
   const session = useSession();
@@ -457,10 +460,11 @@ export default function Register() {
   };
   const finish = async () => {
     if (!check) return;
-    const res = await run(() => closeCheck(db, check.id, { shift, device }));
+    // the receipt prints as soon as it is issued; orders, tables, stock and bookkeeping finish in the background (Saqr 2026-11-25)
+    const res = await run(() => closeCheck(db, check.id, { shift, device, background: true }));
     if (!res || !receiptSrc) return;
-    const fresh = await loadTicket(db, check.id);
-    const pays = await db.list("payments", { where: { checkId: check.id } });
+    const fresh = res.ticket ?? (await loadTicket(db, check.id));
+    const pays = res.payments ?? (await db.list("payments", { where: { checkId: check.id } }));
     setDlg(null);
     setShares(null);
     // بعد الدفع الفاتورة بتتطبع على طول من غير معاينة (Saqr 2026-11-25); the preview stays for an ETA error
@@ -472,7 +476,11 @@ export default function Register() {
         newTicket(kind);
       }
     }
-    if (res.ledgerError) toast({ title: L("القيد المحاسبي اتسجل كخطأ للمحاسب", "Ledger posting logged for the accountant"), description: res.ledgerError, tone: "warn" });
+    const ledger = (e: string | null) => {
+      if (e) toast({ title: L("القيد المحاسبي اتسجل كخطأ للمحاسب", "Ledger posting logged for the accountant"), description: e, tone: "warn" });
+    };
+    if (res.after) void res.after.then(ledger);
+    else ledger(res.ledgerError);
   };
   const tender = async (t: TenderInput) => {
     if (!check) return;
@@ -481,8 +489,8 @@ export default function Register() {
       const ok = await run(() => redeemGiftCard(db, check, t.reference ?? "", t.amount, (p) => takePayment(db, check, p)));
       if (!ok) return;
     } else await run(() => takePayment(db, check, t));
-    const fresh = await db.get("checks", check.id);
-    if (fresh && fresh.paid >= fresh.total) await finish();
+    const paid = paidAfterTake(check.id) ?? (await db.get("checks", check.id))?.paid ?? 0;
+    if (paid >= check.total) await finish();
   };
   const voidTender = async (p: Payment) => {
     const who = await approve({ kind: "refund" }, L("إلغاء دفعة", "Void a payment"));
