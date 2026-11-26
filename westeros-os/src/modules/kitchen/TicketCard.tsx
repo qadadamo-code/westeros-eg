@@ -35,9 +35,11 @@ export interface TicketCardProps {
   onStart: (t: Ticket) => void;
   onBump: (t: Ticket) => void;
   onPriority: (t: Ticket, p: OrderPriority) => void;
+  /** نظام الطابعات (Saqr 2026-11-26): the screen is for viewing only; the order counts down to ready by itself */
+  display?: boolean;
 }
 
-export const TicketCard = memo(function TicketCard({ ticket, index, now, settings, stationById, tableLabel, staffName, showStations, highlight, onItem, onStart, onBump, onPriority }: TicketCardProps) {
+export const TicketCard = memo(function TicketCard({ ticket, index, now, settings, stationById, tableLabel, staffName, showStations, highlight, onItem, onStart, onBump, onPriority, display }: TicketCardProps) {
   const { loc, lang } = useT();
   const k = useDict(kdict);
   const reduced = useReduced();
@@ -124,7 +126,7 @@ export const TicketCard = memo(function TicketCard({ ticket, index, now, setting
               ) : null}
               <ul className="flex flex-col gap-1">
                 {g.items.map((i) => (
-                  <ItemRow key={i.id} item={i} lang={lang} onClick={() => onItem(i)} />
+                  <ItemRow key={i.id} item={i} lang={lang} onClick={() => !display && onItem(i)} />
                 ))}
               </ul>
             </section>
@@ -149,6 +151,7 @@ export const TicketCard = memo(function TicketCard({ ticket, index, now, setting
       </div>
 
       {/* actions */}
+      {display ? <DueBar ticket={ticket} now={now} /> : (
       <footer className="flex items-center gap-2 border-t border-line bg-surface-2 p-2">
         {ticket.state === "new" ? (
           <Button variant="secondary" size="lg" className="px-4" icon={<Play className="size-5" />} onClick={() => onStart(ticket)}>
@@ -178,9 +181,31 @@ export const TicketCard = memo(function TicketCard({ ticket, index, now, setting
           )}
         </Popover>
       </footer>
+      )}
     </motion.article>
   );
 });
+
+/** the order's countdown to ready (نظام الطابعات): the latest due time of its lines */
+function DueBar({ ticket, now }: { ticket: Ticket; now: number }) {
+  const { L } = useT();
+  const dues = ticket.items.map((i) => (i.dueAt ? Date.parse(i.dueAt) : 0)).filter(Boolean);
+  if (!dues.length) return <footer className="border-t border-line bg-surface-2 p-3 text-center text-[13.5px] font-semibold text-muted">{L("بيتحضر", "Preparing")}</footer>;
+  const due = Math.max(...dues);
+  const start = Date.parse(ticket.firedAt);
+  const left = Math.max(0, due - now);
+  const pct = due > start ? Math.min(100, ((now - start) / (due - start)) * 100) : 100;
+  const mm = Math.floor(left / 60_000), ss = Math.floor((left % 60_000) / 1000);
+  return (
+    <footer className="grid gap-1.5 border-t border-line bg-surface-2 p-3">
+      <div className="flex items-center justify-between text-[14px] font-bold">
+        <span>{left ? L("جاهز خلال", "Ready in") : L("جاهز", "Ready")}</span>
+        {left ? <span className="num" dir="ltr">{mm}:{String(ss).padStart(2, "0")}</span> : null}
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-surface-3"><div className={cn("h-full rounded-full transition-[width]", pct > 85 ? "bg-warn" : "bg-ok")} style={{ width: `${pct}%` }} /></div>
+    </footer>
+  );
+}
 
 function MenuBtn({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
   return (

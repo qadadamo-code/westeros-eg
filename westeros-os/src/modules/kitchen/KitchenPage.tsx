@@ -21,6 +21,7 @@ import { useOnWorkingMenu } from "@/modules/cc/menu/menuBranch";
 import { useSession } from "@/auth/session";
 import { listsOf } from "@/modules/cc/lib";
 import { categoryRank, printOf } from "@/modules/cc/print/setup";
+import { KitchenPrintAlerts, useKitchenPrintIssues } from "@/modules/cc/print/issues";
 
 type View = "line" | "allday" | "expo" | "86";
 const VIEW_KEY = "sufra-os.kds.view";
@@ -54,6 +55,9 @@ export function KitchenScreen({ kiosk = false }: { kiosk?: boolean }) {
   const { branchId: kBranch } = useSession();
   const kSetup = printOf(listsOf(useLive("mfgSettings").data[0]), kBranch);
   const byCat = kSetup.kitchenSort === "category";
+  // نظام الطابعات: the kitchen screen is for viewing only, orders become ready by themselves (Saqr 2026-11-26)
+  const displayOnly = !!kSetup.kitchenPrint;
+  const printIssues = useKitchenPrintIssues();
   const kMenu = useLive("menuItems", undefined, { enabled: byCat }).data;
   const kCats = useLive("menuCategories", undefined, { enabled: byCat }).data;
   const itemRank = useMemo(() => (byCat ? categoryRank(kMenu, kCats) : null), [byCat, kMenu, kCats]);
@@ -143,7 +147,7 @@ export function KitchenScreen({ kiosk = false }: { kiosk?: boolean }) {
 
   /* keyboard / bump bar */
   const digits: Record<string, () => void> = {};
-  for (let i = 1; i <= 9; i++) digits[String(i)] = () => (view === "line" ? tickets[i - 1] && void bump(tickets[i - 1]) : view === "expo" ? expoReady(expo)[i - 1] && void serve(expoReady(expo)[i - 1]) : undefined);
+  for (let i = 1; i <= 9; i++) digits[String(i)] = () => (displayOnly ? undefined : view === "line" ? tickets[i - 1] && void bump(tickets[i - 1]) : view === "expo" ? expoReady(expo)[i - 1] && void serve(expoReady(expo)[i - 1]) : undefined);
   useHotkeys(
     { ...digits, r: () => void recall(), l: () => setView("line"), a: () => setView("allday"), e: () => setView("expo"), x: () => setView("86") },
     {
@@ -184,6 +188,8 @@ export function KitchenScreen({ kiosk = false }: { kiosk?: boolean }) {
   return (
     <div className={cn("flex flex-col gap-4", kiosk && "min-h-dvh p-4 lg:p-5")} onPointerDown={unlockAudio}>
       <style>{KDS_CSS}</style>
+      <KitchenPrintAlerts {...printIssues} />
+      {displayOnly ? <p className="rounded-2xl bg-info-soft px-4 py-2.5 text-[13.5px] font-semibold text-info">نظام الطابعات: الشاشة للعرض بس، وكل أوردر بيبقى جاهز لوحده لما وقته يخلص.</p> : null}
       {/* toolbar */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2.5">
         {kiosk ? (
@@ -265,6 +271,7 @@ export function KitchenScreen({ kiosk = false }: { kiosk?: boolean }) {
                   onStart={start}
                   onBump={bump}
                   onPriority={onPriority}
+                  display={displayOnly}
                 />
               ))}
             </AnimatePresence>

@@ -7,7 +7,8 @@
 import { lazy, Suspense, useState } from "react";
 import { ArrowDown, ArrowUp, Check, ChefHat, Plus, Printer, Receipt, Trash2 } from "lucide-react";
 import { useDb, useLive } from "@/data/hooks";
-import type { KitchenTicketDesign, MfgSettings, PrintSetup, PrinterDef } from "@/data/types";
+import type { KitchenTicketDesign, KitchenTime, MfgSettings, PrintSetup, PrinterDef } from "@/data/types";
+import { kitchenTimeOf, orderMinutes } from "@/modules/kitchen/autoTime";
 import { uuid } from "@/lib/id";
 import { cn } from "@/lib/cn";
 import { printNode } from "@/lib/receipt";
@@ -126,7 +127,8 @@ function Kitchen({ setup, save, readOnly, branchId }: Props & { branchId: string
       </Card>
       <Card className="grid gap-3 p-4">
         <Switch checked={setup.kitchenPrint} disabled={readOnly} onChange={(v) => void save({ kitchenPrint: v })} label="تفعيل طابعة المطبخ"
-          description={setup.kitchenPrint ? "طلبيات المطبخ بتتطبع على طابعات الفئات، وبتظهر كمان في شاشة المطبخ." : "مقفولة: المطبخ شغال على شاشة المطبخ الداخلية بس، والطلبيات بتظهر فيها."} />
+          description={setup.kitchenPrint ? "نظام الطابعات: الطلبيات بتتطبع على طابعات الفئات، وشاشة المطبخ للعرض بس، وكل أوردر بيبقى جاهز لوحده لما وقته يخلص." : "شاشة مطبخ تفاعلية: الشيفات بيضغطوا «بدأ» و«جاهز» على شاشة المطبخ."} />
+        {setup.kitchenPrint ? <KitchenTimeEdit setup={setup} save={save} readOnly={readOnly} /> : null}
         {setup.kitchenPrint ? (
           <>
             <Select label="طابعة المطبخ الافتراضية" value={setup.kitchenDefaultPrinterId ?? ""} disabled={readOnly} onChange={(e) => void save({ kitchenDefaultPrinterId: e.target.value || null })}
@@ -179,6 +181,29 @@ function Kitchen({ setup, save, readOnly, branchId }: Props & { branchId: string
 }
 
 /** محطة الطباعة: the switch, the program download (permission "محطة الطباعة") and the station screen */
+/** وقت الأوردر في نظام الطابعات (Saqr 2026-11-26) */
+function KitchenTimeEdit({ setup, save, readOnly }: Props) {
+  const t = kitchenTimeOf(setup.kitchenTime);
+  const set = (p: Partial<KitchenTime>) => void save({ kitchenTime: { ...t, ...p } });
+  const num = (label: string, key: keyof KitchenTime, unit: string) => (
+    <Input key={key} label={`${label} (${unit})`} type="number" inputMode="numeric" min={0} dir="ltr" className="num" defaultValue={String(t[key])} disabled={readOnly}
+      onBlur={(e) => { const v = Math.max(0, Math.round(Number(e.target.value) || 0)); if (v !== t[key]) set({ [key]: v }); }} />
+  );
+  const ex = [1, 2, 3, 4, 5, 6].map((n) => `الأوردر ${n} = ${orderMinutes(n, 0, t)} د`).join("، ");
+  return (
+    <div className="grid gap-3 rounded-2xl border border-line p-3">
+      <p className="font-semibold">وقت الأوردر لحد ما يبقى جاهز</p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {num("وقت الأوردر العادي", "baseMin", "دقيقة")}
+        {num("لحد كام أوردر في المطبخ", "baseOrders", "أوردر")}
+        {num("زيادة لكل أوردر بعدهم", "perOrder", "دقيقة")}
+        {num("زيادة لكل فئة مختلفة في الأوردر", "perCategory", "دقيقة")}
+      </div>
+      <p className="text-[13px] text-muted">مثال من غير زيادة الفئات: {ex}</p>
+    </div>
+  );
+}
+
 function StationCard({ setup, save, readOnly }: Props) {
   const may = useMay();
   const db = useDb();

@@ -3,6 +3,7 @@
  * the floating push-to-talk button (manager, waiter, kitchen/chef, delivery) and toasts for incoming radio clips + alerts.
  */
 import { PrintRenderer } from "@/modules/cc/print/renderer";
+import { AutoReady } from "@/modules/kitchen/AutoReady";
 import { COST_CONTROL_ONLY } from "@/costControl";
 import { useEffect, useMemo, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -108,6 +109,7 @@ export function OpsShellExtras() {
       {COST_CONTROL_ONLY ? <CcRadio /> : <RadioRuntime />}
       {COST_CONTROL_ONLY ? <KitchenPrinter /> : null}
       <PrintRenderer />
+      <AutoReady />
       <AlertToasts />
       {COST_CONTROL_ONLY ? null : <PttFab />}
     </>

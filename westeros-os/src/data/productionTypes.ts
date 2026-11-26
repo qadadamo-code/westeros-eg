@@ -367,4 +367,13 @@ export interface PrintSetup {
   stickerPrinterId?: string | null;
   /** ترتيب الأصناف في طلبية وشاشة المطبخ (Saqr 2026-11-26): as entered, or by the menu category order */
   kitchenSort?: "entry" | "category";
+  /** وقت الأوردر في نظام الطابعات (Saqr 2026-11-26): the first `baseOrders` orders in the kitchen take `baseMin`, each order past them `perOrder` more, plus `perCategory` per distinct category */
+  kitchenTime?: KitchenTime;
+}
+
+export interface KitchenTime {
+  baseMin: number;
+  baseOrders: number;
+  perOrder: number;
+  perCategory: number;
 }

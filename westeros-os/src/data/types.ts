@@ -410,6 +410,8 @@ export interface OrderItem extends TenantRow {
   voidedBy: string | null;
   /** "سفري": a line of a dine-in order packed to go (printed on the receipt and the kitchen ticket). 0046 */
   toGo?: boolean;
+  /** نظام طابعات المطبخ: when the line is marked ready by itself (0064, Saqr 2026-11-26) */
+  dueAt?: string | null;
   createdBy: string | null;
 }
 

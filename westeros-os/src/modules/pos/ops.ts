@@ -11,6 +11,9 @@ import { sameLine, sendableItems } from "./math";
 import { deductForItems, onLineVoided } from "@/modules/inventory/deduct";
 import { channelOf, priceFor } from "@/modules/menu/rules";
 import { comboMods } from "@/modules/menu/sold";
+import { listsOf } from "@/modules/cc/lib";
+import { printOf } from "@/modules/cc/print/setup";
+import { kitchenTimeOf, orderMinutes } from "@/modules/kitchen/autoTime";
 
 export interface TicketDraft {
   mode: OrderMode;
@@ -138,12 +141,35 @@ export async function voidLine(db: Db, checkId: string, it: OrderItem, reason: s
   await recomputeCheck(db, checkId);
 }
 
+/**
+ * نظام طابعات المطبخ (Saqr 2026-11-26): when the kitchen works on printers, the lines get the time they are ready by
+ * themselves: their place among the orders still cooking in the branch, plus one minute per distinct category.
+ * null when the branch works on the interactive kitchen screen. Never throws (the send must go through).
+ */
+async function kitchenDueAt(db: Db, t: Ticket, lines: OrderItem[], at: string): Promise<string | null> {
+  try {
+    const [s] = await db.list("mfgSettings");
+    const setup = printOf(listsOf(s), t.check.branchId);
+    if (!setup.kitchenPrint) return null;
+    const cooking = await db.list("orderItems", { where: { status: ["sent", "preparing"] }, gte: { dueAt: at } });
+    const otherIds = [...new Set(cooking.map((i) => i.orderId).filter((id) => !lines.some((l) => l.orderId === id)))];
+    const others = otherIds.length ? (await db.list("orders", { where: { id: otherIds } })).filter((o) => o.branchId === t.check.branchId).length : 0;
+    const menu = await db.list("menuItems", { where: { id: [...new Set(lines.map((l) => l.itemId))] } });
+    const cats = new Set(menu.map((m) => m.categoryId ?? m.id)).size;
+    const mins = orderMinutes(others + 1, cats, kitchenTimeOf(setup.kitchenTime));
+    return new Date(Date.parse(at) + mins * 60_000).toISOString();
+  } catch {
+    return null;
+  }
+}
+
 /** Fires every sendable line (course 1 + fired courses), or one held course. Kitchen displays pick them up live. */
 export async function sendToKitchen(db: Db, t: Ticket, course?: number): Promise<number> {
   const list = course == null ? sendableItems(t.items) : t.items.filter((i) => i.status === "new" && i.course === course);
   const at = nowIso();
+  const dueAt = list.length ? await kitchenDueAt(db, t, list, at) : null;
   // one round trip for all of them, not one per line (Saqr 2026-11-25: faster cashier)
-  await Promise.all(list.map((i) => db.update("orderItems", i.id, { status: "sent", firedAt: at })));
+  await Promise.all(list.map((i) => db.update("orderItems", i.id, { status: "sent", firedAt: at, ...(dueAt ? { dueAt } : {}) })));
   if (list.length) {
     const orderIds = new Set(list.map((i) => i.orderId));
     await Promise.all([
