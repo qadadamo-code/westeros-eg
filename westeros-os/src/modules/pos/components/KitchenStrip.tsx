@@ -1,10 +1,14 @@
 /**
  * شاشة الكاشير (Saqr 2026-11-26): small chips next to «المغلقة», one per order in the kitchen now, with its number and
  * the time left (or جاهز), coloured by whether its check is still open or already paid. An open one opens on tap.
+ * A soft order bell rings when an order turns ready, and tapping a ready chip marks it handed to the customer (served),
+ * so it leaves the strip (Saqr 2026-11-26).
  */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSession } from "@/auth/session";
-import { useLive } from "@/data/hooks";
+import { useDb, useLive } from "@/data/hooks";
+import { playCue, unlockAudio } from "@/lib/service-calls";
+import { applyAction } from "@/modules/kitchen/ops";
 import type { Check } from "@/data/types";
 import { cn } from "@/lib/cn";
 
@@ -13,6 +17,12 @@ const READY_SHOWN_MS = 15 * 60_000;
 
 export function KitchenStrip({ onOpen }: { onOpen: (c: Check) => void }) {
   const { branchId } = useSession();
+  const db = useDb();
+  useEffect(() => {
+    const u = () => unlockAudio();
+    window.addEventListener("pointerdown", u, { once: true });
+    return () => window.removeEventListener("pointerdown", u);
+  }, []);
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 15_000);
@@ -39,6 +49,15 @@ export function KitchenStrip({ onOpen }: { onOpen: (c: Check) => void }) {
     return out.sort((a, b) => Number(a.ready) - Number(b.ready) || a.firedAt.localeCompare(b.firedAt));
   }, [orders, items, checks, branchId, now]);
 
+  // a soft bell when an order turns ready (not for the ones already ready when the screen opened)
+  const wasReady = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    const ready = new Set(chips.filter((c) => c.ready).map((c) => c.id));
+    if (wasReady.current && [...ready].some((id) => !wasReady.current!.has(id))) playCue("bell", 0.12);
+    wasReady.current = ready;
+  }, [chips]);
+  const handOver = (orderId: string) => void applyAction(db, items.filter((i) => i.orderId === orderId && i.status === "ready"), "serve");
+
   if (!chips.length) return null;
   return (
     <div className="flex min-w-0 max-w-full items-center gap-1.5 overflow-x-auto thin-scrollbar" aria-label="الطلبات في المطبخ" data-kitchen-strip>
@@ -47,8 +66,8 @@ export function KitchenStrip({ onOpen }: { onOpen: (c: Check) => void }) {
         const late = c.left != null && c.left < 0;
         const mins = c.left != null ? Math.ceil(Math.abs(c.left) / 60_000) : null;
         return (
-          <button key={c.id} type="button" disabled={!open} onClick={() => c.check && open && onOpen(c.check)}
-            title={open ? "مفتوح" : "مغلق (اتدفع)"}
+          <button key={c.id} type="button" disabled={!open && !c.ready} onClick={() => (c.ready ? handOver(c.id) : c.check && open && onOpen(c.check))}
+            title={c.ready ? "اضغط لما يتسلم للعميل" : open ? "مفتوح" : "مغلق (اتدفع)"}
             className={cn(
               "flex shrink-0 items-center gap-1 whitespace-nowrap rounded-lg border px-2 py-1 text-[12px] font-bold",
               open ? "border-brass/60 bg-brass-soft text-brass-text hover:brightness-95" : "border-line bg-surface-2 text-ink-2",
@@ -57,7 +76,7 @@ export function KitchenStrip({ onOpen }: { onOpen: (c: Check) => void }) {
             )}>
             <span className="num">#{c.number}</span>
             <span className="opacity-80">·</span>
-            <span className="num">{c.ready ? "جاهز" : mins == null ? "بيتحضر" : late ? `متأخر ${mins}د` : `${mins}د`}</span>
+            <span className="num">{c.ready ? "جاهز ✓" : mins == null ? "بيتحضر" : late ? `متأخر ${mins}د` : `${mins}د`}</span>
             <span className={cn("size-1.5 rounded-full", open ? "bg-brass" : "bg-muted")} aria-hidden />
           </button>
         );

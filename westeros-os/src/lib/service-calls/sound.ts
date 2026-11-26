@@ -4,15 +4,17 @@
  */
 import { loadRaw, saveRaw } from "@/lib/storage";
 
-export type Cue = "call" | "urgent" | "ticket" | "ready";
+export type Cue = "call" | "urgent" | "ticket" | "ready" | "bell";
 
 const NOTES: Record<Cue, [freq: number, start: number, dur: number][]> = {
   call: [[880, 0, 0.14], [1175, 0.16, 0.22]],
   urgent: [[988, 0, 0.12], [988, 0.18, 0.12], [988, 0.36, 0.12], [1319, 0.54, 0.3]],
   ticket: [[660, 0, 0.12], [990, 0.13, 0.2]],
   ready: [[784, 0, 0.12], [988, 0.12, 0.12], [1175, 0.24, 0.26]],
+  /** جرس أوردرات خفيف (Saqr 2026-11-26): a soft counter-bell ding-ding with a long ring */
+  bell: [[1319, 0, 0.9], [2637, 0, 0.35], [1760, 0.2, 1.1], [3520, 0.2, 0.3]],
 };
-const VIBRATE: Record<Cue, number[]> = { call: [120], urgent: [200, 80, 200, 80, 300], ticket: [80], ready: [100, 60, 100] };
+const VIBRATE: Record<Cue, number[]> = { call: [120], urgent: [200, 80, 200, 80, 300], ticket: [80], ready: [100, 60, 100], bell: [60] };
 
 let ctx: AudioContext | null = null;
 function audio(): AudioContext | null {
