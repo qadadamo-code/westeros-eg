@@ -173,7 +173,8 @@ export function buildReceiptModel(src: ReceiptSource): ReceiptModel {
   const meta = sorted.filter((r) => !lay.bottom.includes(r.key ?? ""));
   const metaBottom = sorted.filter((r) => lay.bottom.includes(r.key ?? ""));
 
-  const lines: LineRow[] = b.lines.map((l) => ({
+  // الأصناف المجانية (Saqr 2026-11-26): lines priced 0 can be left off the receipt
+  const lines: LineRow[] = b.lines.filter((l) => on("freeItems") || l.gross !== 0).map((l) => ({
     name: l.name,
     qty: l.qty,
     unitPrice: l.unitPrice,

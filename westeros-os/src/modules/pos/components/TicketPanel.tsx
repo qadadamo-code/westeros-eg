@@ -33,6 +33,8 @@ export interface TicketActions {
   onSend: () => void;
   /** إعادة الإرسال للمطبخ: given only when the user may; the send button sends again once nothing is new */
   onResend?: () => void;
+  /** lines whose kitchen ticket did not print (Saqr 2026-11-26) */
+  printFailed?: Set<string>;
   onFire: (course: number) => void;
   onHold: () => void;
   onPay: () => void;
@@ -141,6 +143,9 @@ export function TicketPanel({ check, orders, items, header, busy, className, ...
                                   <Badge tone={STATUS_TONE[it.status]} size="sm" dot pulse={it.status === "preparing"}>
                                     {STATUS_LABEL[it.status][lang]}
                                   </Badge>
+                                ) : null}
+                                {a.printFailed?.has(it.id) && it.status !== "void" ? (
+                                  <Badge tone="danger" size="sm" icon={<Printer className="size-3" />}>{L("ما اتطبعش في المطبخ", "Kitchen print failed")}</Badge>
                                 ) : null}
                                 {it.discount ? (
                                   <Badge tone="brass" size="sm">

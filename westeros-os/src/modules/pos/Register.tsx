@@ -31,6 +31,7 @@ import { TablePicker } from "./components/TablePicker";
 import { CustomerDialog, type CustomerResult } from "./components/CustomerDialog";
 import { PaymentDialog, type TenderInput } from "./components/PaymentDialog";
 import { ReceiptDialog, useReceiptPrint } from "./components/ReceiptDialog";
+import { KitchenPrintAlerts, useKitchenPrintIssues } from "@/modules/cc/print/issues";
 import { useMay } from "@/modules/cc/useAccess";
 import { BuyerDialog } from "@/modules/settings/zatca/BuyerDialog";
 import { OpenChecksDialog, TransferDialog, useCheckRows } from "./components/Checks";
@@ -57,6 +58,8 @@ export default function Register() {
   const db = useDb();
   const may = useMay();
   const printReceipt = useReceiptPrint();
+  // طلبيات المطبخ اللي ما اتطبعتش: تنبيه للكاشير وإعادة طباعة (Saqr 2026-11-26)
+  const kitchenIssues = useKitchenPrintIssues();
   const approve = useApproval();
   const { toast } = useToast();
   const session = useSession();
@@ -600,6 +603,7 @@ export default function Register() {
       header={header}
       busy={busy}
       className="@container h-full"
+      printFailed={kitchenIssues.failedItems}
       onLine={(it) => (setLineTab("edit"), setLineItem(it))}
       onLineDiscount={(it) => (setLineTab("discount"), setLineItem(it))}
       onSwipe={(it) => {
@@ -630,6 +634,7 @@ export default function Register() {
 
   return (
     <div className="-mx-4 -mt-5 -mb-10 flex h-[calc(100dvh-5rem-env(safe-area-inset-bottom))] min-h-0 flex-col md:-mx-6 md:-mt-6 md:-mb-10 md:h-[calc(100dvh-4rem)] xl:-mx-8">
+      <KitchenPrintAlerts issues={kitchenIssues.issues} retry={kitchenIssues.retry} dismiss={kitchenIssues.dismiss} />
       {/* toolbar */}
       <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-line bg-surface/70 px-3 py-2 backdrop-blur md:px-4">
         <Button size="sm" variant="soft" icon={<Plus className="size-4" />} onClick={askChannel}>

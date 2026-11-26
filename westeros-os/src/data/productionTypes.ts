@@ -348,6 +348,8 @@ export interface KitchenTicketDesign {
   appCode?: boolean;
   /** ترتيب البيانات ومكانها: keys in print order; keys in `bottom` print under the items */
   layout?: { order: string[]; bottom: string[] };
+  /** الهامش فوق الطلبية بالمليمتر (Saqr 2026-11-26) */
+  topMarginMm?: number;
 }
 export interface PrintSetup {
   printers: PrinterDef[];

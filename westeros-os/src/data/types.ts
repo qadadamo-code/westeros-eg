@@ -611,6 +611,8 @@ export interface InvoiceDesign {
     appOrderCode?: boolean;
     driver?: boolean;
     customerAddress?: boolean;
+    /** Saqr 2026-11-26: lines priced 0 (free items) on the receipt; older designs show them */
+    freeItems?: boolean;
   };
   /** ترتيب الحقول ومكانها (Saqr 2026-11-25): meta row keys in print order; keys in `bottom` print under the totals */
   layout?: { order: string[]; bottom: string[] };

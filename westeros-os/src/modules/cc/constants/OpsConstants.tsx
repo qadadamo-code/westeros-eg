@@ -157,6 +157,7 @@ function Kitchen({ setup, save, readOnly, branchId }: Props & { branchId: string
           <CardHeader title="شكل طلبية المطبخ" />
           <Input label="العنوان فوق الطلبية" defaultValue={k.header} disabled={readOnly} onBlur={(e) => e.target.value !== k.header && setK({ header: e.target.value })} />
           <Select label="حجم الخط" value={String(k.fontSize)} disabled={readOnly} onChange={(e) => setK({ fontSize: Number(e.target.value) })} options={[12, 13, 14, 15, 16, 18, 20, 22].map((n) => ({ value: String(n), label: `${n}` }))} />
+          <Select label="المسافة الفاضية فوق الطلبية" value={String(k.topMarginMm ?? 0)} disabled={readOnly} onChange={(e) => setK({ topMarginMm: Number(e.target.value) })} options={[0, 5, 10, 15, 20, 25, 30, 40, 50].map((n) => ({ value: String(n), label: n ? `${n} مم` : "بدون" }))} />
           <div className="grid gap-2 sm:grid-cols-2">
             {FIELDS.map(([key, label]) => <Switch key={key} checked={key === "appCode" ? k.appCode !== false : !!k[key]} disabled={readOnly} onChange={(v) => setK({ [key]: v })} label={label} />)}
           </div>

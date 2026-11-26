@@ -9,28 +9,27 @@ import OpsConstants from "../constants/OpsConstants";
 import { AreaGate, useArea } from "../useAccess";
 
 export default function OpsSettingsPage() {
+  const { branchId, branches } = useSession();
+  const [branch, setBranch] = useState(branchId ?? branches[0]?.id ?? "");
+  // الفرع فوق في نفس مكان زر المنيو (Saqr 2026-11-26)
+  const picker = branches.length > 1 ? (
+    <div className="w-48"><Select aria-label="الفرع" value={branch} onChange={(e) => setBranch(e.target.value)} options={branches.map((b) => ({ value: b.id, label: b.isCentral ? `${b.name.ar} (مطبخ مركزي)` : b.name.ar }))} /></div>
+  ) : null;
   return (
     <div className="grid gap-5">
-      <PageHeader icon={<SlidersHorizontal />} title="اعدادات التشغيل" subtitle="الطابعات وشكل الفاتورة وطلبية المطبخ ومحطة الطباعة، لكل فرع لوحده" />
-      <AreaGate id="ops.settings"><Body /></AreaGate>
+      <PageHeader icon={<SlidersHorizontal />} title="اعدادات التشغيل" subtitle="الطابعات وشكل الفاتورة وطلبية المطبخ ومحطة الطباعة، لكل فرع لوحده" actions={picker} />
+      <AreaGate id="ops.settings"><Body branch={branch} /></AreaGate>
     </div>
   );
 }
 
-function Body() {
-  const { branchId, branches } = useSession();
-  const [branch, setBranch] = useState(branchId ?? branches[0]?.id ?? "");
+function Body({ branch }: { branch: string }) {
   const settings = useLive("mfgSettings");
   const readOnly = !useArea().edit;
   const s = settings.data[0];
   if (!s) return settings.loading ? <Skeleton className="h-40" /> : <Card><EmptyState icon={<SlidersHorizontal />} title="لا توجد ثوابت لهذا المطعم" /></Card>;
   return (
     <div className="grid gap-5">
-      {branches.length > 1 ? (
-        <Card className="p-4">
-          <Select label="الفرع" value={branch} onChange={(e) => setBranch(e.target.value)} options={branches.map((b) => ({ value: b.id, label: b.isCentral ? `${b.name.ar} (مطبخ مركزي)` : b.name.ar }))} />
-        </Card>
-      ) : null}
       {branch ? <OpsConstants key={branch} settings={s} branchId={branch} readOnly={readOnly} /> : null}
     </div>
   );

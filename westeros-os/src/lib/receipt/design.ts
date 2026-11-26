@@ -26,6 +26,7 @@ export const DEFAULT_DESIGN: InvoiceDesign = {
     appOrderCode: true,
     driver: true,
     customerAddress: true,
+    freeItems: true,
   },
 };
 

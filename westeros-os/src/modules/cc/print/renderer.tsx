@@ -97,7 +97,9 @@ export function usePrintRenderer() {
           cashier: waiter?.name ?? null,
         };
         const chunks = await drawJob("kitchen", data as unknown as Record<string, unknown>, p, setup);
-        await db.update("printJobs", id as string, chunks ? { data: chunks, status: "queued" } : { payload: data as unknown as Record<string, unknown>, status: "queued" });
+        // the ticket stays in the job so the cashier can print it again if the printer fails (Saqr 2026-11-26)
+        const payload = { ...data, orderId, itemIds: lines.map((l) => l.id) } as unknown as Record<string, unknown>;
+        await db.update("printJobs", id as string, chunks ? { data: chunks, payload, status: "queued" } : { payload, status: "queued" });
       })().catch(() => undefined);
     }
     if (wait) {

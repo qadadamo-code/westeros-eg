@@ -124,6 +124,7 @@ export default function InvoiceDesigner({ embedded = false }: { embedded?: boole
     ["appOrderCode", L("كود الطلب (تطبيق توصيل)", "App order code")],
     ["driver", L("اسم الطيار (توصيل)", "Driver")],
     ["discounts", L("خانة الخصومات والعروض", "Discounts & offers")],
+    ["freeItems", L("الأصناف المجانية", "Free items")],
     ["modifiers", L("إضافات الصنف", "Item modifiers")],
     ["itemNotes", L("ملاحظات الصنف", "Item notes")],
     ["serviceVatLines", L("سطر الخدمة والضريبة", "Service & VAT lines")],

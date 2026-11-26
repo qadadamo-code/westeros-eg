@@ -19,6 +19,7 @@ const CSS = `
 .sfr .en{display:block;font-size:.82em;color:#222;direction:ltr}
 .sfr[dir=rtl] .en{text-align:right}
 .sfr .c .en{text-align:center}
+.sfr .title .en{text-align:center}
 .sfr .hr{border:0;border-top:1px dashed #000;margin:2.2mm 0}
 .sfr .hr2{border:0;border-top:2px solid #000;margin:2mm 0}
 .sfr .row{display:flex;justify-content:space-between;align-items:baseline;gap:2mm}

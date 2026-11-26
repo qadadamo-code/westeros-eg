@@ -32,7 +32,7 @@ export function KitchenTicketView({ data, design, paper }: { data: KitchenTicket
   const top = order.filter((k) => !bottom.includes(k));
   const under = order.filter((k) => bottom.includes(k) && value[k]);
   return (
-    <div dir="rtl" data-kitchen-ticket style={{ width: `${PAPER_MM[paper] - 6}mm`, padding: "3mm", background: "#fff", color: "#000", fontSize: fs, lineHeight: 1.35, fontFamily: "inherit" }}>
+    <div dir="rtl" data-kitchen-ticket style={{ width: `${PAPER_MM[paper] - 6}mm`, padding: "3mm", paddingTop: `${3 + Math.max(0, Math.min(50, design.topMarginMm ?? 0))}mm`, background: "#fff", color: "#000", fontSize: fs, lineHeight: 1.35, fontFamily: "inherit" }}>
       {design.header ? <div style={{ textAlign: "center", fontWeight: 800, fontSize: fs * 1.1 }}>{design.header}</div> : null}
       <div style={{ textAlign: "center", fontWeight: 900, fontSize: fs * 2.1, margin: "1mm 0" }} dir="ltr">#{data.number}</div>
       {top.map(row)}
