@@ -154,6 +154,8 @@ export interface TicketOpts {
   includeReady?: boolean;
   /** station sort order */
   stationOrder?: string[];
+  /** ترتيب حسب فئة الصنف: rank of a menu item (lower first), applied before course/seat */
+  itemRank?: Map<string, number> | null;
   /** a void older than this many ms is no longer shown (default 15 min) */
   voidTtlMs?: number;
   now?: number;
@@ -180,7 +182,9 @@ export function buildTickets(orders: Order[], items: OrderItem[], opts: TicketOp
     const voided = mine.filter((i) => i.status === "void" && i.firedAt && now - Date.parse(i.updatedAt) < voidTtl);
     const firedAt = active.reduce((m, i) => (i.firedAt && i.firedAt < m ? i.firedAt : m), active[0].firedAt ?? o.openedAt);
     const groupsMap = new Map<string | null, OrderItem[]>();
-    for (const i of [...active].sort((a, b) => a.course - b.course || (a.seat ?? 0) - (b.seat ?? 0) || a.createdAt.localeCompare(b.createdAt))) {
+    const ir = opts.itemRank;
+    const byRank = (a: OrderItem, b: OrderItem) => (ir ? (ir.get(a.itemId) ?? 9999) - (ir.get(b.itemId) ?? 9999) : 0);
+    for (const i of [...active].sort((a, b) => byRank(a, b) || a.course - b.course || (a.seat ?? 0) - (b.seat ?? 0) || a.createdAt.localeCompare(b.createdAt))) {
       groupsMap.set(i.stationId, [...(groupsMap.get(i.stationId) ?? []), i]);
     }
     const groups = [...groupsMap.entries()].map(([stationId, its]) => ({ stationId, items: its })).sort((a, b) => rank(a.stationId) - rank(b.stationId));

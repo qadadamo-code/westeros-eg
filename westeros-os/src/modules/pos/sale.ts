@@ -69,6 +69,14 @@ export async function voidPayment(db: Db, p: Payment) {
   await db.audit("payment.void", "payments", p.id, { amount: p.amount, method: p.method });
 }
 
+/** إرجاع دفعة لطلب بيتلغي (Saqr 2026-11-26): the money goes back to the customer; the payment stays as refunded */
+export async function refundOpenPayment(db: Db, p: Payment, reason: string, approvedBy: string | null) {
+  await db.update("payments", p.id, { status: "refunded" });
+  const paid = (await db.list("payments", { where: { checkId: p.checkId, status: "captured" } })).reduce((a, x) => a + x.amount, 0);
+  await db.update("checks", p.checkId, { paid });
+  await db.audit("payment.refund", "payments", p.id, { amount: p.amount, method: p.method, reason }, approvedBy);
+}
+
 /* ───────── receipts & ETA ───────── */
 
 async function lastReceipt(db: Db, branchId: string, device: string) {

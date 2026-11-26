@@ -77,7 +77,8 @@ export async function deductForItems(db: Db, lines: Line[], opts: { trigger: "se
 }
 
 /** A line voided after it was sent: stock stays out (the food was made); its cost is reclassified to waste. */
-export async function onLineVoided(db: Db, line: Pick<OrderItem, "id" | "name" | "voidReason">): Promise<void> {
+export async function onLineVoided(db: Db, line: Pick<OrderItem, "id" | "name" | "voidReason">, opts: { waste?: boolean } = {}): Promise<void> {
+  const waste = opts.waste !== false;
   try {
     const moves = await db.list("stockMoves", { where: { refType: "order_item", refId: line.id, kind: "sale" } });
     if (!moves.length) return;
@@ -86,7 +87,8 @@ export async function onLineVoided(db: Db, line: Pick<OrderItem, "id" | "name" |
     const back: MoveInput[] = [];
     for (const m of moves) {
       back.push({ itemId: m.itemId, locationId: m.locationId, branchId: m.branchId, kind: "sale_reversal", qty: -m.qty, value: -m.value, refType: "order_item_void", refId: line.id, groupId });
-      back.push({ itemId: m.itemId, locationId: m.locationId, branchId: m.branchId, kind: "waste", qty: m.qty, reason: "void_after_send", refType: "order_item_void", refId: line.id, groupId, note: `${line.name.ar} — ${line.voidReason ?? ""}`.trim() });
+      // no waste (Saqr 2026-11-26): the ingredients were not used, so the reversal alone puts them back in stock
+      if (waste) back.push({ itemId: m.itemId, locationId: m.locationId, branchId: m.branchId, kind: "waste", qty: m.qty, reason: "void_after_send", refType: "order_item_void", refId: line.id, groupId, note: `${line.name.ar} — ${line.voidReason ?? ""}`.trim() });
     }
     const written = await applyMoves(db, back, { items });
     const wasted: ByAccount = {};

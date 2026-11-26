@@ -23,7 +23,7 @@ import { AnimatedMoney, Button, Dialog, Input, useCommands, useHotkeys, useIsMob
 import { MenuPanel } from "./components/MenuPanel";
 import { ModifierSheet, type ModifierChoice } from "./components/ModifierSheet";
 import { TicketPanel } from "./components/TicketPanel";
-import { LineSheet } from "./components/LineSheet";
+import { LineSheet, WasteChoice } from "./components/LineSheet";
 import { useFame } from "@/modules/menu/useFame";
 import { DiscountDialog } from "./components/DiscountDialog";
 import { SplitDialog } from "./components/SplitDialog";
@@ -40,7 +40,7 @@ import { OpenShiftDialog } from "./components/OpenShiftDialog";
 import { Stepper } from "./components/bits";
 import { discountPct, lineDiscountUnits } from "./math";
 import { addLine, changeChannel, cancelSentTicket, discardTicket, loadTicket, mergeChecks, moveCheckToTable, moveItems, openTicket, sendToKitchen, resendToKitchen, setBillDiscount, setLineDiscount, setLineQty, replaceLine, setTicketMeta, splitIntoChecks, updateLine, voidLine, type TicketDraft } from "./ops";
-import { closeCheck, paidAfterTake, takePayment, voidPayment } from "./sale";
+import { closeCheck, paidAfterTake, refundOpenPayment, takePayment, voidPayment } from "./sale";
 import { PromoDialog } from "@/modules/marketing/pos/PromoDialog";
 import { redeemGiftCard, refundGiftCard } from "@/modules/marketing/ops";
 import { useMenu, useReceiptSourceBuilder, useSettings, useShift, useStaffNames } from "./usePos";
@@ -366,10 +366,18 @@ export default function Register() {
 
   /* ── ticket actions ── */
   const ticket = async () => (check ? loadTicket(db, check.id) : null);
+  // الدفع شغال بالتوازي مع الإرسال للمطبخ (Saqr 2026-11-26): sending does not lock the screen; payment waits for it only before its own send
+  const sendingRef = useRef<Promise<unknown> | null>(null);
+  const sendNow = (t: Awaited<ReturnType<typeof ticket>>) => {
+    if (!t) return Promise.resolve(0);
+    const p = sendToKitchen(db, t).catch((e) => (fail(e), 0));
+    sendingRef.current = p.finally(() => sendingRef.current === p && (sendingRef.current = null));
+    return p;
+  };
   const send = async () => {
     const t = await ticket();
     if (!t) return;
-    const n = await run(() => sendToKitchen(db, t));
+    const n = await sendNow(t);
     if (n) {
       toast({ title: L(`اتبعت ${n} صنف للمطبخ`, `Sent ${n} line${n > 1 ? "s" : ""} to the kitchen`), tone: "success" });
       if (order?.mode === "dine_in") newTicket("dine_in");
@@ -395,23 +403,29 @@ export default function Register() {
     newTicket(kind === "dine_in" ? "dine_in" : kind);
   };
   const [cancelReason, setCancelReason] = useState("");
+  const [cancelWaste, setCancelWaste] = useState<boolean | null>(null);
+  const paidOpen = payments.filter((p) => p.status === "captured");
   const discard = async () => {
     const t = await ticket();
     if (!t) return;
-    if (t.items.some((i) => i.status !== "new" && i.status !== "void")) return (setCancelReason(""), setDlg("cancel"));
+    if (t.items.some((i) => i.status !== "new" && i.status !== "void")) return (setCancelReason(""), setCancelWaste(null), setDlg("cancel"));
     await run(() => discardTicket(db, t));
     newTicket(kind);
   };
   /** the order already went to the kitchen: one approval and a reason void every line, then the check is cancelled (Saqr 2026-11-26) */
   const cancelSent = async () => {
     const t = await ticket();
-    if (!t || !cancelReason.trim()) return;
-    if (payments.some((p) => p.status === "captured"))
-      return toast({ title: L("فيه دفعات على الطلب", "The order has payments"), description: L("ألغي الدفعات الأول وبعدين ألغي الطلب.", "Void the payments first."), tone: "warn" });
-    const who = await approve({ kind: "void", afterSend: true }, L("إلغاء طلب دخل المطبخ", "Cancel an order sent to the kitchen"));
+    if (!t || !cancelReason.trim() || cancelWaste === null) return;
+    const paidNow = payments.filter((p) => p.status === "captured");
+    // a paid order is refunded as part of the cancel (Saqr 2026-11-26)
+    const who = await approve(paidNow.length ? { kind: "refund" } : { kind: "void", afterSend: true }, paidNow.length ? L("إلغاء طلب مدفوع وإرجاع المبلغ", "Cancel a paid order and refund") : L("إلغاء طلب دخل المطبخ", "Cancel an order sent to the kitchen"));
     if (!who) return;
     setDlg(null);
-    await run(() => cancelSentTicket(db, t, cancelReason.trim(), who.id));
+    const r = cancelReason.trim();
+    await run(async () => {
+      for (const p of paidNow) await refundOpenPayment(db, p, r, who.id);
+      await cancelSentTicket(db, t, r, who.id, cancelWaste);
+    });
     toast({ title: L("الطلب اتلغى", "Order cancelled"), tone: "success" });
     newTicket(kind);
   };
@@ -438,13 +452,13 @@ export default function Register() {
       await updateLine(db, check.id, it, rest);
     });
   };
-  const onLineVoid = async (it: OrderItem, reason: string) => {
+  const onLineVoid = async (it: OrderItem, reason: string, waste = true) => {
     if (!check) return;
     const afterSend = it.status !== "new";
     const who = await approve({ kind: "void", afterSend }, L(`إلغاء ${loc(it.name)}`, `Void ${loc(it.name)}`));
     if (!who) return;
     setLineItem(null);
-    await run(() => voidLine(db, check.id, it, reason, afterSend ? who.id : null));
+    await run(() => voidLine(db, check.id, it, reason, afterSend ? who.id : null, waste));
   };
   const onLineDiscount = async (it: OrderItem, d: Discount | null, reason: string) => {
     if (!check) return;
@@ -476,7 +490,10 @@ export default function Register() {
       setDlg("pay");
       // paid before it went to the kitchen: the kitchen ticket goes now (Mohammed 2026-11-23)
       if (items.some((i) => i.status === "new"))
-        void ticket().then((t) => t && run(() => sendToKitchen(db, t)).then((n) => n && toast({ title: L(`اتبعت ${n} صنف للمطبخ`, `Sent ${n} line${n > 1 ? "s" : ""} to the kitchen`), tone: "success" })));
+        void Promise.resolve(sendingRef.current)
+          .then(() => ticket())
+          .then((t) => (t && t.items.some((i) => i.status === "new") ? sendNow(t) : 0))
+          .then((n) => n && toast({ title: L(`اتبعت ${n} صنف للمطبخ`, `Sent ${n} line${n > 1 ? "s" : ""} to the kitchen`), tone: "success" }));
     });
   };
   const finish = async () => {
@@ -779,7 +796,7 @@ export default function Register() {
         </form>
       </Dialog>
       <Dialog open={dlg === "cancel"} onClose={() => setDlg(null)} size="sm" title={L("إلغاء الطلب", "Cancel the order")}
-        footer={<div className="flex justify-end gap-2"><Button variant="ghost" onClick={() => setDlg(null)}>{L("رجوع", "Back")}</Button><Button variant="danger" disabled={!cancelReason.trim()} onClick={() => void cancelSent()}>{L("إلغاء الطلب", "Cancel order")}</Button></div>}>
+        footer={<div className="flex justify-end gap-2"><Button variant="ghost" onClick={() => setDlg(null)}>{L("رجوع", "Back")}</Button><Button variant="danger" disabled={!cancelReason.trim() || cancelWaste === null} onClick={() => void cancelSent()}>{L("إلغاء الطلب", "Cancel order")}</Button></div>}>
         <form onSubmit={(e) => { e.preventDefault(); void cancelSent(); }} className="grid gap-3">
           <p className="text-[13.5px] text-muted">{L("الطلب دخل المطبخ: كل أصنافه هتتلغي وتتسجل في السجل، وتكلفتها تروح للهالك.", "The kitchen has it: every line is voided, logged, and its cost goes to waste.")}</p>
           <div className="flex flex-wrap gap-2">
@@ -788,6 +805,8 @@ export default function Register() {
             ))}
           </div>
           <Input label={L("السبب", "Reason")} autoFocus value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} />
+          <WasteChoice value={cancelWaste} onChange={setCancelWaste} />
+          {paidOpen.length ? <p className="rounded-xl bg-warn-soft px-3 py-2 text-[13.5px] font-semibold text-warn">{L(`الطلب عليه دفعات بـ ${formatMoney(paidOpen.reduce((a, p) => a + p.amount, 0) as Units, { lang })}: هتترجع للعميل مع الإلغاء.`, "Its payments are refunded with the cancel.")}</p> : null}
         </form>
       </Dialog>
       <Dialog open={dlg === "code"} onClose={() => setDlg(null)} size="sm" title={L("كود الطلب في التطبيق", "The app's order code")}

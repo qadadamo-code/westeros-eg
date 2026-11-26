@@ -18,6 +18,9 @@ import { TicketCard } from "./TicketCard";
 import { AllDayView, EightySixView, ExpoView } from "./views";
 import { useKitchen } from "./useKitchen";
 import { useOnWorkingMenu } from "@/modules/cc/menu/menuBranch";
+import { useSession } from "@/auth/session";
+import { listsOf } from "@/modules/cc/lib";
+import { categoryRank, printOf } from "@/modules/cc/print/setup";
 
 type View = "line" | "allday" | "expo" | "86";
 const VIEW_KEY = "sufra-os.kds.view";
@@ -47,8 +50,15 @@ export function KitchenScreen({ kiosk = false }: { kiosk?: boolean }) {
   const stationValid = station && data.stationById.has(station) ? station : null;
   const stationOrder = useMemo(() => data.stations.map((s) => s.id), [data.stations]);
 
-  const tickets = useMemo(() => buildTickets(data.orders, data.items, { stationId: stationValid, stationOrder, now }), [data.orders, data.items, stationValid, stationOrder, now]);
-  const expo = useMemo(() => buildTickets(data.orders, data.items, { includeReady: true, stationOrder, now }), [data.orders, data.items, stationOrder, now]);
+  // ترتيب الأصناف حسب الفئة من اعدادات التشغيل > شاشة المطبخ (Saqr 2026-11-26)
+  const { branchId: kBranch } = useSession();
+  const kSetup = printOf(listsOf(useLive("mfgSettings").data[0]), kBranch);
+  const byCat = kSetup.kitchenSort === "category";
+  const kMenu = useLive("menuItems", undefined, { enabled: byCat }).data;
+  const kCats = useLive("menuCategories", undefined, { enabled: byCat }).data;
+  const itemRank = useMemo(() => (byCat ? categoryRank(kMenu, kCats) : null), [byCat, kMenu, kCats]);
+  const tickets = useMemo(() => buildTickets(data.orders, data.items, { stationId: stationValid, stationOrder, now, itemRank }), [data.orders, data.items, stationValid, stationOrder, now, itemRank]);
+  const expo = useMemo(() => buildTickets(data.orders, data.items, { includeReady: true, stationOrder, now, itemRank }), [data.orders, data.items, stationOrder, now, itemRank]);
   const allCount = useMemo(() => buildTickets(data.orders, data.items, { now }).length, [data.orders, data.items, now]);
   const perStation = useMemo(() => {
     const m = new Map<string, number>();

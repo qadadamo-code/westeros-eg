@@ -119,6 +119,12 @@ function Kitchen({ setup, save, readOnly, branchId }: Props & { branchId: string
   return (
     <div className="grid gap-5">
       <Card className="grid gap-3 p-4">
+        <CardHeader title="ترتيب الأصناف" subtitle="ترتيب الأصناف في طلبية المطبخ المطبوعة وفي شاشة المطبخ" />
+        <Segmented label="ترتيب الأصناف" value={setup.kitchenSort ?? "entry"} onChange={(v) => !readOnly && void save({ kitchenSort: v })}
+          options={[{ value: "entry", label: "زي ما الكاشير دخلها" }, { value: "category", label: "حسب فئة الصنف" }]} />
+        {setup.kitchenSort === "category" ? <p className="text-[13px] text-muted">الأصناف بتترتب بترتيب الفئات في المنيو (أول فئة فوق).</p> : null}
+      </Card>
+      <Card className="grid gap-3 p-4">
         <Switch checked={setup.kitchenPrint} disabled={readOnly} onChange={(v) => void save({ kitchenPrint: v })} label="تفعيل طابعة المطبخ"
           description={setup.kitchenPrint ? "طلبيات المطبخ بتتطبع على طابعات الفئات، وبتظهر كمان في شاشة المطبخ." : "مقفولة: المطبخ شغال على شاشة المطبخ الداخلية بس، والطلبيات بتظهر فيها."} />
         {setup.kitchenPrint ? (

@@ -34,7 +34,7 @@ export function LineSheet({ item, guests, startTab = "edit", onOptions, onClose,
   guests: number;
   onClose: () => void;
   onSave: (it: OrderItem, patch: { qty?: number; notes?: string; seat?: number | null; course?: number }) => void;
-  onVoid: (it: OrderItem, reason: string) => void;
+  onVoid: (it: OrderItem, reason: string, waste: boolean) => void;
   onDiscount: (it: OrderItem, d: Discount | null, reason: string) => void;
 }) {
   const { L, loc, lang } = useT();
@@ -44,10 +44,12 @@ export function LineSheet({ item, guests, startTab = "edit", onOptions, onClose,
   const [course, setCourse] = useState(1);
   const [tab, setTab] = useState<"edit" | "discount" | "void">("edit");
   const [reason, setReason] = useState("");
+  const [waste, setWaste] = useState<boolean | null>(null);
   const [dKind, setDKind] = useState<"percent" | "amount">("percent");
   const [dVal, setDVal] = useState("10");
   useEffect(() => {
     if (!item) return;
+    setWaste(null);
     setQty(item.qty);
     setNotes(item.notes);
     setSeat(item.seat);
@@ -90,7 +92,7 @@ export function LineSheet({ item, guests, startTab = "edit", onOptions, onClose,
             </Button>
           </>
         ) : (
-          <Button size="lg" variant="danger" disabled={!reason} onClick={() => onVoid(item, reason)} icon={<Ban className="size-5" />}>
+          <Button size="lg" variant="danger" disabled={!reason || (!isNew && waste === null)} onClick={() => onVoid(item, reason, !!waste)} icon={<Ban className="size-5" />}>
             {isNew ? L("شيل الصنف", "Remove item") : L("إلغاء (PIN مدير)", "Void (manager PIN)")}
           </Button>
         )
@@ -143,11 +145,27 @@ export function LineSheet({ item, guests, startTab = "edit", onOptions, onClose,
         ) : (
           <>
             <ReasonPicker reasons={VOID_REASONS} value={reason} onChange={setReason} />
+            {!isNew ? <WasteChoice value={waste} onChange={setWaste} /> : null}
             {!isNew ? <p className="text-[13px] text-muted">{L("هيتطبع تيكت إلغاء للمطبخ وهيتسجل في السجل.", "A void ticket goes to the kitchen and the audit log.")}</p> : null}
           </>
         )}
       </div>
     </Dialog>
+  );
+}
+
+/** الصنف دخل المطبخ: the cashier must say whether food was wasted (Saqr 2026-11-26). Yes = its cost goes to waste; no = the stock comes back. */
+export function WasteChoice({ value, onChange }: { value: boolean | null; onChange: (v: boolean) => void }) {
+  const { L } = useT();
+  return (
+    <div className="grid gap-1.5">
+      <p className="text-[13.5px] font-semibold">{L("فيه هدر؟", "Was food wasted?")}</p>
+      <div className="grid grid-cols-2 gap-2">
+        {([[true, L("أيوه، اتعمل واتهدر", "Yes, made and wasted")], [false, L("لأ، المكونات ترجع المخزن", "No, stock goes back")]] as const).map(([v, label]) => (
+          <button key={String(v)} type="button" onClick={() => onChange(v)} className={cn("min-h-11 rounded-xl border px-3 text-[13.5px] font-semibold", value === v ? (v ? "border-danger bg-danger-soft text-danger" : "border-ok bg-ok/10 text-ok") : "border-line")}>{label}</button>
+        ))}
+      </div>
+    </div>
   );
 }
 

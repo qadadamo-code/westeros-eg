@@ -31,6 +31,12 @@ export function printersFor(p: PrintSetup, categoryId: string | null | undefined
   return p.kitchenDefaultPrinterId && p.printers.some((x) => x.id === p.kitchenDefaultPrinterId) ? [p.kitchenDefaultPrinterId] : [];
 }
 
+/** rank of each menu item by its category's place in the menu (for ترتيب حسب الفئة); unknown items go last */
+export function categoryRank(items: { id: string; categoryId: string | null }[], cats: { id: string; sort: number }[]): Map<string, number> {
+  const pos = new Map([...cats].sort((a, b) => a.sort - b.sort).map((c, i) => [c.id, i]));
+  return new Map(items.map((m) => [m.id, m.categoryId ? pos.get(m.categoryId) ?? 9999 : 9999]));
+}
+
 const KEY = "westeros.printer.device";
 /** which printer this device is connected to (null = none) */
 export function devicePrinter(): string | null {

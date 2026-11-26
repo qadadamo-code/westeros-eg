@@ -126,14 +126,14 @@ export async function updateLine(db: Db, checkId: string, it: OrderItem, patch: 
 }
 
 /** Before the kitchen saw it: just remove. After: mark void with a reason (needs approval upstream). */
-export async function voidLine(db: Db, checkId: string, it: OrderItem, reason: string, approvedBy: string | null) {
+export async function voidLine(db: Db, checkId: string, it: OrderItem, reason: string, approvedBy: string | null, waste = true) {
   if (it.status === "new") {
     await db.remove("orderItems", it.id);
   } else {
     await db.update("orderItems", it.id, { status: "void", voidReason: reason, voidedBy: approvedBy ?? db.actorId });
-    await db.audit("order.void", "orderItems", it.id, { item: it.name.en, qty: it.qty, reason }, approvedBy);
-    // inventory: the food was made — its cost moves from cost of sales to waste
-    await onLineVoided(db, { ...it, voidReason: reason });
+    await db.audit("order.void", "orderItems", it.id, { item: it.name.en, qty: it.qty, reason, waste }, approvedBy);
+    // inventory: wasted = its cost moves from cost of sales to waste; not wasted = the stock comes back
+    await onLineVoided(db, { ...it, voidReason: reason }, { waste });
   }
   await recomputeCheck(db, checkId);
 }
@@ -301,10 +301,10 @@ export async function changeChannel(db: Db, t: Ticket, ch: { id: string; kind: "
 
 /** Cancel an empty (or never-sent) check. */
 /** إلغاء طلب دخل المطبخ (Saqr 2026-11-26): every line the kitchen got is voided with the reason (cost goes to waste, audit log), then the check is cancelled */
-export async function cancelSentTicket(db: Db, t: Ticket, reason: string, approvedBy: string | null) {
+export async function cancelSentTicket(db: Db, t: Ticket, reason: string, approvedBy: string | null, waste = true) {
   const sent = t.items.filter((i) => i.status !== "new" && i.status !== "void");
-  for (const it of sent) await voidLine(db, t.check.id, it, reason, approvedBy);
-  await db.audit("order.cancel", "checks", t.check.id, { items: sent.length, reason }, approvedBy);
+  for (const it of sent) await voidLine(db, t.check.id, it, reason, approvedBy, waste);
+  await db.audit("order.cancel", "checks", t.check.id, { items: sent.length, reason, waste }, approvedBy);
   await discardTicket(db, { ...t, items: t.items.map((i) => (sent.some((x) => x.id === i.id) ? { ...i, status: "void" as const } : i)) });
 }
 

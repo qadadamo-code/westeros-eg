@@ -365,4 +365,6 @@ export interface PrintSetup {
   stationOn?: boolean;
   /** طابعة ستيكرات الصلاحية (التصنيع) */
   stickerPrinterId?: string | null;
+  /** ترتيب الأصناف في طلبية وشاشة المطبخ (Saqr 2026-11-26): as entered, or by the menu category order */
+  kitchenSort?: "entry" | "category";
 }

@@ -9,7 +9,7 @@ import { useDb, useLive } from "@/data/hooks";
 import type { OrderItem, PrintJob } from "@/data/types";
 import { useChannelName } from "@/modules/pos/channelName";
 import { listsOf } from "../lib";
-import { printersFor, printOf } from "./setup";
+import { categoryRank, printersFor, printOf } from "./setup";
 import type { KitchenTicketData } from "./KitchenTicket";
 import { clientOf, drawJob, drawsHere, probeDraw } from "./station";
 
@@ -37,6 +37,7 @@ export function usePrintRenderer() {
   const items = useLive("orderItems", { gte: { firedAt: since } }, { enabled: kitchenOn }).data;
   const orders = useLive("orders", { gte: { createdAt: dayAgo } }, { enabled: kitchenOn }).data;
   const menu = useLive("menuItems", undefined, { enabled: kitchenOn }).data;
+  const cats = useLive("menuCategories", undefined, { enabled: kitchenOn && setup.kitchenSort === "category" }).data;
   const chName = useChannelName();
   const seen = useRef(new Set<string>());
   const [tick, bump] = useState(0);
@@ -64,7 +65,9 @@ export function usePrintRenderer() {
         plan.set(k, [...(plan.get(k) ?? []), i]);
       }
     }
-    for (const [k, lines] of plan) {
+    const rank = setup.kitchenSort === "category" ? categoryRank(menu, cats) : null;
+    for (const [k, unsorted] of plan) {
+      const lines = rank ? [...unsorted].sort((a, b) => (rank.get(a.itemId) ?? 9999) - (rank.get(b.itemId) ?? 9999)) : unsorted;
       const [orderId, firedAt, pid] = k.split("|");
       const dedupe = `k:${orderId}:${pid}:${firedAt}:${lines.map((l) => l.id.slice(0, 6)).sort().join(".")}`;
       if (seen.current.has(dedupe)) continue;
