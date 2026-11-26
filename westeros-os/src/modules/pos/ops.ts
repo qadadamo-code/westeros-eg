@@ -300,9 +300,17 @@ export async function changeChannel(db: Db, t: Ticket, ch: { id: string; kind: "
 }
 
 /** Cancel an empty (or never-sent) check. */
+/** إلغاء طلب دخل المطبخ (Saqr 2026-11-26): every line the kitchen got is voided with the reason (cost goes to waste, audit log), then the check is cancelled */
+export async function cancelSentTicket(db: Db, t: Ticket, reason: string, approvedBy: string | null) {
+  const sent = t.items.filter((i) => i.status !== "new" && i.status !== "void");
+  for (const it of sent) await voidLine(db, t.check.id, it, reason, approvedBy);
+  await db.audit("order.cancel", "checks", t.check.id, { items: sent.length, reason }, approvedBy);
+  await discardTicket(db, { ...t, items: t.items.map((i) => (sent.some((x) => x.id === i.id) ? { ...i, status: "void" as const } : i)) });
+}
+
 export async function discardTicket(db: Db, t: Ticket) {
   if (t.items.some((i) => i.status !== "new" && i.status !== "void")) throw new Error("sent items need a void first");
-  for (const i of t.items) await db.remove("orderItems", i.id);
+  for (const i of t.items.filter((x) => x.status === "new")) await db.remove("orderItems", i.id); // voided lines stay as the record of what was cancelled
   for (const o of t.orders) await db.update("orders", o.id, { status: "void", closedAt: nowIso() });
   await db.update("checks", t.check.id, { status: "void", closedAt: nowIso() });
   for (const tid of t.check.tableIds) await setTableStatus(db, tid, "free");

@@ -254,8 +254,8 @@ export function TicketPanel({ check, orders, items, header, busy, className, ...
               {x.key ? <Kbd>{x.key}</Kbd> : null}
             </button>
           ))}
-          <button type="button" disabled={anySent} onClick={() => (setMore(false), a.onDiscard())} className="col-span-2 flex min-h-14 items-center justify-center gap-2 rounded-2xl border border-danger/30 bg-danger-soft font-semibold text-danger disabled:opacity-40">
-            <Trash2 className="size-5" /> {anySent ? L("فيه أصناف اتبعتت — ألغيها الأول", "Lines were sent — void them first") : L("إلغاء الشيك", "Discard check")}
+          <button type="button" onClick={() => (setMore(false), a.onDiscard())} className="col-span-2 flex min-h-14 items-center justify-center gap-2 rounded-2xl border border-danger/30 bg-danger-soft font-semibold text-danger disabled:opacity-40">
+            <Trash2 className="size-5" /> {anySent ? L("إلغاء الطلب (دخل المطبخ)", "Cancel order (sent to kitchen)") : L("إلغاء الشيك", "Discard check")}
           </button>
         </div>
       </Dialog>

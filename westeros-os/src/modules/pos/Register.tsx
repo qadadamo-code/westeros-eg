@@ -39,7 +39,7 @@ import { ShiftBranch } from "./components/ShiftBranch";
 import { OpenShiftDialog } from "./components/OpenShiftDialog";
 import { Stepper } from "./components/bits";
 import { discountPct, lineDiscountUnits } from "./math";
-import { addLine, changeChannel, discardTicket, loadTicket, mergeChecks, moveCheckToTable, moveItems, openTicket, sendToKitchen, resendToKitchen, setBillDiscount, setLineDiscount, setLineQty, replaceLine, setTicketMeta, splitIntoChecks, updateLine, voidLine, type TicketDraft } from "./ops";
+import { addLine, changeChannel, cancelSentTicket, discardTicket, loadTicket, mergeChecks, moveCheckToTable, moveItems, openTicket, sendToKitchen, resendToKitchen, setBillDiscount, setLineDiscount, setLineQty, replaceLine, setTicketMeta, splitIntoChecks, updateLine, voidLine, type TicketDraft } from "./ops";
 import { closeCheck, paidAfterTake, takePayment, voidPayment } from "./sale";
 import { PromoDialog } from "@/modules/marketing/pos/PromoDialog";
 import { redeemGiftCard, refundGiftCard } from "@/modules/marketing/ops";
@@ -119,7 +119,7 @@ export default function Register() {
   const [lineTab, setLineTab] = useState<"edit" | "discount" | "void">("edit");
   // a line reopened in the options sheet to change its size, extras or notes
   const [editLine, setEditLine] = useState<OrderItem | null>(null);
-  const [dlg, setDlg] = useState<null | "table" | "customer" | "discount" | "split" | "pay" | "checks" | "transfer" | "merge" | "moveTable" | "itemsToTable" | "guests" | "shift" | "ticket" | "promo" | "code" | "channel">(null);
+  const [dlg, setDlg] = useState<null | "table" | "customer" | "discount" | "split" | "pay" | "checks" | "transfer" | "merge" | "moveTable" | "itemsToTable" | "guests" | "shift" | "ticket" | "promo" | "code" | "channel" | "cancel">(null);
   const [chOpen, setChOpen] = useState(false);
   /** تطبيق توصيل: the channel waiting for the app's order code before the order starts */
   const [aggCh, setAggCh] = useState<SalesChannelDef | null>(null);
@@ -394,10 +394,25 @@ export default function Register() {
     } else if (check) toast({ title: L("الشيك اتعلّق — تلاقيه في الشيكات المفتوحة", "Check held — find it under Open checks") });
     newTicket(kind === "dine_in" ? "dine_in" : kind);
   };
+  const [cancelReason, setCancelReason] = useState("");
   const discard = async () => {
     const t = await ticket();
     if (!t) return;
+    if (t.items.some((i) => i.status !== "new" && i.status !== "void")) return (setCancelReason(""), setDlg("cancel"));
     await run(() => discardTicket(db, t));
+    newTicket(kind);
+  };
+  /** the order already went to the kitchen: one approval and a reason void every line, then the check is cancelled (Saqr 2026-11-26) */
+  const cancelSent = async () => {
+    const t = await ticket();
+    if (!t || !cancelReason.trim()) return;
+    if (payments.some((p) => p.status === "captured"))
+      return toast({ title: L("فيه دفعات على الطلب", "The order has payments"), description: L("ألغي الدفعات الأول وبعدين ألغي الطلب.", "Void the payments first."), tone: "warn" });
+    const who = await approve({ kind: "void", afterSend: true }, L("إلغاء طلب دخل المطبخ", "Cancel an order sent to the kitchen"));
+    if (!who) return;
+    setDlg(null);
+    await run(() => cancelSentTicket(db, t, cancelReason.trim(), who.id));
+    toast({ title: L("الطلب اتلغى", "Order cancelled"), tone: "success" });
     newTicket(kind);
   };
 
@@ -761,6 +776,18 @@ export default function Register() {
         footer={<div className="flex justify-end gap-2"><Button variant="ghost" onClick={() => setAggCh(null)}>{L("إلغاء", "Cancel")}</Button><Button disabled={!aggRef.trim()} onClick={() => aggCh && startChannel(aggCh, aggRef.trim())}>{L("ابدأ الطلب", "Start")}</Button></div>}>
         <form onSubmit={(e) => { e.preventDefault(); if (aggCh && aggRef.trim()) startChannel(aggCh, aggRef.trim()); }}>
           <Input label={L("كود الطلب في التطبيق", "The app's order code")} dir="ltr" className="num" autoFocus value={aggRef} onChange={(e) => setAggRef(e.target.value)} />
+        </form>
+      </Dialog>
+      <Dialog open={dlg === "cancel"} onClose={() => setDlg(null)} size="sm" title={L("إلغاء الطلب", "Cancel the order")}
+        footer={<div className="flex justify-end gap-2"><Button variant="ghost" onClick={() => setDlg(null)}>{L("رجوع", "Back")}</Button><Button variant="danger" disabled={!cancelReason.trim()} onClick={() => void cancelSent()}>{L("إلغاء الطلب", "Cancel order")}</Button></div>}>
+        <form onSubmit={(e) => { e.preventDefault(); void cancelSent(); }} className="grid gap-3">
+          <p className="text-[13.5px] text-muted">{L("الطلب دخل المطبخ: كل أصنافه هتتلغي وتتسجل في السجل، وتكلفتها تروح للهالك.", "The kitchen has it: every line is voided, logged, and its cost goes to waste.")}</p>
+          <div className="flex flex-wrap gap-2">
+            {[L("العميل لغى", "Customer cancelled"), L("طلب غلط", "Wrong order"), L("تأخير", "Delay")].map((r) => (
+              <button key={r} type="button" onClick={() => setCancelReason(r)} className={cn("rounded-full border px-3 py-1.5 text-[13px] font-semibold", cancelReason === r ? "border-primary bg-primary/10 text-primary" : "border-line")}>{r}</button>
+            ))}
+          </div>
+          <Input label={L("السبب", "Reason")} autoFocus value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} />
         </form>
       </Dialog>
       <Dialog open={dlg === "code"} onClose={() => setDlg(null)} size="sm" title={L("كود الطلب في التطبيق", "The app's order code")}
