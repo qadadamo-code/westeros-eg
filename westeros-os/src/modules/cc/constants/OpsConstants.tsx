@@ -125,10 +125,10 @@ function Kitchen({ setup, save, readOnly, branchId }: Props & { branchId: string
           options={[{ value: "entry", label: "زي ما الكاشير دخلها" }, { value: "category", label: "حسب فئة الصنف" }]} />
         {setup.kitchenSort === "category" ? <p className="text-[13px] text-muted">الأصناف بتترتب بترتيب الفئات في المنيو (أول فئة فوق).</p> : null}
       </Card>
+      <KitchenTimeEdit setup={setup} save={save} readOnly={readOnly} />
       <Card className="grid gap-3 p-4">
         <Switch checked={setup.kitchenPrint} disabled={readOnly} onChange={(v) => void save({ kitchenPrint: v })} label="تفعيل طابعة المطبخ"
           description={setup.kitchenPrint ? "نظام الطابعات: الطلبيات بتتطبع على طابعات الفئات، وشاشة المطبخ للعرض بس، وكل أوردر بيبقى جاهز لوحده لما وقته يخلص." : "شاشة مطبخ تفاعلية: الشيفات بيضغطوا «بدأ» و«جاهز» على شاشة المطبخ."} />
-        {setup.kitchenPrint ? <KitchenTimeEdit setup={setup} save={save} readOnly={readOnly} /> : null}
         {setup.kitchenPrint ? (
           <>
             <Select label="طابعة المطبخ الافتراضية" value={setup.kitchenDefaultPrinterId ?? ""} disabled={readOnly} onChange={(e) => void save({ kitchenDefaultPrinterId: e.target.value || null })}
@@ -191,8 +191,8 @@ function KitchenTimeEdit({ setup, save, readOnly }: Props) {
   );
   const ex = [1, 2, 3, 4, 5, 6].map((n) => `الأوردر ${n} = ${orderMinutes(n, 0, t)} د`).join("، ");
   return (
-    <div className="grid gap-3 rounded-2xl border border-line p-3">
-      <p className="font-semibold">وقت الأوردر لحد ما يبقى جاهز</p>
+    <Card className="grid gap-3 p-4">
+      <CardHeader title="حساب الوقت المتوقع للتجهيز" subtitle="الوقت بيظهر للكاشير فوق زر الإرسال، وفي نظام الطابعات الأوردر بيبقى جاهز لوحده لما وقته يخلص" />
       <div className="grid gap-3 sm:grid-cols-2">
         {num("وقت الأوردر العادي", "baseMin", "دقيقة")}
         {num("لحد كام أوردر في المطبخ", "baseOrders", "أوردر")}
@@ -200,7 +200,7 @@ function KitchenTimeEdit({ setup, save, readOnly }: Props) {
         {num("زيادة لكل فئة مختلفة في الأوردر", "perCategory", "دقيقة")}
       </div>
       <p className="text-[13px] text-muted">مثال من غير زيادة الفئات: {ex}</p>
-    </div>
+    </Card>
   );
 }
 
