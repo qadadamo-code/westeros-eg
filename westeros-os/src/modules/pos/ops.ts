@@ -142,25 +142,30 @@ export async function voidLine(db: Db, checkId: string, it: OrderItem, reason: s
 }
 
 /**
- * نظام طابعات المطبخ (Saqr 2026-11-26): when the kitchen works on printers, the lines get the time they are ready by
- * themselves: their place among the orders still cooking in the branch, plus one minute per distinct category.
- * null when the branch works on the interactive kitchen screen. Never throws (the send must go through).
+ * الوقت المتوقع لتجهيز الأوردر (Saqr 2026-11-26, both kitchen modes): its place among the orders still cooking in the
+ * branch (fired in the last 3 hours and not ready), plus one minute per distinct category. Never throws (null).
  */
-async function kitchenDueAt(db: Db, t: Ticket, lines: OrderItem[], at: string): Promise<string | null> {
+export async function kitchenEstimate(db: Db, branchId: string, lines: Pick<OrderItem, "orderId" | "itemId">[], at = nowIso()): Promise<{ minutes: number; kitchenPrint: boolean } | null> {
   try {
     const [s] = await db.list("mfgSettings");
-    const setup = printOf(listsOf(s), t.check.branchId);
-    if (!setup.kitchenPrint) return null;
-    const cooking = await db.list("orderItems", { where: { status: ["sent", "preparing"] }, gte: { dueAt: at } });
+    const setup = printOf(listsOf(s), branchId);
+    const since = new Date(Date.parse(at) - 3 * 3600_000).toISOString();
+    const cooking = await db.list("orderItems", { where: { status: ["sent", "preparing"] }, gte: { firedAt: since } });
     const otherIds = [...new Set(cooking.map((i) => i.orderId).filter((id) => !lines.some((l) => l.orderId === id)))];
-    const others = otherIds.length ? (await db.list("orders", { where: { id: otherIds } })).filter((o) => o.branchId === t.check.branchId).length : 0;
-    const menu = await db.list("menuItems", { where: { id: [...new Set(lines.map((l) => l.itemId))] } });
+    const others = otherIds.length ? (await db.list("orders", { where: { id: otherIds } })).filter((o) => o.branchId === branchId).length : 0;
+    const ids = [...new Set(lines.map((l) => l.itemId))];
+    const menu = ids.length ? await db.list("menuItems", { where: { id: ids } }) : [];
     const cats = new Set(menu.map((m) => m.categoryId ?? m.id)).size;
-    const mins = orderMinutes(others + 1, cats, kitchenTimeOf(setup.kitchenTime));
-    return new Date(Date.parse(at) + mins * 60_000).toISOString();
+    return { minutes: orderMinutes(others + 1, cats, kitchenTimeOf(setup.kitchenTime)), kitchenPrint: !!setup.kitchenPrint };
   } catch {
     return null;
   }
+}
+
+/** the time the sent lines are due (stored in both modes; only the printers mode marks them ready by itself) */
+async function kitchenDueAt(db: Db, t: Ticket, lines: OrderItem[], at: string): Promise<string | null> {
+  const e = await kitchenEstimate(db, t.check.branchId, lines, at);
+  return e ? new Date(Date.parse(at) + e.minutes * 60_000).toISOString() : null;
 }
 
 /** Fires every sendable line (course 1 + fired courses), or one held course. Kitchen displays pick them up live. */

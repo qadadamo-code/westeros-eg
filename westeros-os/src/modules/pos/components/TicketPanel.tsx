@@ -38,6 +38,8 @@ export interface TicketActions {
   onFire: (course: number) => void;
   onHold: () => void;
   onPay: () => void;
+  /** الوقت المتوقع لتجهيز الأوردر قبل الإرسال (Saqr 2026-11-26) */
+  eta?: number | null;
   onDiscount: () => void;
   onSplit: () => void;
   onTransfer: () => void;
@@ -220,6 +222,12 @@ export function TicketPanel({ check, orders, items, header, busy, className, ...
               {L("ابعت تاني", "Send again")}
             </Button>
           ) : (
+            <div className="relative grid">
+            {sendable && a.eta ? (
+              <span className="pointer-events-none absolute -top-3 start-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full bg-warn px-2 py-0.5 text-[12px] font-bold text-white shadow rtl:translate-x-1/2" data-eta>
+                ⏱ {L(`حوالي ${a.eta} دقيقة`, `~${a.eta} min`)}
+              </span>
+            ) : null}
             <Button size="lg" variant={sendable ? "primary" : "secondary"} icon={sendable ? <Send className="size-5 flip-rtl" /> : <PauseCircle className="size-5" />} onClick={sendable ? a.onSend : a.onHold} disabled={busy || !check} className="px-3">
               {sendable ? (
                 <>
@@ -229,6 +237,7 @@ export function TicketPanel({ check, orders, items, header, busy, className, ...
                 L("علّق", "Hold")
               )}
             </Button>
+            </div>
           )}
           <Button size="lg" variant="brass" icon={<Wallet className="size-5" />} onClick={a.onPay} disabled={busy || !check || !live.length} className="px-3">
             {L("ادفع", "Pay")}

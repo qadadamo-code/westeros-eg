@@ -39,7 +39,7 @@ import { ShiftBranch } from "./components/ShiftBranch";
 import { OpenShiftDialog } from "./components/OpenShiftDialog";
 import { Stepper } from "./components/bits";
 import { discountPct, lineDiscountUnits } from "./math";
-import { addLine, changeChannel, cancelSentTicket, discardTicket, loadTicket, mergeChecks, moveCheckToTable, moveItems, openTicket, sendToKitchen, resendToKitchen, setBillDiscount, setLineDiscount, setLineQty, replaceLine, setTicketMeta, splitIntoChecks, updateLine, voidLine, type TicketDraft } from "./ops";
+import { addLine, changeChannel, cancelSentTicket, discardTicket, kitchenEstimate, loadTicket, mergeChecks, moveCheckToTable, moveItems, openTicket, sendToKitchen, resendToKitchen, setBillDiscount, setLineDiscount, setLineQty, replaceLine, setTicketMeta, splitIntoChecks, updateLine, voidLine, type TicketDraft } from "./ops";
 import { closeCheck, paidAfterTake, refundOpenPayment, takePayment, voidPayment } from "./sale";
 import { PromoDialog } from "@/modules/marketing/pos/PromoDialog";
 import { redeemGiftCard, refundGiftCard } from "@/modules/marketing/ops";
@@ -272,6 +272,19 @@ export default function Register() {
 
   const mfgSettings = useLive("mfgSettings").data[0] ?? null;
   const stockOf = useBranchStock(session.branchId, menu.items);
+  // الوقت المتوقع للأوردر الجديد فوق زر الإرسال (Saqr 2026-11-26): refreshed as lines change and every 20s
+  const [eta, setEta] = useState<number | null>(null);
+  const toSend = items.filter((i) => i.status === "new");
+  const etaKey = toSend.map((i) => i.itemId).sort().join(",");
+  useEffect(() => {
+    if (!etaKey || !check) return setEta(null);
+    let off = false;
+    const lines = toSend.map((i) => ({ orderId: i.orderId, itemId: i.itemId }));
+    const look = () => void kitchenEstimate(db, check.branchId, lines).then((e) => !off && setEta(e?.minutes ?? null));
+    look();
+    const t = setInterval(look, 20_000);
+    return () => ((off = true), clearInterval(t));
+  }, [etaKey, check?.id, db]); // eslint-disable-line react-hooks/exhaustive-deps
   const pick = (item: MenuItem, { forceSheet, sellOk }: { forceSheet: boolean; sellOk?: boolean }) => {
     if (!item.available) return toast({ title: L("الصنف ده خلصان النهارده", "This item is sold out today"), tone: "warn" });
     // Saqr 2026-11-25: an item short in the branch stock sells only with the permission
@@ -642,6 +655,7 @@ export default function Register() {
       busy={busy}
       className="@container h-full"
       printFailed={kitchenIssues.failedItems}
+      eta={eta}
       onLine={(it) => (setLineTab("edit"), setLineItem(it))}
       onLineDiscount={(it) => (setLineTab("discount"), setLineItem(it))}
       onSwipe={(it) => {
