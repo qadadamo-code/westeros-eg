@@ -272,11 +272,17 @@ export default function Register() {
 
   const mfgSettings = useLive("mfgSettings").data[0] ?? null;
   const stockOf = useBranchStock(session.branchId, menu.items);
-  const pick = (item: MenuItem, { forceSheet }: { forceSheet: boolean }) => {
+  const pick = (item: MenuItem, { forceSheet, sellOk }: { forceSheet: boolean; sellOk?: boolean }) => {
     if (!item.available) return toast({ title: L("الصنف ده خلصان النهارده", "This item is sold out today"), tone: "warn" });
     // Saqr 2026-11-25: an item short in the branch stock sells only with the permission
-    if (stockOf(item)?.short && !memberCan(session.staff, listsOf(mfgSettings), "pos.sellOut"))
-      return toast({ title: L("الصنف مش متوفر في الفرع", "Not in stock at this branch"), description: L("مكوناته مش كفاية في مخزون الفرع، والبيع محتاج صلاحية \"البيع لمنتجات غير متوفرة\".", "Needs the sell-out permission."), tone: "warn" });
+    if (!sellOk && stockOf(item)?.short && !memberCan(session.staff, listsOf(mfgSettings), "pos.sellOut")) {
+      // the role may have just been given the permission on another device: check the saved roles before refusing (Saqr 2026-11-26)
+      void db.list("mfgSettings").then(([fresh]) => {
+        if (fresh && memberCan(session.staff, listsOf(fresh), "pos.sellOut")) pick(item, { forceSheet, sellOk: true });
+        else toast({ title: L("الصنف مش متوفر في الفرع", "Not in stock at this branch"), description: L("مكوناته مش كفاية في مخزون الفرع، والبيع محتاج صلاحية \"البيع لمنتجات غير متوفرة\".", "Needs the sell-out permission."), tone: "warn" });
+      });
+      return;
+    }
     if (!onSchedule(item)) return toast({ title: L("الصنف ده مش متاح دلوقتي", "Not served at this hour"), description: scheduleLabel(item.schedule, lang), tone: "warn" });
     // an item with option groups (size, combo, extras, notes) opens them, so the cashier sees each option and its price
     const hasGroups = item.modifierGroupIds.some((g) => menu.groups.some((x) => x.id === g) && menu.mods.some((m) => m.groupId === g && m.available));
