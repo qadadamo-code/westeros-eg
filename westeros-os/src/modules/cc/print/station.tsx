@@ -73,6 +73,20 @@ export const clientOf = (db: Db): SupabaseClient | null => (db.repo as unknown a
 /** false once this browser proved it cannot draw for printing (Safari taints the canvas) */
 let canDraw = true;
 export const drawsHere = () => canDraw;
+let probed: Promise<boolean> | null = null;
+/** can this browser draw a ticket into printer pixels? (once per page; iPhone Safari cannot) */
+export function probeDraw(): Promise<boolean> {
+  probed ??= (async () => {
+    try {
+      pixelsOf(await nodeToCanvas(<div style={{ width: 20, height: 10 }}>ok</div>, 16));
+    } catch (e) {
+      canDraw = false;
+      void e;
+    }
+    return canDraw;
+  })();
+  return probed;
+}
 
 const b64 = (bytes: Uint8Array) => toBase64(bytes);
 async function gzip(bytes: Uint8Array): Promise<Uint8Array | null> {

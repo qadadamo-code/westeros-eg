@@ -11,7 +11,7 @@ import { useChannelName } from "@/modules/pos/channelName";
 import { listsOf } from "../lib";
 import { printersFor, printOf } from "./setup";
 import type { KitchenTicketData } from "./KitchenTicket";
-import { clientOf, drawJob, drawsHere } from "./station";
+import { clientOf, drawJob, drawsHere, probeDraw } from "./station";
 
 /** lines fired together settle this long before their ticket is drawn (their saves arrive one by one) */
 const SETTLE_MS = 1200;
@@ -22,22 +22,28 @@ export function usePrintRenderer() {
   const settings = useLive("mfgSettings").data[0];
   const setup = printOf(listsOf(settings), branchId);
   const on = !!setup.stationOn && !!clientOf(db);
-  const since = useMemo(() => new Date(Date.now() - 3 * 60_000).toISOString(), []);
-  const kitchenOn = on && !!setup.kitchenPrint;
-  const dayAgo = useMemo(() => new Date(Date.now() - 24 * 3600_000).toISOString(), []);
+  // a short moving window (the shell stays open all day; the query must not grow)
+  const [since, setSince] = useState(() => new Date(Date.now() - 3 * 60_000).toISOString());
+  useEffect(() => {
+    const t = setInterval(() => setSince(new Date(Date.now() - 3 * 60_000).toISOString()), 5 * 60_000);
+    return () => clearInterval(t);
+  }, []);
+  const [canDraw, setCanDraw] = useState(drawsHere());
+  useEffect(() => {
+    if (on) void probeDraw().then(setCanDraw);
+  }, [on]);
+  const kitchenOn = on && !!setup.kitchenPrint && canDraw;
+  const dayAgo = useMemo(() => new Date(Date.now() - 24 * 3600_000).toISOString(), [since]); // eslint-disable-line react-hooks/exhaustive-deps
   const items = useLive("orderItems", { gte: { firedAt: since } }, { enabled: kitchenOn }).data;
   const orders = useLive("orders", { gte: { createdAt: dayAgo } }, { enabled: kitchenOn }).data;
   const menu = useLive("menuItems", undefined, { enabled: kitchenOn }).data;
-  const tables = useLive("tables", undefined, { enabled: kitchenOn }).data;
-  const customers = useLive("customers", undefined, { enabled: kitchenOn }).data;
-  const members = useLive("memberships", undefined, { enabled: kitchenOn }).data;
   const chName = useChannelName();
   const seen = useRef(new Set<string>());
   const [tick, bump] = useState(0);
 
   /* ── kitchen tickets ── */
   useEffect(() => {
-    if (!on || !setup.kitchenPrint || !drawsHere()) return;
+    if (!kitchenOn) return;
     const client = clientOf(db)!;
     const catOf = new Map(menu.map((m) => [m.id, m.categoryId]));
     const now = Date.now();
@@ -66,12 +72,9 @@ export function usePrintRenderer() {
       const p = setup.printers.find((x) => x.id === pid);
       const o = orders.find((x) => x.id === orderId);
       if (!p?.ip || !o) continue;
-      const data: KitchenTicketData = {
+      const base = {
         number: o.number ?? "—",
         channel: chName(o),
-        table: o.tableIds.length ? o.tableIds.map((t) => tables.find((x) => x.id === t)?.label ?? "?").join("+") : null,
-        customer: o.customerId ? customers.find((c) => c.id === o.customerId)?.name ?? null : null,
-        cashier: o.waiterId ? members.find((m) => m.id === o.waiterId)?.name ?? null : null,
         at: firedAt,
         printer: p.name,
         note: o.note || null,
@@ -81,6 +84,18 @@ export function usePrintRenderer() {
       void (async () => {
         const { data: id } = await client.rpc("print_kitchen_claim", { p_restaurant: db.restaurantId, p_branch: branchId, p_printer: pid, p_dedupe: dedupe });
         if (!id) return; // another screen has it
+        // looked up only for the ticket this screen got (so phones don't load every customer)
+        const [tbls, customer, waiter] = await Promise.all([
+          Promise.all(o.tableIds.map((t) => db.get("tables", t))),
+          o.customerId ? db.get("customers", o.customerId) : null,
+          o.waiterId ? db.get("memberships", o.waiterId) : null,
+        ]);
+        const data: KitchenTicketData = {
+          ...base,
+          table: o.tableIds.length ? tbls.map((t) => t?.label ?? "?").join("+") : null,
+          customer: customer?.name ?? null,
+          cashier: waiter?.name ?? null,
+        };
         const chunks = await drawJob("kitchen", data as unknown as Record<string, unknown>, p, setup);
         await db.update("printJobs", id as string, chunks ? { data: chunks, status: "queued" } : { payload: data as unknown as Record<string, unknown>, status: "queued" });
       })().catch(() => undefined);
@@ -89,11 +104,11 @@ export function usePrintRenderer() {
       const t = setTimeout(() => bump((x) => x + 1), wait + 50);
       return () => clearTimeout(t);
     }
-  }, [items, orders, on, setup.kitchenPrint, tick]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [items, orders, kitchenOn, tick]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ── jobs a phone could not draw ── */
   useEffect(() => {
-    if (!on || !drawsHere()) return;
+    if (!on || !canDraw) return;
     const client = clientOf(db)!;
     const busy = new Set<string>();
     const look = async () => {
@@ -110,5 +125,11 @@ export function usePrintRenderer() {
     };
     const t = setInterval(() => void look().catch(() => undefined), 4_000);
     return () => clearInterval(t);
-  }, [on, branchId, settings]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [on, canDraw, branchId, settings]); // eslint-disable-line react-hooks/exhaustive-deps
+}
+
+/** mounted once in the app shell: every open screen of the branch can draw the kitchen tickets (Saqr 2026-11-26) */
+export function PrintRenderer() {
+  usePrintRenderer();
+  return null;
 }

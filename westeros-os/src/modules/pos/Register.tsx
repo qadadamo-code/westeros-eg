@@ -30,7 +30,6 @@ import { SplitDialog } from "./components/SplitDialog";
 import { TablePicker } from "./components/TablePicker";
 import { CustomerDialog, type CustomerResult } from "./components/CustomerDialog";
 import { PaymentDialog, type TenderInput } from "./components/PaymentDialog";
-import { usePrintRenderer } from "@/modules/cc/print/renderer";
 import { ReceiptDialog, useReceiptPrint } from "./components/ReceiptDialog";
 import { useMay } from "@/modules/cc/useAccess";
 import { BuyerDialog } from "@/modules/settings/zatca/BuyerDialog";
@@ -58,8 +57,6 @@ export default function Register() {
   const db = useDb();
   const may = useMay();
   const printReceipt = useReceiptPrint();
-  // this screen draws the kitchen tickets for the background print station (Saqr 2026-11-25)
-  usePrintRenderer();
   const approve = useApproval();
   const { toast } = useToast();
   const session = useSession();

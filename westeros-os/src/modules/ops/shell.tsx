@@ -2,6 +2,7 @@
  * Mounted once by the app shell (AppShell.tsx): diagnostics capture, the walkie-talkie runtime for the signed-in member,
  * the floating push-to-talk button (manager, waiter, kitchen/chef, delivery) and toasts for incoming radio clips + alerts.
  */
+import { PrintRenderer } from "@/modules/cc/print/renderer";
 import { COST_CONTROL_ONLY } from "@/costControl";
 import { useEffect, useMemo, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -106,6 +107,7 @@ export function OpsShellExtras() {
       {/* the Cost Control version: اللاسلكي only for employees allowed in الإعدادات ← اللاسلكي (Saqr 2026-11-25) */}
       {COST_CONTROL_ONLY ? <CcRadio /> : <RadioRuntime />}
       {COST_CONTROL_ONLY ? <KitchenPrinter /> : null}
+      <PrintRenderer />
       <AlertToasts />
       {COST_CONTROL_ONLY ? null : <PttFab />}
     </>
