@@ -17,7 +17,7 @@ import type { Check, Discount, MenuItem, OrderItem, Payment } from "@/data/types
 import { useT } from "@/i18n/i18n";
 import { cn } from "@/lib/cn";
 import { formatMoney, type Units } from "@/lib/money";
-import { loadRaw, saveRaw } from "@/lib/storage";
+import { saveRaw } from "@/lib/storage";
 import type { ReceiptModel } from "@/lib/receipt";
 import { AnimatedMoney, Button, Dialog, Input, useCommands, useHotkeys, useIsMobile, useToast } from "@/ui";
 import { MenuPanel } from "./components/MenuPanel";
@@ -35,6 +35,8 @@ import { KitchenPrintAlerts, useKitchenPrintIssues } from "@/modules/cc/print/is
 import { useMay } from "@/modules/cc/useAccess";
 import { BuyerDialog } from "@/modules/settings/zatca/BuyerDialog";
 import { OpenChecksDialog, TransferDialog, useCheckRows } from "./components/Checks";
+import { ClosedChecksDialog } from "./components/ClosedChecks";
+import { KitchenStrip } from "./components/KitchenStrip";
 import { ShiftBranch } from "./components/ShiftBranch";
 import { OpenShiftDialog } from "./components/OpenShiftDialog";
 import { Stepper } from "./components/bits";
@@ -71,7 +73,8 @@ export default function Register() {
   const receiptSrc = useReceiptSourceBuilder();
   const searchRef = useRef<HTMLInputElement>(null);
 
-  const [activeId, setActiveIdState] = useState<string | null>(() => loadRaw(ACTIVE_KEY));
+  // the cashier opens empty, with no order picked (Saqr 2026-11-26); tapping an item starts a new order
+  const [activeId, setActiveIdState] = useState<string | null>(null);
   const setActiveId = useCallback((id: string | null) => {
     saveRaw(ACTIVE_KEY, id);
     setActiveIdState(id);
@@ -119,7 +122,7 @@ export default function Register() {
   const [lineTab, setLineTab] = useState<"edit" | "discount" | "void">("edit");
   // a line reopened in the options sheet to change its size, extras or notes
   const [editLine, setEditLine] = useState<OrderItem | null>(null);
-  const [dlg, setDlg] = useState<null | "table" | "customer" | "discount" | "split" | "pay" | "checks" | "transfer" | "merge" | "moveTable" | "itemsToTable" | "guests" | "shift" | "ticket" | "promo" | "code" | "channel" | "cancel">(null);
+  const [dlg, setDlg] = useState<null | "table" | "customer" | "discount" | "split" | "pay" | "checks" | "transfer" | "merge" | "moveTable" | "itemsToTable" | "guests" | "shift" | "ticket" | "promo" | "code" | "channel" | "cancel" | "closed">(null);
   const [chOpen, setChOpen] = useState(false);
   /** تطبيق توصيل: the channel waiting for the app's order code before the order starts */
   const [aggCh, setAggCh] = useState<SalesChannelDef | null>(null);
@@ -443,6 +446,16 @@ export default function Register() {
     newTicket(kind);
   };
 
+  /** a closed order's receipt, to see and print again (Saqr 2026-11-26) */
+  const showClosed = async (c: Check) => {
+    if (!receiptSrc) return;
+    const [rs, os, ps] = await Promise.all([db.list("receipts", { where: { checkId: c.id } }), db.list("orders", { where: { checkId: c.id } }), db.list("payments", { where: { checkId: c.id } })]);
+    const r = [...rs].filter((x) => x.kind === "SC").sort((a, b) => b.issuedAt.localeCompare(a.issuedAt))[0];
+    if (!r) return toast({ title: L("مفيش فاتورة للطلب ده", "No receipt for this order"), tone: "warn" });
+    setDlg(null);
+    setReceipt({ model: receiptSrc.fromReceipt(r, c, os, ps, null, null), etaError: null, title: L(`إيصال ${r.receiptNo}`, `Receipt ${r.receiptNo}`) });
+  };
+
   const policy = { discountApprovalPct: settings?.discountApprovalPct ?? 10 };
   const preview = (d: Discount | null) => (settings && order ? priceItems(items, { mode: order.mode, tax: taxFor(settings, order), discount: d, deliveryFee: order.deliveryFee }).totals.total : 0);
   const applyDiscount = async (d: Discount | null, reason: string) => {
@@ -707,6 +720,10 @@ export default function Register() {
         <Button size="sm" variant="secondary" icon={<ClipboardList className="size-4" />} onClick={() => (setChFilter(null), setDlg("checks"))}>
           {L("المفتوح", "Open")} <span className="num rounded-full bg-primary-soft px-1.5 text-[12px] text-primary">{rows.length}</span>
         </Button>
+        <Button size="sm" variant="secondary" icon={<ReceiptText className="size-4" />} onClick={() => setDlg("closed")}>
+          {L("المغلقة", "Closed")}
+        </Button>
+        <KitchenStrip onOpen={(c) => setActiveId(c.id)} />
         <div className="flex-1" />
         <ShiftBranch />
         {shift ? (
@@ -932,6 +949,7 @@ export default function Register() {
           if (fresh && fresh.status !== "paid" && fresh.paid >= fresh.total) await finish();
         }}
       />
+      <ClosedChecksDialog open={dlg === "closed"} onClose={() => setDlg(null)} onPick={(c) => void showClosed(c)} />
       <ReceiptDialog
         open={!!receipt}
         onClose={() => {
