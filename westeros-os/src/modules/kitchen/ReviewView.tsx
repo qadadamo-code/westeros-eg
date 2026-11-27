@@ -20,9 +20,11 @@ interface Props {
   staffName: Map<string, string>;
   tableLabel: Map<string, string>;
   now: number;
+  /** why no line goes to review now: the printers mode, or 0 minutes in the settings */
+  off?: "print" | "zero" | null;
 }
 
-export function ReviewView({ orders, items, staffName, tableLabel, now }: Props) {
+export function ReviewView({ orders, items, staffName, tableLabel, now, off }: Props) {
   const db = useDb();
   const { toast } = useToast();
   const { staff, branchId } = useSession();
@@ -82,6 +84,7 @@ export function ReviewView({ orders, items, staffName, tableLabel, now }: Props)
           </div>
         ) : null}
       </div>
+      {off ? <p className="rounded-2xl bg-info-soft px-4 py-2.5 text-[13.5px] font-semibold text-info">{off === "print" ? "المراجعة شغالة في نظام شاشة المطبخ التفاعلية بس. دلوقتي «تفعيل طابعة المطبخ» شغال، فالأوردرات بتبقى جاهزة لوحدها لما وقتها يخلص." : "المراجعة مقفولة: حدد عدد الدقايق من اعدادات التشغيل ← شاشة المطبخ."}</p> : null}
       {!can ? <p className="rounded-2xl bg-surface-2 px-4 py-2.5 text-[13.5px] text-muted">تحديد جاهز أو هدر أو خرج محتاج صلاحية «مراجعة طلبات المطبخ المتأخرة» من الأدوار.</p> : null}
 
       {!groups.length ? (

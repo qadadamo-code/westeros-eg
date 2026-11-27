@@ -203,7 +203,7 @@ export function KitchenScreen({ kiosk = false }: { kiosk?: boolean }) {
     { value: "line" as const, label: k("k.line"), icon: <LayoutGrid />, badge: tickets.length || undefined },
     { value: "allday" as const, label: k("k.allDay"), icon: <ClipboardList /> },
     { value: "expo" as const, label: k("k.expo"), icon: <CircleCheck />, badge: readyCount || undefined },
-    ...(reviewOn || reviewCount ? [{ value: "review" as const, label: "مراجعة", icon: <ClipboardCheck />, badge: reviewCount || undefined }] : []),
+    { value: "review" as const, label: "مراجعة", icon: <ClipboardCheck />, badge: reviewCount || undefined },
     { value: "86" as const, label: k("k.86"), icon: <Ban />, badge: outCount || undefined },
   ];
 
@@ -306,7 +306,7 @@ export function KitchenScreen({ kiosk = false }: { kiosk?: boolean }) {
       ) : view === "expo" ? (
         <ExpoView tickets={expo} stationById={data.stationById} tableLabel={data.tableLabel} now={now} settings={data.settings} onServe={serve} onPing={ping} />
       ) : view === "review" ? (
-        <ReviewView orders={data.orders} items={data.items} staffName={data.staffName} tableLabel={data.tableLabel} now={now} />
+        <ReviewView off={!reviewOn ? (kSetup.kitchenPrint ? "print" : "zero") : null} orders={data.orders} items={data.items} staffName={data.staffName} tableLabel={data.tableLabel} now={now} />
       ) : (
         <EightySixView />
       )}
