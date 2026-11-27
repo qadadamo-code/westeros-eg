@@ -39,7 +39,7 @@ export function KitchenStrip({ onOpen }: { onOpen: (c: Check) => void }) {
     const out: { id: string; number: number | string; ready: boolean; left: number | null; check: Check | null; firedAt: string }[] = [];
     for (const o of orders) {
       if (branchId && o.branchId !== branchId) continue;
-      const its = items.filter((i) => i.orderId === o.id);
+      const its = items.filter((i) => i.orderId === o.id && !(i.reviewAt && !i.reviewResult));
       if (!its.length) continue;
       const ready = its.every((i) => i.status === "ready");
       if (ready && now - Math.max(...its.map((i) => Date.parse(i.readyAt ?? i.updatedAt))) > READY_SHOWN_MS) continue;

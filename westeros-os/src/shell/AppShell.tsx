@@ -20,6 +20,7 @@ import { TopBar, useShellTitle } from "./TopBar";
 import { OpsShellExtras } from "@/modules/ops/shell";
 import { COST_CONTROL_ONLY } from "@/costControl";
 import { SupplyAlerts } from "@/modules/cc/stores/SupplyAlerts";
+import { ReviewAlerts } from "@/modules/kitchen/ReviewAlerts";
 
 const COLLAPSE_KEY = "sufra-os.sidebar";
 
@@ -133,6 +134,8 @@ export function AppShell() {
       <NumCalc />
       {/* طلبات التوريد: the message on opening for the employees they wait for */}
       {COST_CONTROL_ONLY ? <SupplyAlerts /> : null}
+      {/* تقرير مراجعة المطبخ مع إنهاء اليوم */}
+      <ReviewAlerts />
     </div>
   );
 }

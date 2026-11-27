@@ -8,7 +8,7 @@ import { lazy, Suspense, useState } from "react";
 import { ArrowDown, ArrowUp, Check, ChefHat, Plus, Printer, Receipt, Trash2 } from "lucide-react";
 import { useDb, useLive } from "@/data/hooks";
 import type { KitchenTicketDesign, KitchenTime, MfgSettings, PrintSetup, PrinterDef } from "@/data/types";
-import { kitchenTimeOf, orderMinutes } from "@/modules/kitchen/autoTime";
+import { DEFAULT_REVIEW_MIN, kitchenTimeOf, orderMinutes } from "@/modules/kitchen/autoTime";
 import { uuid } from "@/lib/id";
 import { cn } from "@/lib/cn";
 import { printNode } from "@/lib/receipt";
@@ -126,6 +126,7 @@ function Kitchen({ setup, save, readOnly, branchId }: Props & { branchId: string
         {setup.kitchenSort === "category" ? <p className="text-[13px] text-muted">الأصناف بتترتب بترتيب الفئات في المنيو (أول فئة فوق).</p> : null}
       </Card>
       <KitchenTimeEdit setup={setup} save={save} readOnly={readOnly} />
+      {!setup.kitchenPrint ? <ReviewEdit setup={setup} save={save} readOnly={readOnly} /> : null}
       <Card className="grid gap-3 p-4">
         <Switch checked={setup.kitchenPrint} disabled={readOnly} onChange={(v) => void save({ kitchenPrint: v })} label="تفعيل طابعة المطبخ"
           description={setup.kitchenPrint ? "نظام الطابعات: الطلبيات بتتطبع على طابعات الفئات، وشاشة المطبخ للعرض بس، وكل أوردر بيبقى جاهز لوحده لما وقته يخلص." : "شاشة مطبخ تفاعلية: الشيفات بيضغطوا «بدأ» و«جاهز» على شاشة المطبخ."} />
@@ -200,6 +201,19 @@ function KitchenTimeEdit({ setup, save, readOnly }: Props) {
         {num("زيادة لكل فئة مختلفة في الأوردر", "perCategory", "دقيقة")}
       </div>
       <p className="text-[13px] text-muted">مثال من غير زيادة الفئات: {ex}</p>
+    </Card>
+  );
+}
+
+/** مراجعة الطلبات المتأخرة (Saqr 2026-11-27): شاشة المطبخ التفاعلية بس */
+function ReviewEdit({ setup, save, readOnly }: Props) {
+  const v = setup.kitchenReviewMin ?? DEFAULT_REVIEW_MIN;
+  return (
+    <Card className="grid gap-3 p-4" data-review-card>
+      <CardHeader title="مراجعة الطلبات المتأخرة" subtitle="الطلب اللي ما يتعملش جاهز بعد المدة دي من إرساله للمطبخ بيتحول لخانة «مراجعة» بعد «الباس»، وصاحب الصلاحية بيحدد عليه جاهز أو هدر أو خرج" />
+      <Input label="الطلب يتحول للمراجعة بعد (دقيقة من الإرسال للمطبخ)" type="number" inputMode="numeric" min={0} dir="ltr" className="num" defaultValue={String(v)} disabled={readOnly}
+        onBlur={(e) => { const n = Math.max(0, Math.round(Number(e.target.value) || 0)); if (n !== v) void save({ kitchenReviewMin: n }); }} />
+      <p className="text-[13px] text-muted">{v ? `دلوقتي: بعد ${v} دقيقة. ` : "المراجعة مقفولة. "}اكتب 0 عشان تقفل المراجعة. التقرير بيوصل لأصحاب صلاحية «مراجعة طلبات المطبخ المتأخرة» مع إنهاء اليوم.</p>
     </Card>
   );
 }

@@ -42,7 +42,11 @@ export const HR_PERMS = [
 export const POS_PERMS = [
   { id: "pos.sellOut", label: "البيع في الكاشير لمنتجات غير متوفرة في الفرع", help: "يقدر يضيف للطلب صنف عليه علامة تعجب (مكوناته مش كفاية في مخزون الفرع). من غيرها الكاشير بيرفض الصنف لحد ما المخزون يكفي." },
 ] as const;
-export type SupplyPerm = (typeof SUPPLY_PERMS)[number]["id"] | (typeof PURCHASE_PERMS)[number]["id"] | (typeof HR_PERMS)[number]["id"] | (typeof POS_PERMS)[number]["id"];
+/** شاشة المطبخ (Saqr 2026-11-27) */
+export const KITCHEN_PERMS = [
+  { id: "kitchen.review", label: "مراجعة طلبات المطبخ المتأخرة", help: "يشوف الطلبات اللي اتحولت لـ «مراجعة» في شاشة المطبخ (ما اتعملتش جاهز في الوقت المحدد) ويحدد على كل طلب: جاهز أو هدر أو خرج، والهدر بيتسجل في المخازن. ويوصله تقرير بالطلبات دي مع إنهاء اليوم." },
+] as const;
+export type SupplyPerm = (typeof SUPPLY_PERMS)[number]["id"] | (typeof PURCHASE_PERMS)[number]["id"] | (typeof HR_PERMS)[number]["id"] | (typeof POS_PERMS)[number]["id"] | (typeof KITCHEN_PERMS)[number]["id"];
 
 /** what each screen lets its users do: the line under the screen's tick */
 export const SCREEN_HELP: Record<string, string> = {
@@ -83,6 +87,7 @@ export function permGroups(financeOn: boolean): PermGroup[] {
     { id: "purchase", title: "المخازن والفروع: طلبات الشراء", items: PURCHASE_PERMS.map((p) => ({ id: p.id, label: p.label, help: p.help })) },
     { id: "hr", title: "الموارد البشرية", note: "تشتغل لما شاشة الموارد البشرية تكون متعلم عليها.", items: HR_PERMS.map((p) => ({ id: p.id, label: p.label, help: p.help })) },
     { id: "pos", title: "الكاشير", items: POS_PERMS.map((p) => ({ id: p.id, label: p.label, help: p.help })) },
+    { id: "kitchen", title: "شاشة المطبخ", items: KITCHEN_PERMS.map((p) => ({ id: p.id, label: p.label, help: p.help })) },
     { id: "money", title: "الأسعار والتكاليف", items: [{ id: "prices", label: "رؤية الأسعار والتكاليف", help: "يشوف أسعار الشراء وتكلفة الوصفات والتشغيلات. من غيرها الأرقام دي بتظهر مخفية." }] },
     ...(financeOn ? [{ id: "finance", title: "الحسابات", note: "تشتغل لما شاشة الحسابات تكون متعلم عليها.", items: FIN_PERMS.map((p) => ({ id: `fin:${p.id}`, label: p.label, help: FIN_HELP[p.id] ?? "" })) }] : []),
     { id: "admin", title: "الإدارة", items: [{ id: "restore", label: "الاسترجاع من السجل", help: "يرجع عن إضافة أو تعديل أو حذف من السجل والاسترجاع. تحتاج شاشة المستخدمين." }] },
@@ -90,8 +95,8 @@ export function permGroups(financeOn: boolean): PermGroup[] {
 }
 
 const LEVEL_PERMS: Record<MfgUserType["role"], SupplyPerm[]> = {
-  admin: ["supply.branch", "supply.handle", "purchase.handle", "hr.approve", "hr.salary", "hr.branches", "hr.jobs", "pos.sellOut"],
-  manager: ["supply.branch", "supply.handle", "purchase.handle", "hr.approve", "pos.sellOut"],
+  admin: ["supply.branch", "supply.handle", "purchase.handle", "hr.approve", "hr.salary", "hr.branches", "hr.jobs", "pos.sellOut", "kitchen.review"],
+  manager: ["supply.branch", "supply.handle", "purchase.handle", "hr.approve", "pos.sellOut", "kitchen.review"],
   chef: [],
   kitchen: [],
   cashier: [],
@@ -119,7 +124,7 @@ export function rolePatch(ids: Set<string>): Pick<MfgUserType, "access" | "acces
     access: areas().flatMap((a) => a.acts.map((x) => accessKey(a.id, x))).filter((k) => ids.has(`acc:${k}`)),
     accessVer: 2,
     screens: screensFromAccess([...ids].filter((k) => k.startsWith("acc:")).map((k) => k.slice(4))),
-    perms: [...SUPPLY_PERMS, ...PURCHASE_PERMS, ...HR_PERMS, ...POS_PERMS].map((p) => p.id).filter((p) => ids.has(p)),
+    perms: [...SUPPLY_PERMS, ...PURCHASE_PERMS, ...HR_PERMS, ...POS_PERMS, ...KITCHEN_PERMS].map((p) => p.id).filter((p) => ids.has(p)),
     seePrices: ids.has("prices"),
     finance: FIN_PERMS.map((p) => p.id).filter((p) => ids.has(`fin:${p}`)),
     restore: ids.has("restore"),

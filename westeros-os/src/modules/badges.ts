@@ -7,7 +7,7 @@ export function useOpenCalls() {
   return useLive("serviceCalls", { where: { status: "open" } }).data.length || null;
 }
 export function useKitchenQueue() {
-  return useLive("orderItems", { where: { status: ["sent", "preparing"] } }).data.length || null;
+  return useLive("orderItems", { where: { status: ["sent", "preparing"] } }).data.filter((i) => !(i.reviewAt && !i.reviewResult)).length || null;
 }
 /** الطلبات الشغالة في الفرع المعروض فوق (Saqr 2026-11-24: the badge counted every branch, the page showed one) */
 export function useActiveOrders() {

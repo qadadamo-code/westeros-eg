@@ -369,6 +369,8 @@ export interface PrintSetup {
   kitchenSort?: "entry" | "category";
   /** وقت الأوردر في نظام الطابعات (Saqr 2026-11-26): the first `baseOrders` orders in the kitchen take `baseMin`, each order past them `perOrder` more, plus `perCategory` per distinct category */
   kitchenTime?: KitchenTime;
+  /** مراجعة (Saqr 2026-11-27, شاشة المطبخ التفاعلية): minutes after send before a line not made ready goes to «مراجعة»; 0 = off */
+  kitchenReviewMin?: number;
 }
 
 export interface KitchenTime {

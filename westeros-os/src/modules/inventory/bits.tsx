@@ -44,6 +44,7 @@ export const WASTE_REASONS: { id: WasteReason; ar: string; en: string }[] = [
   { id: "overproduction", ar: "زيادة إنتاج", en: "Over-production" },
   { id: "returned_by_guest", ar: "زبون رجّعه", en: "Returned by guest" },
   { id: "void_after_send", ar: "اتلغى بعد ما اتعمل", en: "Voided after send" },
+  { id: "kds_review", ar: "هدر من مراجعة المطبخ", en: "Wasted at kitchen review" },
   { id: "staff_meal", ar: "وجبة طاقم", en: "Staff meal" },
   { id: "other", ar: "سبب تاني", en: "Other" },
 ];

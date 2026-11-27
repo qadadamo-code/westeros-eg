@@ -412,6 +412,14 @@ export interface OrderItem extends TenantRow {
   toGo?: boolean;
   /** نظام طابعات المطبخ: when the line is marked ready by itself (0064, Saqr 2026-11-26) */
   dueAt?: string | null;
+  /** مراجعة شاشة المطبخ (0065, Saqr 2026-11-27): a line not made ready within the set minutes after send goes to «مراجعة» */
+  reviewAt?: string | null;
+  /** الشيف المشرف: the member signed in on the kitchen screen when the line arrived */
+  chefId?: string | null;
+  /** what the reviewer decided: جاهز / هدر / خرج */
+  reviewResult?: "ready" | "waste" | "out" | null;
+  reviewedBy?: string | null;
+  reviewedAt?: string | null;
   createdBy: string | null;
 }
 

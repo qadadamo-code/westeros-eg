@@ -201,7 +201,7 @@ export type MoveKind =
   | "supplier_return"
   | "sale_reversal";
 
-export type WasteReason = "expired" | "spoiled" | "burnt" | "dropped" | "overproduction" | "returned_by_guest" | "void_after_send" | "staff_meal" | "other";
+export type WasteReason = "expired" | "spoiled" | "burnt" | "dropped" | "overproduction" | "returned_by_guest" | "void_after_send" | "kds_review" | "staff_meal" | "other";
 
 /** Every change to stock. Append-only; qty/value are signed (+ in, − out). */
 export interface StockMove extends Row {

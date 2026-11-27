@@ -47,6 +47,10 @@ export default function DayClose() {
   const docs = useLive("finDocs", { where: { kind: SALES_DAY } }).data;
   const members = useLive("memberships").data;
   const openChecks = useLive("checks", { where: { status: ["open", "bill_requested"] } }).data;
+  // مراجعة شاشة المطبخ (Saqr 2026-11-27): orders still waiting in «مراجعة»
+  const cooking = useLive("orderItems", { where: { status: ["sent", "preparing"] } }).data.filter((i) => i.reviewAt && !i.reviewResult);
+  const reviewOrderIds = useMemo(() => [...new Set(cooking.map((i) => i.orderId))], [cooking]);
+  const reviewOrders = useLive("orders", { where: { id: reviewOrderIds } }, { enabled: reviewOrderIds.length > 0 }).data.filter((o) => !branch || o.branchId === branch).length;
   const who = (id: string | null) => (id ? members.find((m) => m.id === id)?.name ?? "—" : "—");
 
   const d = useMemo(() => {
@@ -83,6 +87,7 @@ export default function DayClose() {
       d.diff ? `${d.diff < 0 ? "عجز" : "زيادة"} الدرج: ${fmt(Math.abs(d.diff))}` : "الدرج مظبوط",
       `الكاش للتوريد: ${fmt(deposit)}`,
       unpaid.length ? `طلبات لسه مفتوحة: ${unpaid.length}` : "",
+      reviewOrders ? `طلبات في المطبخ محتاجة مراجعة: ${reviewOrders}` : "",
     ].filter(Boolean);
     window.open(`https://wa.me/?text=${encodeURIComponent(lines.join("\n"))}`, "_blank", "noopener");
   };
@@ -119,6 +124,9 @@ export default function DayClose() {
               </span>
             ) : "كل وردية صار لها قيد مبيعات."}
             {sync.problems.map((p) => <span key={p} className="block text-danger">{p}</span>)}
+          </Step>
+          <Step ok={!reviewOrders} title={reviewOrders ? `${reviewOrders} طلب في المطبخ محتاج مراجعة` : "مفيش طلبات في المطبخ محتاجة مراجعة"}>
+            {reviewOrders ? <>حدد على كل طلب جاهز أو هدر أو خرج من <Link to="/kitchen?view=review" className="font-semibold text-brass hover:underline">شاشة المطبخ ← مراجعة</Link>.</> : "كل طلبات المطبخ اتقفلت."}
           </Step>
           <Step ok={deposit === 0} title={deposit ? `ورّد ${fmt(deposit)} ج.م للبنك أو الخزينة الرئيسية` : "ما فيه كاش للتوريد"}>
             {deposit ? <span className="flex flex-wrap items-center gap-2">سجّل التوريد كتحويل من خزينة الفرع:<Link to="/finance/vouchers"><Button size="sm" variant="secondary" icon={<ArrowLeftRight />}>سند تحويل</Button></Link></span> : "الدرج فيه الفكة بس."}

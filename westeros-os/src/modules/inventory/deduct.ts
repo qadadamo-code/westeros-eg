@@ -19,6 +19,7 @@
  */
 import type { Db } from "@/data/hooks";
 import type { OrderItem } from "@/data/types";
+import type { WasteReason } from "@/data/inventoryTypes";
 import { uuid } from "@/lib/id";
 import { COST_CONTROL_ONLY } from "@/costControl";
 import { ACC, postJournal, signedLines } from "@/modules/accounting/api";
@@ -77,7 +78,7 @@ export async function deductForItems(db: Db, lines: Line[], opts: { trigger: "se
 }
 
 /** A line voided after it was sent: stock stays out (the food was made); its cost is reclassified to waste. */
-export async function onLineVoided(db: Db, line: Pick<OrderItem, "id" | "name" | "voidReason">, opts: { waste?: boolean } = {}): Promise<void> {
+export async function onLineVoided(db: Db, line: Pick<OrderItem, "id" | "name" | "voidReason">, opts: { waste?: boolean; reason?: WasteReason } = {}): Promise<void> {
   const waste = opts.waste !== false;
   try {
     const moves = await db.list("stockMoves", { where: { refType: "order_item", refId: line.id, kind: "sale" } });
@@ -88,7 +89,7 @@ export async function onLineVoided(db: Db, line: Pick<OrderItem, "id" | "name" |
     for (const m of moves) {
       back.push({ itemId: m.itemId, locationId: m.locationId, branchId: m.branchId, kind: "sale_reversal", qty: -m.qty, value: -m.value, refType: "order_item_void", refId: line.id, groupId });
       // no waste (Saqr 2026-11-26): the ingredients were not used, so the reversal alone puts them back in stock
-      if (waste) back.push({ itemId: m.itemId, locationId: m.locationId, branchId: m.branchId, kind: "waste", qty: m.qty, reason: "void_after_send", refType: "order_item_void", refId: line.id, groupId, note: `${line.name.ar} — ${line.voidReason ?? ""}`.trim() });
+      if (waste) back.push({ itemId: m.itemId, locationId: m.locationId, branchId: m.branchId, kind: "waste", qty: m.qty, reason: opts.reason ?? "void_after_send", refType: "order_item_void", refId: line.id, groupId, note: `${line.name.ar} — ${line.voidReason ?? ""}`.trim() });
     }
     const written = await applyMoves(db, back, { items });
     const wasted: ByAccount = {};

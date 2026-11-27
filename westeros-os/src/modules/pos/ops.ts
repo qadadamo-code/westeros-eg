@@ -150,7 +150,8 @@ export async function kitchenEstimate(db: Db, branchId: string, lines: Pick<Orde
     const [s] = await db.list("mfgSettings");
     const setup = printOf(listsOf(s), branchId);
     const since = new Date(Date.parse(at) - 3 * 3600_000).toISOString();
-    const cooking = await db.list("orderItems", { where: { status: ["sent", "preparing"] }, gte: { firedAt: since } });
+    // lines waiting in «مراجعة» are not cooking any more
+    const cooking = (await db.list("orderItems", { where: { status: ["sent", "preparing"] }, gte: { firedAt: since } })).filter((i) => !(i.reviewAt && !i.reviewResult));
     const otherIds = [...new Set(cooking.map((i) => i.orderId).filter((id) => !lines.some((l) => l.orderId === id)))];
     const others = otherIds.length ? (await db.list("orders", { where: { id: otherIds } })).filter((o) => o.branchId === branchId).length : 0;
     const ids = [...new Set(lines.map((l) => l.itemId))];

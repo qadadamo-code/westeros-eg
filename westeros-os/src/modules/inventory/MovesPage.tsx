@@ -153,7 +153,7 @@ export function WasteDialog({ open, onClose, itemId: initial }: { open: boolean;
         <ItemSelect label={L("الخامة", "Item")} value={itemId} onChange={setItemId} />
         {item ? <QtyInput key={item.id} item={item} value={qty} onChange={setQty} label={L("الكمية", "Quantity")} autoFocus /> : null}
         <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={L("السبب", "Reason")}>
-          {WASTE_REASONS.filter((r) => r.id !== "void_after_send").map((r) => (
+          {WASTE_REASONS.filter((r) => r.id !== "void_after_send" && r.id !== "kds_review").map((r) => (
             <button key={r.id} type="button" role="radio" aria-checked={reason === r.id} onClick={() => setReason(r.id)} className={`h-10 rounded-full border px-3.5 text-[13.5px] font-semibold ${reason === r.id ? "border-danger bg-danger-soft text-danger" : "border-line hover:bg-surface-2"}`}>
               {r[lang]}
             </button>

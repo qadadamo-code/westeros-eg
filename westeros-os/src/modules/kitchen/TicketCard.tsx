@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { motion } from "motion/react";
-import { Ban, Check, Crown, Flame, MoreVertical, Play, ShoppingBag, Timer, TriangleAlert, Truck, Users, UtensilsCrossed, QrCode, Hourglass } from "lucide-react";
+import { Ban, Check, ChefHat, Crown, Flame, MoreVertical, Play, ShoppingBag, Timer, TriangleAlert, Truck, Users, UtensilsCrossed, QrCode, Hourglass } from "lucide-react";
 import type { KitchenStation, OrderItem, OrderPriority } from "@/data/types";
 import { useT, useDict } from "@/i18n/i18n";
 import { cn } from "@/lib/cn";
@@ -107,6 +107,10 @@ export const TicketCard = memo(function TicketCard({ ticket, index, now, setting
           </span>
         ) : null}
         {o.waiterId && staffName.get(o.waiterId) ? <span className="truncate">{k("k.waiter", { name: staffName.get(o.waiterId)!.split(" ")[0] })}</span> : null}
+        {(() => {
+          const chef = ticket.items.find((i) => i.chefId)?.chefId;
+          return chef && staffName.get(chef) ? <span className="inline-flex items-center gap-1 truncate"><ChefHat className="size-3.5" aria-hidden />{staffName.get(chef)!.split(" ")[0]}</span> : null;
+        })()}
         {!showStations && ticket.stations.length > 1 ? <span className="ms-auto text-faint">{k("k.otherStations", { n: ticket.stations.length - 1 })}</span> : null}
       </div>
 

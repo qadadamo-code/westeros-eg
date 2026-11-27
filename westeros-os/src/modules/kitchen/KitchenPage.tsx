@@ -1,7 +1,7 @@
-import { useCallback, useMemo, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { AnimatePresence } from "motion/react";
-import { Ban, ChefHat, ClipboardList, Expand, Languages, LayoutGrid, Minimize2, Moon, Sun, Undo2, Volume2, VolumeX, CircleCheck, ArrowDownToLine } from "lucide-react";
+import { Ban, ChefHat, ClipboardCheck, ClipboardList, Expand, Languages, LayoutGrid, Minimize2, Moon, Sun, Undo2, Volume2, VolumeX, CircleCheck, ArrowDownToLine } from "lucide-react";
 import { useDb, useLive } from "@/data/hooks";
 import type { OrderItem, OrderPriority } from "@/data/types";
 import { useT, useDict } from "@/i18n/i18n";
@@ -22,8 +22,11 @@ import { useSession } from "@/auth/session";
 import { listsOf } from "@/modules/cc/lib";
 import { categoryRank, printOf } from "@/modules/cc/print/setup";
 import { KitchenPrintAlerts, useKitchenPrintIssues } from "@/modules/cc/print/issues";
+import { inReview, reviewMinOf, stampChef } from "./review";
+import { ReviewView } from "./ReviewView";
 
-type View = "line" | "allday" | "expo" | "86";
+type View = "line" | "allday" | "expo" | "review" | "86";
+const VIEWS: View[] = ["line", "allday", "expo", "review", "86"];
 const VIEW_KEY = "sufra-os.kds.view";
 const STATION_KEY = "sufra-os.kds.station";
 const SCROLL_KEY = "sufra-os.kds.autoscroll";
@@ -40,7 +43,11 @@ export function KitchenScreen({ kiosk = false }: { kiosk?: boolean }) {
   const { toast } = useToast();
   const data = useKitchen();
   const now = useNow(1000);
-  const [view, setViewState] = useState<View>(() => (["line", "allday", "expo", "86"].includes(loadRaw(VIEW_KEY) ?? "") ? (loadRaw(VIEW_KEY) as View) : "line"));
+  const [params] = useSearchParams();
+  const [view, setViewState] = useState<View>(() => {
+    const v = params.get("view") ?? loadRaw(VIEW_KEY) ?? "";
+    return VIEWS.includes(v as View) ? (v as View) : "line";
+  });
   const [station, setStationState] = useState<string | null>(() => loadRaw(STATION_KEY) || null);
   const [sound, setSound] = useState(() => soundEnabled("kds"));
   const [autoScroll, setAutoScroll] = useState(() => loadRaw(SCROLL_KEY) !== "0");
@@ -52,7 +59,7 @@ export function KitchenScreen({ kiosk = false }: { kiosk?: boolean }) {
   const stationOrder = useMemo(() => data.stations.map((s) => s.id), [data.stations]);
 
   // ترتيب الأصناف حسب الفئة من اعدادات التشغيل > شاشة المطبخ (Saqr 2026-11-26)
-  const { branchId: kBranch } = useSession();
+  const { branchId: kBranch, staff } = useSession();
   const kSetup = printOf(listsOf(useLive("mfgSettings").data[0]), kBranch);
   const byCat = kSetup.kitchenSort === "category";
   // نظام الطابعات: the kitchen screen is for viewing only, orders become ready by themselves (Saqr 2026-11-26)
@@ -61,14 +68,28 @@ export function KitchenScreen({ kiosk = false }: { kiosk?: boolean }) {
   const kMenu = useLive("menuItems", undefined, { enabled: byCat }).data;
   const kCats = useLive("menuCategories", undefined, { enabled: byCat }).data;
   const itemRank = useMemo(() => (byCat ? categoryRank(kMenu, kCats) : null), [byCat, kMenu, kCats]);
-  const tickets = useMemo(() => buildTickets(data.orders, data.items, { stationId: stationValid, stationOrder, now, itemRank }), [data.orders, data.items, stationValid, stationOrder, now, itemRank]);
-  const expo = useMemo(() => buildTickets(data.orders, data.items, { includeReady: true, stationOrder, now, itemRank }), [data.orders, data.items, stationOrder, now, itemRank]);
-  const allCount = useMemo(() => buildTickets(data.orders, data.items, { now }).length, [data.orders, data.items, now]);
+  // مراجعة (Saqr 2026-11-27): lines waiting for review leave the tickets, all-day and الباس
+  const reviewOn = reviewMinOf(kSetup) > 0;
+  const kItems = useMemo(() => data.items.filter((i) => !inReview(i)), [data.items]);
+  const branchOrderIds = useMemo(() => new Set(data.orders.map((o) => o.id)), [data.orders]);
+  const reviewCount = useMemo(() => new Set(data.items.filter((i) => inReview(i) && branchOrderIds.has(i.orderId)).map((i) => i.orderId)).size, [data.items, branchOrderIds]);
+  // الشيف المشرف: the member signed in on this kitchen screen is stamped on the lines that arrive
+  const stamped = useRef(new Set<string>());
+  useEffect(() => {
+    if (displayOnly || !staff || data.loading) return;
+    const fresh = data.items.filter((i) => (i.status === "sent" || i.status === "preparing") && !i.chefId && !i.reviewAt && branchOrderIds.has(i.orderId) && !stamped.current.has(i.id));
+    if (!fresh.length) return;
+    for (const i of fresh) stamped.current.add(i.id);
+    void stampChef(db, fresh, staff.id).catch(() => fresh.forEach((i) => stamped.current.delete(i.id)));
+  }, [data.items, data.loading, branchOrderIds, displayOnly, staff, db]);
+  const tickets = useMemo(() => buildTickets(data.orders, kItems, { stationId: stationValid, stationOrder, now, itemRank }), [data.orders, kItems, stationValid, stationOrder, now, itemRank]);
+  const expo = useMemo(() => buildTickets(data.orders, kItems, { includeReady: true, stationOrder, now, itemRank }), [data.orders, kItems, stationOrder, now, itemRank]);
+  const allCount = useMemo(() => buildTickets(data.orders, kItems, { now }).length, [data.orders, kItems, now]);
   const perStation = useMemo(() => {
     const m = new Map<string, number>();
-    for (const s of data.stations) m.set(s.id, buildTickets(data.orders, data.items, { stationId: s.id, now }).length);
+    for (const s of data.stations) m.set(s.id, buildTickets(data.orders, kItems, { stationId: s.id, now }).length);
     return m;
-  }, [data.orders, data.items, data.stations, now]);
+  }, [data.orders, kItems, data.stations, now]);
   const itemsLeft = tickets.reduce((a, tk) => a + tk.items.filter((i) => i.status !== "ready").reduce((s, i) => s + i.qty, 0), 0);
   const late = tickets.filter((tk) => ageLevel(ageMinutes(tk.firedAt, now), data.settings) === "red").length;
   const readyCount = expo.filter((tk) => tk.state === "ready").length;
@@ -182,6 +203,7 @@ export function KitchenScreen({ kiosk = false }: { kiosk?: boolean }) {
     { value: "line" as const, label: k("k.line"), icon: <LayoutGrid />, badge: tickets.length || undefined },
     { value: "allday" as const, label: k("k.allDay"), icon: <ClipboardList /> },
     { value: "expo" as const, label: k("k.expo"), icon: <CircleCheck />, badge: readyCount || undefined },
+    ...(reviewOn || reviewCount ? [{ value: "review" as const, label: "مراجعة", icon: <ClipboardCheck />, badge: reviewCount || undefined }] : []),
     { value: "86" as const, label: k("k.86"), icon: <Ban />, badge: outCount || undefined },
   ];
 
@@ -280,9 +302,11 @@ export function KitchenScreen({ kiosk = false }: { kiosk?: boolean }) {
           <EmptyState icon={<ChefHat />} title={k("k.empty")} body={k("k.emptyBody")} className="rounded-[24px] border border-dashed border-line py-20" />
         )
       ) : view === "allday" ? (
-        <AllDayView items={data.items} stationId={stationValid} stationById={data.stationById} prep={data.prep} now={now} settings={data.settings} />
+        <AllDayView items={kItems} stationId={stationValid} stationById={data.stationById} prep={data.prep} now={now} settings={data.settings} />
       ) : view === "expo" ? (
         <ExpoView tickets={expo} stationById={data.stationById} tableLabel={data.tableLabel} now={now} settings={data.settings} onServe={serve} onPing={ping} />
+      ) : view === "review" ? (
+        <ReviewView orders={data.orders} items={data.items} staffName={data.staffName} tableLabel={data.tableLabel} now={now} />
       ) : (
         <EightySixView />
       )}

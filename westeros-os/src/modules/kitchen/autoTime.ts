@@ -7,6 +7,8 @@
  */
 import type { KitchenTime } from "@/data/types";
 
+/** مراجعة شاشة المطبخ (Saqr 2026-11-27): default minutes after send before review */
+export const DEFAULT_REVIEW_MIN = 30;
 export const DEFAULT_KITCHEN_TIME: KitchenTime = { baseMin: 12, baseOrders: 3, perOrder: 3, perCategory: 1 };
 
 export const kitchenTimeOf = (t: Partial<KitchenTime> | null | undefined): KitchenTime => ({ ...DEFAULT_KITCHEN_TIME, ...(t ?? {}) });
