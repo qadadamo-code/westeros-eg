@@ -3,7 +3,7 @@
  * constants (section 4), the raw material card and its two results (3.1), and the units a stock line is typed in.
  */
 import { FINANCE_ON } from "./finance/flag";
-import type { CodeRange, MfgLists, MfgProduct, MfgSettings, MfgUnitDef, MfgUserType, RawSpec, StockItem, Units } from "@/data/types";
+import type { CodeRange, MfgLists, MfgProduct, MfgSettings, MfgUnitDef, MfgUserType, RawSpec, StockItem, StoreTypeDef, Units } from "@/data/types";
 
 export const DEFAULT_LISTS: MfgLists = {
   storageUnits: ["كيلو", "لتر", "قطعة", "كرتونة", "جالون", "بالة"],
@@ -21,7 +21,11 @@ export const DEFAULT_LISTS: MfgLists = {
   recipeNames: { main: "الوصفة الرئيسية", sub: "الوصفة الفرعية", marinade: "التتبيلة" },
 };
 
-export const listsOf = (s: Pick<MfgSettings, "lists"> | null | undefined): MfgLists => ({ ...DEFAULT_LISTS, ...(s?.lists ?? {}) });
+export const listsOf = (s: Pick<MfgSettings, "lists"> | null | undefined): MfgLists => {
+  // the added warehouse types are known everywhere a type is named once the settings are read
+  if (s?.lists) extraStoreTypes = s.lists.storeTypes ?? [];
+  return { ...DEFAULT_LISTS, ...(s?.lists ?? {}) };
+};
 
 const unitByName = (lists: MfgLists, name: string): MfgUnitDef => lists.mfgUnits.find((u) => u.name === name) ?? lists.mfgUnits[0] ?? DEFAULT_LISTS.mfgUnits[0];
 
@@ -74,7 +78,7 @@ export const toLine = (baseQty: number, item: Pick<StockItem, "kind" | "baseUnit
 export const toBaseQty = (qty: number, item: Pick<StockItem, "kind" | "baseUnit" | "packs">) => Math.round(qty * lineUnit(item).factor * 1000) / 1000;
 
 /**
- * أنواع المخازن: fixed by the restaurant, each with its temperature (ثوابت النظام shows them; they are not edited).
+ * أنواع المخازن: four fixed ones, each with its temperature, and the ones added in ثوابت النظام (Saqr 2026-11-28).
  * A warehouse, a raw material and a manufactured product each name one of them.
  */
 export const STORE_TYPES = [
@@ -83,16 +87,24 @@ export const STORE_TYPES = [
   { id: "dry", name: "مخزن جاف", temp: 25 as number | null },
   { id: "supplies", name: "مخزن مستلزمات", temp: null as number | null },
 ] as const;
-export type StoreType = (typeof STORE_TYPES)[number];
-export const storeType = (id: string | null | undefined): StoreType | null => STORE_TYPES.find((t) => t.id === id) ?? null;
+export type StoreType = StoreTypeDef;
+let extraStoreTypes: StoreTypeDef[] = [];
+/** the fixed types, then the added ones */
+export const allStoreTypes = (): StoreType[] => [...STORE_TYPES, ...extraStoreTypes];
+export const storeType = (id: string | null | undefined): StoreType | null => allStoreTypes().find((t) => t.id === id) ?? null;
 export const storeTypeName = (id: string | null | undefined) => storeType(id)?.name ?? "غير محدد";
 export const storeTemp = (id: string | null | undefined) => { const t = storeType(id); return t && t.temp != null ? `${t.temp}°` : "—"; };
-export const STORE_TYPE_OPTIONS = STORE_TYPES.map((t) => ({ value: t.id as string, label: t.temp != null ? `${t.name} (${t.temp}°)` : t.name }));
+export const storeTypeOptions = () => allStoreTypes().map((t) => ({ value: t.id, label: t.temp != null ? `${t.name} (${t.temp}°)` : t.name }));
 /** نوع المخزن of a product: its own choice, else what its storage temperature said before types existed. */
 const TEMP_TYPE: Record<MfgProduct["storageTemp"], string> = { chilled: "cold", frozen: "freezer", room: "dry" };
 export const productStoreType = (p: Pick<MfgProduct, "storeType" | "storageTemp">): string => storeType(p.storeType)?.id ?? TEMP_TYPE[p.storageTemp];
 /** the storage temperature kept beside the type (the expiry sticker and older screens read it) */
-export const tempOfStoreType = (id: string): MfgProduct["storageTemp"] => (id === "cold" ? "chilled" : id === "freezer" ? "frozen" : "room");
+export const tempOfStoreType = (id: string): MfgProduct["storageTemp"] => {
+  if (id === "cold") return "chilled";
+  if (id === "freezer") return "frozen";
+  const t = storeType(id)?.temp;
+  return t != null && t <= -1 ? "frozen" : t != null && t <= 10 ? "chilled" : "room";
+};
 /**
  * *** المخزن فيه اصناف حسب نوعه: an item kept in a named warehouse type goes into the warehouses of that type.
  * A warehouse or an item without a type (saved before the types) is not limited.

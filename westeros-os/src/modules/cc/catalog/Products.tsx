@@ -9,7 +9,7 @@ import type { MfgChickenMode, MfgMethod, MfgProduct, MfgStorageTemp } from "@/da
 import { Num } from "@/modules/production/ui";
 import { categoryName } from "@/modules/production/useProduction";
 import { Button, Card, Dialog, EmptyState, Input, Select, Table, Textarea, useToast, type Column } from "@/ui";
-import { codeRanges, nextCodeIn, num, productStoreType, STORE_TYPE_OPTIONS, storeTemp, storeTypeName, tempOfStoreType } from "../lib";
+import { codeRanges, nextCodeIn, num, productStoreType, storeTypeOptions, storeTemp, storeTypeName, tempOfStoreType } from "../lib";
 import { ExportButton, ImageField, ReadOnly } from "../ui";
 import { sheetCode, sheetNumber } from "../xlsx";
 import { useCc, type Cc } from "../useCc";
@@ -247,7 +247,7 @@ function ProductDialog({ product, cc, readOnly, onClose }: { product: MfgProduct
           <Select label="وحدة التصنيع" value={mfgUnit} onChange={(e) => set({ mfgUnit: e.target.value })} options={[...new Set([...cc.lists.mfgUnits.map((u) => u.name), mfgUnit])].map((u) => ({ value: u, label: u }))} />
           <Select label="طريقة التخزين" value={d.storageMethod} onChange={(e) => set({ storageMethod: e.target.value })} options={[{ value: "", label: "—" }, ...[...new Set([...(prod.settings?.storageMethods ?? []), d.storageMethod].filter(Boolean))].map((s) => ({ value: s, label: s }))]} />
           <Num label="كمية وحدة التخزين" value={d.storageQty} onChange={(storageQty) => set({ storageQty })} hint={d.storageMethod ? `الكمية لكل ${d.storageMethod}` : "الكمية لكل وحدة تخزين"} />
-          <Select label="نوع المخزن" value={d.storeType} onChange={(e) => set({ storeType: e.target.value })} options={STORE_TYPE_OPTIONS} />
+          <Select label="نوع المخزن" value={d.storeType} onChange={(e) => set({ storeType: e.target.value })} options={storeTypeOptions()} />
           <ReadOnly label="درجة حرارة التخزين"><span className="num" dir="ltr">{storeTemp(d.storeType)}</span></ReadOnly>
           <Num label="صلاحية المنتج" suffix="يوم" value={d.shelfLifeDays} onChange={(shelfLifeDays) => set({ shelfLifeDays })} />
           <Num label="وزن الحصة" suffix="جم" value={d.portionGrams} onChange={(portionGrams) => set({ portionGrams })} hint="ان وجد" />

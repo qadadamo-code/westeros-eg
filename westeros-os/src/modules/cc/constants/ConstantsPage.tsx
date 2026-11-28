@@ -6,11 +6,12 @@ import { Factory, Landmark, Plus, Settings2, Trash2, Warehouse, X } from "lucide
 import { Navigate, useLocation } from "react-router-dom";
 import { RouteTabs } from "@/modules/marketing/ui";
 import { useDb, useLive } from "@/data/hooks";
-import type { CodeRange, MfgCategoryDef, MfgLists, MfgMeatType, MfgSettings, MfgUnitDef } from "@/data/types";
+import type { CodeRange, MfgCategoryDef, MfgLists, MfgMeatType, MfgSettings, MfgUnitDef, StoreTypeDef } from "@/data/types";
 import { uuid } from "@/lib/id";
 import { PageHeader } from "@/shell/PageHeader";
 import { Num } from "@/modules/production/ui";
 import { Button, Card, CardHeader, EmptyState, IconButton, Input, Select, useToast } from "@/ui";
+import { cn } from "@/lib/cn";
 import { codeRanges, rangeProblem, rawRanges, specOf, STORE_TYPES, type CodeKind } from "../lib";
 import { useCc } from "../useCc";
 import FinanceConstants from "./FinanceConstants";
@@ -41,6 +42,7 @@ function ConstantsPageBody() {
   const s = prod.settings;
   const saleCats = useLive("menuCategories", { orderBy: [{ field: "sort" }] }).data;
   const menuItems = useLive("menuItems").data;
+  const locations = useLive("storageLocations").data;
   const { toast } = useToast();
   if (!s) return <EmptyState icon={<Settings2 />} title="لا توجد ثوابت لهذا المطعم" />;
   const lists = cc.lists;
@@ -51,6 +53,7 @@ function ConstantsPageBody() {
   const usedCats = new Set(prod.products.map((x) => x.category));
   const usedRawCats = new Set(cc.raws.map((i) => specOf(i, lists).category));
   const usedSale = new Set(menuItems.map((i) => i.categoryId));
+  const usedTypes = new Set<string>([...locations.map((l) => l.type ?? ""), ...cc.raws.map((i) => specOf(i, lists).storeType ?? ""), ...prod.products.map((x) => x.storeType ?? "")].filter(Boolean));
   // مدى أكواد كل فئة: a new item takes the next free code of its category
   const ranges: Record<CodeKind, Record<string, CodeRange>> = {
     raw: rawRanges(lists, cc.raws),
@@ -110,31 +113,19 @@ function ConstantsPageBody() {
           <>
         <Chips title="تعريف وحدة التخزين لمواد الخام" subtitle="حذف الوحدة من هنا يشيلها من القائمة فقط، والخامات المسجلة بها تفضل كما هي" values={lists.storageUnits} onChange={(storageUnits) => setLists({ storageUnits })} placeholder="وحدة تخزين جديدة" />
 
-        <Card>
-          <CardHeader title="أنواع المخازن ودرجة حرارتها" subtitle="أنواع ثابتة: يختار منها نوع المخزن، ونوع تخزين الخام، ونوع مخزن المنتج المصنع" />
-          <ul className="grid gap-2 px-5 pb-5 sm:grid-cols-2">
-            {STORE_TYPES.map((t) => (
-              <li key={t.id} className="flex items-center justify-between gap-3 rounded-xl border border-line px-4 py-3">
-                <span className="font-semibold">{t.name}</span>
-                <span className="num text-[14.5px] text-muted" dir="ltr">{t.temp != null ? `${t.temp}°` : "—"}</span>
-              </li>
-            ))}
-          </ul>
-        </Card>
+        <StoreTypesCard lists={lists} setLists={setLists} used={usedTypes} />
 
         <Card className="lg:col-span-2">
           <CardHeader title="تعريف فئات مواد الخام" subtitle="لكل فئة مدى أكواد: بداية الكود وعدد الأصناف. الخام الجديد ياخد أول كود فاضي في فئته" />
-          <ul className="grid gap-2 px-5 pb-3">
+          <CompactList cols={RANGE_COLS} head={["اسم الفئة", "بداية الكود", "عدد الأصناف", "الأكواد", ""]} wide>
             {lists.rawCategories.map((c) => (
-              <li key={c} className="grid items-end gap-2 rounded-xl border border-line p-3 grid-cols-[minmax(0,1fr)_auto]">
-                <div className="grid gap-2">
-                  <Input label="اسم الفئة" defaultValue={c} onBlur={(e) => { const el = e.target; void renameRawCat(c, el.value).then((ok) => { if (!ok) el.value = c; }); }} />
-                  <RangeInputs id={c} ranges={ranges.raw} nameOf={(k) => k} onSave={(r) => saveRange("raw", c, r)} />
-                </div>
-                <IconButton label={usedRawCats.has(c) ? "مستخدمة في مواد خام" : "حذف"} disabled={usedRawCats.has(c)} onClick={() => setLists({ rawCategories: lists.rawCategories.filter((x) => x !== c) })}><Trash2 /></IconButton>
-              </li>
+              <CompactRow key={c} cols={RANGE_COLS}>
+                <SmallInput aria-label="اسم الفئة" defaultValue={c} onBlur={(e) => { const el = e.target; void renameRawCat(c, el.value).then((ok) => { if (!ok) el.value = c; }); }} />
+                <RangeInputs id={c} ranges={ranges.raw} nameOf={(k) => k} onSave={(r) => saveRange("raw", c, r)} />
+                <IconButton size="sm" label={usedRawCats.has(c) ? "مستخدمة في مواد خام" : "حذف"} disabled={usedRawCats.has(c)} onClick={() => setLists({ rawCategories: lists.rawCategories.filter((x) => x !== c) })}><Trash2 /></IconButton>
+              </CompactRow>
             ))}
-          </ul>
+          </CompactList>
           <AddForm placeholder="فئة خام جديدة" onAdd={(v) => !lists.rawCategories.includes(v) && setLists({ rawCategories: [...lists.rawCategories, v] })} />
         </Card>
 
@@ -159,25 +150,29 @@ function ConstantsPageBody() {
           values={(lists.mealOptions?.length ? lists.mealOptions : [0.5, 1, 2, 4, 8]).map(String)}
           onChange={(v) => { const n = [...new Set(v.map((x) => Number(x.replace(",", "."))).filter((x) => Number.isFinite(x) && x > 0))].sort((a, b) => a - b); if (n.length) setLists({ mealOptions: n }); }} />
         <Chips title="طريقة التخزين" subtitle="القائمة المعرفة مسبقاً في بيانات المنتج المصنع" values={s.storageMethods} onChange={(storageMethods) => patch({ storageMethods })} placeholder="طريقة تخزين جديدة" />
-        <Card className="lg:col-span-2">
-          <CardHeader title="تعريف فئات الأصناف المصنعة" subtitle="كود الفئة هو أول رقم في رقم التشغيلة. ولكل فئة مدى أكواد لمنتجاتها: بداية الكود وعدد الأصناف"
+        {/* فئات الأصناف المصنعة جنب فئات أصناف البيع (Saqr 2026-11-28) */}
+        <div className="grid items-start gap-5 lg:col-span-2 lg:grid-cols-2">
+        <Card>
+          <CardHeader title="تعريف فئات الأصناف المصنعة" subtitle="كود الفئة هو أول رقم في رقم التشغيلة. ولكل فئة مدى أكواد لمنتجاتها"
             action={<Button size="sm" variant="outline" icon={<Plus />} onClick={() => patch({ productCategories: [...cats, { id: uuid(), name: { ar: "فئة جديدة", en: "New category" }, code: Math.max(0, ...cats.map((c) => c.code)) + 1, burger: null }] })}>فئة جديدة</Button>} />
-          <ul className="grid gap-2 px-5 pb-5">
+          <CompactList cols={PRODUCT_COLS} head={["اسم الفئة", "كود الفئة", "بداية الكود", "عدد الأصناف", ""]}>
             {cats.map((c) => (
-              <li key={c.id} className="grid items-end gap-2 rounded-xl border border-line p-3 sm:grid-cols-[minmax(0,1fr)_110px_minmax(0,1.6fr)_auto]">
-                <Input label="اسم الفئة" defaultValue={c.name.ar} onBlur={(e) => e.target.value.trim() && e.target.value !== c.name.ar && setCat(c.id, { name: { ar: e.target.value.trim(), en: e.target.value.trim() } })} />
-                <Num label="كود الفئة" value={c.code} onChange={(n) => setCat(c.id, { code: Math.max(0, Math.round(n)) })} />
-                <RangeInputs id={c.id} ranges={ranges.product} nameOf={(k) => cats.find((x) => x.id === k)?.name.ar ?? ""} onSave={(r) => saveRange("product", c.id, r)} />
-                <IconButton label={usedCats.has(c.id) ? "فيها منتجات، انقلها أولاً" : "حذف"} disabled={usedCats.has(c.id)} onClick={() => patch({ productCategories: cats.filter((x) => x.id !== c.id) })}><Trash2 /></IconButton>
-              </li>
+              <CompactRow key={c.id} cols={PRODUCT_COLS}>
+                <SmallInput aria-label="اسم الفئة" defaultValue={c.name.ar} onBlur={(e) => e.target.value.trim() && e.target.value !== c.name.ar && setCat(c.id, { name: { ar: e.target.value.trim(), en: e.target.value.trim() } })} />
+                <SmallInput aria-label="كود الفئة" inputMode="numeric" dir="ltr" className="num" defaultValue={String(c.code)} onBlur={(e) => { const n = Math.max(0, Math.round(Number(e.target.value) || 0)); if (n !== c.code) setCat(c.id, { code: n }); }} />
+                <RangeInputs noText id={c.id} ranges={ranges.product} nameOf={(k) => cats.find((x) => x.id === k)?.name.ar ?? ""} onSave={(r) => saveRange("product", c.id, r)} />
+                <IconButton size="sm" label={usedCats.has(c.id) ? "فيها منتجات، انقلها أولاً" : "حذف"} disabled={usedCats.has(c.id)} onClick={() => patch({ productCategories: cats.filter((x) => x.id !== c.id) })}><Trash2 /></IconButton>
+              </CompactRow>
             ))}
-          </ul>
+          </CompactList>
+          <div className="pb-4" />
         </Card>
 
         <Card>
-          <CardHeader title="تعريف فئات أصناف البيع" subtitle="لكل فئة مدى أكواد: بداية الكود وعدد الأصناف. الصنف الجديد ياخد أول كود فاضي في فئته" />
+          <CardHeader title="تعريف فئات أصناف البيع" subtitle="الأكواد تلقائي: كل فئة 1000 كود. الصنف الجديد ياخد أول كود فاضي في فئته" />
           <SaleCategories cats={saleCats} used={usedSale} />
         </Card>
+        </div>
 
         <Card>
           <CardHeader title="تعريف أنواع البرجر" subtitle="اختر فئة المنتجات لكل نوع، عشان طريقة تصنيع البرجر تعرف منتجاتها" />
@@ -259,23 +254,88 @@ function SaleCategories({ cats, used }: { cats: { id: string; name: { ar: string
   const db = useDb();
   return (
     <>
-      <ul className="grid gap-2 px-5 pb-3">
+      <CompactList cols={SALE_COLS} head={["اسم الفئة", "الأكواد (تلقائي)", ""]}>
         {cats.map((c) => (
-          <li key={c.id} className="grid items-end gap-2 rounded-xl border border-line p-3 grid-cols-[minmax(0,1fr)_auto]">
-            <div className="grid gap-2">
-              <Input label="اسم الفئة" defaultValue={c.name.ar} onBlur={(e) => {
-                const v = e.target.value.trim();
-                if (!v || cats.some((x) => x.id !== c.id && x.name.ar === v)) e.target.value = c.name.ar;
-                else if (v !== c.name.ar) void db.update("menuCategories", c.id, { name: { ar: v, en: c.name.en === c.name.ar ? v : c.name.en } });
-              }} />
-              <p className="num text-[12.5px] text-muted">{c.code != null ? `الأكواد تلقائي: من ${blockRange(c.code).from} إلى ${blockRange(c.code).to}` : "الأكواد هتتحط تلقائي (كل فئة 1000 كود)"}</p>
-            </div>
-            <IconButton label={used.has(c.id) ? "فيها أصناف" : "حذف"} disabled={used.has(c.id)} onClick={() => void db.remove("menuCategories", c.id)}><Trash2 /></IconButton>
-          </li>
+          <CompactRow key={c.id} cols={SALE_COLS}>
+            <SmallInput aria-label="اسم الفئة" defaultValue={c.name.ar} onBlur={(e) => {
+              const v = e.target.value.trim();
+              if (!v || cats.some((x) => x.id !== c.id && x.name.ar === v)) e.target.value = c.name.ar;
+              else if (v !== c.name.ar) void db.update("menuCategories", c.id, { name: { ar: v, en: c.name.en === c.name.ar ? v : c.name.en } });
+            }} />
+            <span className="num text-[12.5px] text-muted" dir="ltr">{c.code != null ? `${blockRange(c.code).from} – ${blockRange(c.code).to}` : "—"}</span>
+            <IconButton size="sm" label={used.has(c.id) ? "فيها أصناف" : "حذف"} disabled={used.has(c.id)} onClick={() => void db.remove("menuCategories", c.id)}><Trash2 /></IconButton>
+          </CompactRow>
         ))}
-      </ul>
+      </CompactList>
       <AddForm placeholder="فئة صنف بيع جديدة" onAdd={(v) => void db.insert("menuCategories", { name: { ar: v, en: v }, sort: cats.length + 1, color: "#F8BB18", icon: "utensils", stationId: null, active: true })} />
     </>
+  );
+}
+
+/* ───── compact lists (Saqr 2026-11-28: categories smaller and easier to handle): one short row per category ───── */
+const RANGE_COLS = "grid-cols-[minmax(0,1fr)_84px_84px_auto] sm:grid-cols-[minmax(0,1fr)_96px_96px_110px_auto]";
+const PRODUCT_COLS = "grid-cols-[minmax(0,1fr)_56px_76px_76px_auto]";
+const SALE_COLS = "grid-cols-[minmax(0,1fr)_110px_auto]";
+const TYPE_COLS = "grid-cols-[minmax(0,1fr)_96px_auto]";
+
+function CompactList({ cols, head, children, wide }: { cols: string; head: string[]; children: ReactNode; wide?: boolean }) {
+  return (
+    <div className={cn("grid gap-1 px-5 pb-3", wide && "lg:max-w-3xl")}>
+      <div className={cn("grid items-center gap-2 px-1 text-[12px] font-semibold text-muted", cols)}>
+        {head.map((h, i) => <span key={i} className={cn(h === "الأكواد" && "max-sm:hidden")}>{h}</span>)}
+      </div>
+      {children}
+    </div>
+  );
+}
+function CompactRow({ cols, children }: { cols: string; children: ReactNode }) {
+  return <div className={cn("grid items-center gap-2 rounded-lg px-1 py-0.5 hover:bg-surface-2", cols)}>{children}</div>;
+}
+function SmallInput({ className, ...rest }: React.InputHTMLAttributes<HTMLInputElement>) {
+  return <input {...rest} className={cn("h-9 w-full min-w-0 rounded-lg border border-line bg-surface px-2.5 text-[14px] outline-none focus:border-brass disabled:opacity-60", className)} />;
+}
+
+/** أنواع المخازن: the four fixed ones, and the ones the restaurant adds with their temperature (Saqr 2026-11-28) */
+function StoreTypesCard({ lists, setLists, used }: { lists: MfgLists; setLists: (p: Partial<MfgLists>) => void; used: Set<string> }) {
+  const extra = lists.storeTypes ?? [];
+  const [name, setName] = useState("");
+  const [temp, setTemp] = useState("");
+  const { toast } = useToast();
+  const tempOf = (v: string) => (v.trim() === "" || !Number.isFinite(Number(v)) ? null : Math.round(Number(v)));
+  const save = (next: StoreTypeDef[]) => setLists({ storeTypes: next });
+  const add = () => {
+    const n = name.trim();
+    if (!n) return;
+    if ([...STORE_TYPES, ...extra].some((t) => t.name === n || t.name.replace(/^مخزن\s+/, "") === n.replace(/^مخزن\s+/, ""))) return toast({ tone: "error", title: "النوع موجود" });
+    save([...extra, { id: `t-${uuid().slice(0, 8)}`, name: n, temp: tempOf(temp) }]);
+    setName("");
+    setTemp("");
+  };
+  return (
+    <Card>
+      <CardHeader title="أنواع المخازن ودرجة حرارتها" subtitle="يختار منها نوع المخزن، ونوع تخزين الخام، ونوع مخزن المنتج المصنع. الأربعة الأولى ثابتة" />
+      <CompactList cols={TYPE_COLS} head={["النوع", "الحرارة °", ""]}>
+        {STORE_TYPES.map((t) => (
+          <CompactRow key={t.id} cols={TYPE_COLS}>
+            <span className="px-2.5 text-[14px] font-semibold">{t.name}</span>
+            <span className="num px-2.5 text-[14px] text-muted" dir="ltr">{t.temp != null ? `${t.temp}°` : "—"}</span>
+            <span className="w-8 text-center text-[11px] text-faint">ثابت</span>
+          </CompactRow>
+        ))}
+        {extra.map((t) => (
+          <CompactRow key={t.id} cols={TYPE_COLS}>
+            <SmallInput aria-label="اسم النوع" defaultValue={t.name} onBlur={(e) => { const v = e.target.value.trim(); if (!v) e.target.value = t.name; else if (v !== t.name) save(extra.map((x) => (x.id === t.id ? { ...x, name: v } : x))); }} />
+            <SmallInput aria-label="درجة الحرارة" inputMode="numeric" dir="ltr" className="num" placeholder="—" defaultValue={t.temp != null ? String(t.temp) : ""} onBlur={(e) => { const v = tempOf(e.target.value); if (v !== t.temp) save(extra.map((x) => (x.id === t.id ? { ...x, temp: v } : x))); }} />
+            <IconButton size="sm" label={used.has(t.id) ? "مستخدم في مخازن أو أصناف" : "حذف"} disabled={used.has(t.id)} onClick={() => save(extra.filter((x) => x.id !== t.id))}><Trash2 /></IconButton>
+          </CompactRow>
+        ))}
+      </CompactList>
+      <form className="grid grid-cols-[minmax(0,1fr)_96px_auto] gap-2 px-5 pb-5" onSubmit={(e) => { e.preventDefault(); add(); }}>
+        <SmallInput placeholder="نوع مخزن جديد" value={name} onChange={(e) => setName(e.target.value)} />
+        <SmallInput placeholder="الحرارة" inputMode="numeric" dir="ltr" className="num" value={temp} onChange={(e) => setTemp(e.target.value)} />
+        <Button type="submit" size="sm" variant="outline" icon={<Plus />}>إضافة</Button>
+      </form>
+    </Card>
   );
 }
 
@@ -289,8 +349,8 @@ function AddForm({ placeholder, onAdd }: { placeholder: string; onAdd: (v: strin
   );
 }
 
-/** بداية الكود وعدد الأصناف for one category: refused when it crosses the range of another category. */
-function RangeInputs({ id, ranges, nameOf, onSave }: { id: string; ranges: Record<string, CodeRange>; nameOf: (key: string) => string; onSave: (r: CodeRange) => void }) {
+/** بداية الكود وعدد الأصناف for one category, as row cells: refused when it crosses the range of another category. */
+function RangeInputs({ id, ranges, nameOf, onSave, noText }: { noText?: boolean; id: string; ranges: Record<string, CodeRange>; nameOf: (key: string) => string; onSave: (r: CodeRange) => void }) {
   const { toast } = useToast();
   const [bump, setBump] = useState(0);
   const r = ranges[id] ?? { from: 1, count: 100 };
@@ -304,11 +364,12 @@ function RangeInputs({ id, ranges, nameOf, onSave }: { id: string; ranges: Recor
     }
     onSave({ from, count });
   };
+  const k = `${r.from}:${r.count}:${bump}`;
   return (
-    <div key={`${r.from}:${r.count}:${bump}`} className="grid items-end gap-2 grid-cols-2 sm:grid-cols-[110px_110px_minmax(0,1fr)]">
-      <Input label="بداية الكود" inputMode="numeric" dir="ltr" defaultValue={String(r.from)} onBlur={(e) => change(Number(e.target.value), r.count)} />
-      <Input label="عدد الأصناف" inputMode="numeric" dir="ltr" defaultValue={String(r.count)} onBlur={(e) => change(r.from, Number(e.target.value))} />
-      <p className="col-span-2 text-[13.5px] text-muted sm:col-span-1 sm:pb-2.5">الأكواد من <b className="num text-ink">{r.from}</b> إلى <b className="num text-ink">{r.from + r.count - 1}</b></p>
-    </div>
+    <>
+      <SmallInput key={`f${k}`} aria-label="بداية الكود" inputMode="numeric" dir="ltr" className="num" defaultValue={String(r.from)} onBlur={(e) => change(Number(e.target.value), r.count)} />
+      <SmallInput key={`c${k}`} aria-label="عدد الأصناف" inputMode="numeric" dir="ltr" className="num" defaultValue={String(r.count)} onBlur={(e) => change(r.from, Number(e.target.value))} />
+      {noText ? null : <span className="num text-[12.5px] text-muted max-sm:hidden" dir="ltr">{r.from} – {r.from + r.count - 1}</span>}
+    </>
   );
 }

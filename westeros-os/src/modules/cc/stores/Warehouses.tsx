@@ -9,7 +9,7 @@ import { useSession } from "@/auth/session";
 import { useDb, useLive } from "@/data/hooks";
 import type { StorageLocation } from "@/data/types";
 import { Button, Card, Dialog, EmptyState, Input, Select, Table, useToast, type Column } from "@/ui";
-import { fmtAt, lineUnit, num, STORE_TYPE_OPTIONS, storeTemp, storeType, storeTypeName, toLine } from "../lib";
+import { fmtAt, lineUnit, num, storeTypeOptions, storeTemp, storeType, storeTypeName, toLine } from "../lib";
 import { ExportButton, ReadOnly } from "../ui";
 import { useCc, type Cc } from "../useCc";
 
@@ -84,7 +84,7 @@ function WarehouseDialog({ row, code, cc, onClose }: { row: StorageLocation | nu
         <Input label="اسم المخزن" value={d.name} onChange={(e) => setD({ ...d, name: e.target.value })} />
         <ReadOnly label="كود المخزن (ترقيم تلقائي)"><span className="num">{code}</span></ReadOnly>
         <Select label="الفرع الموجود فيه المخزن" value={d.branchId} onChange={(e) => setD({ ...d, branchId: e.target.value })} options={cc.branches.length ? cc.branches.map((b) => ({ value: b.id, label: b.name.ar })) : [{ value: "", label: "لا يوجد فرع" }]} />
-        <Select label="نوع المخزن" value={d.type} onChange={(e) => setD({ ...d, type: e.target.value })} options={[...(d.type ? [] : [{ value: "", label: "اختر نوع المخزن" }]), ...STORE_TYPE_OPTIONS]} />
+        <Select label="نوع المخزن" value={d.type} onChange={(e) => setD({ ...d, type: e.target.value })} options={[...(d.type ? [] : [{ value: "", label: "اختر نوع المخزن" }]), ...storeTypeOptions()]} />
         <Input label="عنوان المخزن" value={d.address} onChange={(e) => setD({ ...d, address: e.target.value })} />
         <Input label="موقع المخزن (لينك لوكيشن)" dir="ltr" placeholder="https://maps.google.com/…" value={d.mapUrl} onChange={(e) => setD({ ...d, mapUrl: e.target.value })} />
         <Select label="امين المخزن" value={d.keeperId} onChange={(e) => setD({ ...d, keeperId: e.target.value })} options={[{ value: "", label: "اختر من المستخدمين" }, ...cc.members.map((m) => ({ value: m.id, label: m.name }))]} />

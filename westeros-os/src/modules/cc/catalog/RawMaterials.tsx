@@ -10,7 +10,7 @@ import { formatMoney, major } from "@/lib/money";
 import { MoneyInput } from "@/modules/marketing/ui";
 import { Num } from "@/modules/production/ui";
 import { Badge, Button, Card, Dialog, EmptyState, Input, Select, Switch, Table, useToast, type Column } from "@/ui";
-import { conversionOf, fmtDay, mfgUnitPrice, nextCodeIn, num, rawRanges, specOf, stockFieldsOf, STORE_TYPE_OPTIONS, STORE_TYPES, storeType, storeTypeName } from "../lib";
+import { conversionOf, fmtDay, mfgUnitPrice, nextCodeIn, num, rawRanges, specOf, stockFieldsOf, storeTypeOptions, allStoreTypes, storeType, storeTypeName } from "../lib";
 import { ExportButton, ImageField, Result } from "../ui";
 import { sheetCode, sheetNumber } from "../xlsx";
 import { useCc, type Cc } from "../useCc";
@@ -31,7 +31,7 @@ const FIELDS: ImportField[] = [
   { key: "الكمية في وحدة التخزين", aliases: ["الكمية في الوحدة", "معامل التحويل"] },
 ];
 const money = (u: number) => formatMoney(u, { lang: "ar" });
-const typeByName = (v: string) => { const n = v.trim().replace(/^مخزن\s+/, ""); return STORE_TYPES.find((t) => t.name === v.trim() || t.name.replace(/^مخزن\s+/, "") === n)?.id; };
+const typeByName = (v: string) => { const n = v.trim().replace(/^مخزن\s+/, ""); return allStoreTypes().find((t) => t.name === v.trim() || t.name.replace(/^مخزن\s+/, "") === n)?.id; };
 const isoDay = (s: string) => {
   const t = s.trim();
   if (/^\d{4}-\d{2}-\d{2}/.test(t)) return t.slice(0, 10);
@@ -224,7 +224,7 @@ function RawDialog({ item, cc, cats, readOnly, onClose }: { item: StockItem | nu
         <ImageField value={s.image} onChange={(image) => set({ image })} />
         <div className="grid gap-3 sm:grid-cols-2">
           <Select label="فئة الخام" value={s.category} onChange={(e) => set({ category: e.target.value })} options={[...(cats.includes(s.category) ? [] : [{ value: s.category, label: s.category || "—" }]), ...cats.map((c) => ({ value: c, label: c }))]} />
-          <Select label="نوع التخزين" value={s.storeType ?? ""} onChange={(e) => set({ storeType: e.target.value || undefined })} options={[{ value: "", label: "اختر نوع المخزن" }, ...STORE_TYPE_OPTIONS]} />
+          <Select label="نوع التخزين" value={s.storeType ?? ""} onChange={(e) => set({ storeType: e.target.value || undefined })} options={[{ value: "", label: "اختر نوع المخزن" }, ...storeTypeOptions()]} />
           <Select label="وحدة التخزين" value={s.storageUnit} onChange={(e) => set({ storageUnit: e.target.value })} options={[...new Set([...cc.lists.storageUnits, s.storageUnit])].map((u) => ({ value: u, label: u }))} />
           <MoneyInput label="اخر سعر شراء" value={s.lastPrice} onChange={(lastPrice) => set({ lastPrice })} hint={`لكل ${s.storageUnit}`} />
           <Input label="تاريخ اخر عملية شراء" type="date" dir="ltr" value={s.lastPurchaseDate ?? ""} onChange={(e) => set({ lastPurchaseDate: e.target.value || null })} />

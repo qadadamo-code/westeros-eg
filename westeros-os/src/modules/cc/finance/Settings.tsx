@@ -4,7 +4,7 @@ import { Plus, RefreshCw, Trash2 } from "lucide-react";
 import { useDb, useLive } from "@/data/hooks";
 import type { FinCosting, FinLinkRule, FinSettingsData } from "@/data/financeTypes";
 import { Button, Card, Input, Segmented, Select, Switch, useToast } from "@/ui";
-import { lineUnit, listsOf, STORE_TYPES } from "../lib";
+import { allStoreTypes, lineUnit, listsOf } from "../lib";
 import { DEFAULT_TREE } from "./chart";
 import { saveSettings } from "./ops";
 import { useFinPerms } from "./perms";
@@ -62,7 +62,7 @@ export default function Settings() {
   }, [keys]);
   const idOf = (code: string | undefined) => fin.ix.byCode.get(code ?? "")?.id ?? "";
   const scopeOptions = (scope: FinLinkRule["scope"]) =>
-    scope === "storeType" ? STORE_TYPES.map((t) => ({ value: t.id as string, label: t.name }))
+    scope === "storeType" ? allStoreTypes().map((t) => ({ value: t.id, label: t.name }))
       : scope === "category" ? lists.rawCategories.map((c) => ({ value: c, label: c }))
         : scope === "location" ? locations.map((l) => ({ value: l.id, label: l.name.ar }))
           : items.map((i) => ({ value: i.id, label: `${i.sku} · ${i.name.ar}` }));

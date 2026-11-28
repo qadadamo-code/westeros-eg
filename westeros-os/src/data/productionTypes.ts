@@ -229,7 +229,14 @@ export interface MfgSettings extends Row {
 }
 
 export interface MfgUnitDef { name: string; base: "g" | "ml" | "pc"; factor: number }
+export interface StoreTypeDef {
+  id: string;
+  name: string;
+  temp: number | null;
+}
 export interface MfgLists {
+  /** أنواع مخازن مضافة (Saqr 2026-11-28), after the four fixed ones; each with its temperature */
+  storeTypes?: StoreTypeDef[];
   /** المنيو: الخيارات الجانبية (زي Side Options في Bonbell), the names a group's options are picked from; price in pounds */
   /** عدد الوجبات في تصنيع صنف: the ready buttons (Saqr 2026-11-25), default 0.5 · 1 · 2 · 4 · 8 */
   mealOptions?: number[];
