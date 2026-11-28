@@ -17,6 +17,13 @@ import { useCc } from "../useCc";
 import FinanceConstants from "./FinanceConstants";
 import { FINANCE_ON } from "../finance/flag";
 
+/** what each recipe kind is and where it is used (Saqr 2026-11-28), from the rules of the recipe lists (recipeItems) */
+const RECIPE_HELP = {
+  main: "المنتج المصنع النهائي اللي بيدخل في أصناف البيع (زي البرجر أو الكوردن بلو). ممكن يدخل في مكوناتها وصفات فرعية وجزئية ومواد خام.",
+  sub: "منتج نص مصنع بيدخل في وصفة رئيسية (زي صوص أو عجينة). ممكن يدخل في مكوناتها وصفات جزئية ومواد خام، ومينفعش يدخل فيها وصفة رئيسية.",
+  marinade: "أصغر وصفة (زي التتبيلة أو خلطة البهارات) بتدخل في الوصفات الرئيسية والفرعية. مكوناتها مواد خام بس، ووزنها بيتحسب كوزن تتبيلة في التشغيلة.",
+} as const;
+
 const BASE_LABEL: Record<MfgUnitDef["base"], string> = { g: "وزن (جرام)", ml: "حجم (مل)", pc: "عدد (قطعة)" };
 
 export default function ConstantsPage() {
@@ -211,10 +218,13 @@ function ConstantsPageBody() {
         </Card>
 
         <Card className="lg:col-span-2">
-          <CardHeader title="تعريف اسماء الوصفات" subtitle="الرئيسية، الفرعية، التتبيلة" />
+          <CardHeader title="تعريف اسماء الوصفات" subtitle="الرئيسية، الفرعية، الجزئية. تحت كل اسم: الوصفة دي إيه وبتستخدم في إيه" />
           <div className="grid gap-3 px-5 pb-5 sm:grid-cols-3">
             {(["main", "sub", "marinade"] as const).map((k) => (
-              <Input key={k} label={k === "main" ? "الرئيسية" : k === "sub" ? "الفرعية" : "التتبيلة"} defaultValue={lists.recipeNames[k]} onBlur={(e) => e.target.value.trim() && e.target.value !== lists.recipeNames[k] && setLists({ recipeNames: { ...lists.recipeNames, [k]: e.target.value.trim() } })} />
+              <div key={k} className="grid content-start gap-2">
+                <Input label={k === "main" ? "الرئيسية" : k === "sub" ? "الفرعية" : "الجزئية"} defaultValue={lists.recipeNames[k]} onBlur={(e) => e.target.value.trim() && e.target.value !== lists.recipeNames[k] && setLists({ recipeNames: { ...lists.recipeNames, [k]: e.target.value.trim() } })} />
+                <p className="rounded-lg bg-surface-2 px-3 py-2 text-[13px] leading-relaxed text-muted">{RECIPE_HELP[k]}</p>
+              </div>
             ))}
           </div>
         </Card>

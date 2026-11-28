@@ -18,7 +18,7 @@ export const DEFAULT_LISTS: MfgLists = {
     { id: "beef", name: "برجر لحم" },
     { id: "chicken", name: "برجر دجاج" },
   ],
-  recipeNames: { main: "الوصفة الرئيسية", sub: "الوصفة الفرعية", marinade: "التتبيلة" },
+  recipeNames: { main: "الوصفة الرئيسية", sub: "الوصفة الفرعية", marinade: "الوصفة الجزئية" },
 };
 
 export const listsOf = (s: Pick<MfgSettings, "lists"> | null | undefined): MfgLists => {
