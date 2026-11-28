@@ -1,6 +1,5 @@
 /** 4- ثوابت النظام: the definitions of the document, in tabs by the main menu they belong to (2026-11-22): المخازن والفروع, التصنيع، الحسابات (خدمة التوصيل صارت قائمة رئيسية لوحدها في الإعدادات). */
 import { AreaGate, useArea } from "../useAccess";
-import { blockRange } from "../menu/codes";
 import { useState, type ReactNode } from "react";
 import { Factory, Landmark, Plus, Settings2, Trash2, Warehouse, X } from "lucide-react";
 import { Navigate, useLocation } from "react-router-dom";
@@ -48,7 +47,6 @@ function ConstantsPageBody() {
   const prod = cc.prod;
   const s = prod.settings;
   const saleCats = useLive("menuCategories", { orderBy: [{ field: "sort" }] }).data;
-  const menuItems = useLive("menuItems").data;
   const locations = useLive("storageLocations").data;
   const { toast } = useToast();
   if (!s) return <EmptyState icon={<Settings2 />} title="لا توجد ثوابت لهذا المطعم" />;
@@ -59,7 +57,6 @@ function ConstantsPageBody() {
   const setCat = (id: string, p: Partial<MfgCategoryDef>) => patch({ productCategories: cats.map((c) => (c.id === id ? { ...c, ...p } : c)) });
   const usedCats = new Set(prod.products.map((x) => x.category));
   const usedRawCats = new Set(cc.raws.map((i) => specOf(i, lists).category));
-  const usedSale = new Set(menuItems.map((i) => i.categoryId));
   const usedTypes = new Set<string>([...locations.map((l) => l.type ?? ""), ...cc.raws.map((i) => specOf(i, lists).storeType ?? ""), ...prod.products.map((x) => x.storeType ?? "")].filter(Boolean));
   // مدى أكواد كل فئة: a new item takes the next free code of its category
   const ranges: Record<CodeKind, Record<string, CodeRange>> = {
@@ -157,8 +154,7 @@ function ConstantsPageBody() {
           values={(lists.mealOptions?.length ? lists.mealOptions : [0.5, 1, 2, 4, 8]).map(String)}
           onChange={(v) => { const n = [...new Set(v.map((x) => Number(x.replace(",", "."))).filter((x) => Number.isFinite(x) && x > 0))].sort((a, b) => a - b); if (n.length) setLists({ mealOptions: n }); }} />
         <Chips title="طريقة التخزين" subtitle="القائمة المعرفة مسبقاً في بيانات المنتج المصنع" values={s.storageMethods} onChange={(storageMethods) => patch({ storageMethods })} placeholder="طريقة تخزين جديدة" />
-        {/* فئات الأصناف المصنعة جنب فئات أصناف البيع (Saqr 2026-11-28) */}
-        <div className="grid items-start gap-5 lg:col-span-2 lg:grid-cols-2">
+        {/* فئات أصناف البيع بتتعرف من المنيو بس (Saqr 2026-11-28 11:03) */}
         <Card>
           <CardHeader title="تعريف فئات الأصناف المصنعة" subtitle="كود الفئة هو أول رقم في رقم التشغيلة. ولكل فئة مدى أكواد لمنتجاتها"
             action={<Button size="sm" variant="outline" icon={<Plus />} onClick={() => patch({ productCategories: [...cats, { id: uuid(), name: { ar: "فئة جديدة", en: "New category" }, code: Math.max(0, ...cats.map((c) => c.code)) + 1, burger: null }] })}>فئة جديدة</Button>} />
@@ -175,11 +171,6 @@ function ConstantsPageBody() {
           <div className="pb-4" />
         </Card>
 
-        <Card>
-          <CardHeader title="تعريف فئات أصناف البيع" subtitle="الأكواد تلقائي: كل فئة 1000 كود. الصنف الجديد ياخد أول كود فاضي في فئته" />
-          <SaleCategories cats={saleCats} used={usedSale} />
-        </Card>
-        </div>
 
         <Card>
           <CardHeader title="تعريف أنواع البرجر" subtitle="اختر فئة المنتجات لكل نوع، عشان طريقة تصنيع البرجر تعرف منتجاتها" />
@@ -260,32 +251,9 @@ function Chips({ title, subtitle, values, onChange, placeholder, used }: { title
   );
 }
 
-function SaleCategories({ cats, used }: { cats: { id: string; name: { ar: string; en: string }; code?: number | null }[]; used: Set<string> }) {
-  const db = useDb();
-  return (
-    <>
-      <CompactList cols={SALE_COLS} head={["اسم الفئة", "الأكواد (تلقائي)", ""]}>
-        {cats.map((c) => (
-          <CompactRow key={c.id} cols={SALE_COLS}>
-            <SmallInput aria-label="اسم الفئة" defaultValue={c.name.ar} onBlur={(e) => {
-              const v = e.target.value.trim();
-              if (!v || cats.some((x) => x.id !== c.id && x.name.ar === v)) e.target.value = c.name.ar;
-              else if (v !== c.name.ar) void db.update("menuCategories", c.id, { name: { ar: v, en: c.name.en === c.name.ar ? v : c.name.en } });
-            }} />
-            <span className="num text-[12.5px] text-muted" dir="ltr">{c.code != null ? `${blockRange(c.code).from} – ${blockRange(c.code).to}` : "—"}</span>
-            <IconButton size="sm" label={used.has(c.id) ? "فيها أصناف" : "حذف"} disabled={used.has(c.id)} onClick={() => void db.remove("menuCategories", c.id)}><Trash2 /></IconButton>
-          </CompactRow>
-        ))}
-      </CompactList>
-      <AddForm placeholder="فئة صنف بيع جديدة" onAdd={(v) => void db.insert("menuCategories", { name: { ar: v, en: v }, sort: cats.length + 1, color: "#F8BB18", icon: "utensils", stationId: null, active: true })} />
-    </>
-  );
-}
-
 /* ───── compact lists (Saqr 2026-11-28: categories smaller and easier to handle): one short row per category ───── */
 const RANGE_COLS = "grid-cols-[minmax(0,1fr)_84px_84px_auto] sm:grid-cols-[minmax(0,1fr)_96px_96px_110px_auto]";
 const PRODUCT_COLS = "grid-cols-[minmax(0,1fr)_56px_76px_76px_auto]";
-const SALE_COLS = "grid-cols-[minmax(0,1fr)_110px_auto]";
 const TYPE_COLS = "grid-cols-[minmax(0,1fr)_96px_auto]";
 
 function CompactList({ cols, head, children, wide }: { cols: string; head: string[]; children: ReactNode; wide?: boolean }) {

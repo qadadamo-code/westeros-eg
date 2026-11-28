@@ -3,7 +3,7 @@
 import { useArea } from "../useAccess";
 import { searchHit } from "@/lib/search";
 import { useMemo, useState } from "react";
-import { Plus, Search, UtensilsCrossed } from "lucide-react";
+import { Search, UtensilsCrossed } from "lucide-react";
 import { useSession } from "@/auth/session";
 import { useDb, useLive } from "@/data/hooks";
 import type { MenuCategory, MenuItem, MfgRecipeLine, Recipe } from "@/data/types";
@@ -115,15 +115,15 @@ export default function SaleItems() {
   ];
   return (
     <div className="grid gap-4">
-      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_200px_auto_auto]">
+      <p className="text-[13px] text-muted">أصناف البيع وفئاتها بتتضاف وتتعدل من المنيو بس. هنا بتحدد مكونات كل صنف وتكلفته.</p>
+      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_200px_auto]">
         <Input icon={<Search />} placeholder="ابحث باسم الصنف أو الكود" value={q} onChange={(e) => setQ(e.target.value)} />
         <Select value={cat} onChange={(e) => setCat(e.target.value)} options={[{ value: "", label: "كل الفئات" }, ...cats.map((c) => ({ value: c.id, label: c.name.ar })), ...(sides.length ? [{ value: SIDES, label: "الإضافات الجانبية" }] : [])]} />
         <ExportButton file="أصناف البيع" head={["كود الصنف", "اسم الصنف", "فئة الصنف", "عدد المكونات", "تكلفة محلي", "تكلفة استلام"]} rows={() => rows.map((i) => [i.sku ?? "", i.name.ar, catName(i.categoryId), recipeOf(i.id)?.lines.length ?? 0, costOf(i.id, "dine") / 100_000, costOf(i.id, "pickup") / 100_000])} />
-        {manage && area.add ? <Button icon={<Plus />} disabled={!cats.length} onClick={() => setEdit("new")}>اضافة صنف</Button> : null}
       </div>
       {manage ? <BulkBar count={sel.rows.length} noun="صنف" onClear={sel.clear} onEdit={() => setEdit(sel.rows[0])} categories={cats.map((c) => ({ value: c.id, label: c.name.ar }))} onMove={move} onDelete={remove} /> : null}
       <Card className="overflow-hidden">
-        <Table columns={columns} rows={rows} rowKey={(i) => i.id} dense onRowClick={(i) => setEdit(i)} empty={<EmptyState compact icon={<UtensilsCrossed />} title="لا توجد أصناف بيع" body={cats.length ? undefined : "عرّف فئات أصناف البيع من ثوابت النظام أولاً"} />} />
+        <Table columns={columns} rows={rows} rowKey={(i) => i.id} dense onRowClick={(i) => setEdit(i)} empty={<EmptyState compact icon={<UtensilsCrossed />} title="لا توجد أصناف بيع" body="أصناف البيع وفئاتها بتتضاف من المنيو بس، وبتظهر هنا لوحدها علشان تحدد مكوناتها" />} />
       </Card>
       {sideRows.length ? (
         <div className="grid gap-2">

@@ -237,6 +237,8 @@ export interface MenuCategory extends TenantRow {
   externalRef?: string | null;
   /** 0045: first number of the category's block of codes (1, 1000, 2000…); its items are numbered inside it */
   code?: number | null;
+  /** 0067 (Saqr 2026-11-28): how many codes the category holds from `code`; missing = the old block of 1000 */
+  codeCount?: number | null;
   /** 0054: the branch whose menu this is (منيو منفصل لكل فرع); missing = the main branch's menu */
   branchId?: string | null;
 }

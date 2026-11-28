@@ -24,7 +24,7 @@ import { channelsOf, soldOn } from "@/data/channels";
 import { SideOptions } from "./SideOptions";
 import { groupsOf } from "./bonbell";
 import { linkPlan } from "./sideOptions";
-import { blockRange } from "./codes";
+import { rangeClash, rangeOf, suggestRange } from "./codes";
 import { useAutoCodes } from "./useAutoCodes";
 import { PriceTable } from "./PriceTable";
 import { listsOf } from "../lib";
@@ -159,7 +159,7 @@ function Body() {
       {manage && codes.fix.length ? (
         <Card className="grid gap-2 border-brass/50 p-3">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="min-w-0 flex-1 text-[13.5px]"><b className="num">{codes.fix.length}</b> صنف كودهم مش في نطاق فئتهم (كل فئة ليها 1000 كود). راجع الأكواد الجديدة قبل ما تتغير.</span>
+            <span className="min-w-0 flex-1 text-[13.5px]"><b className="num">{codes.fix.length}</b> صنف كودهم مش في نطاق أكواد فئتهم. راجع الأكواد الجديدة قبل ما تتغير.</span>
             <Button size="sm" variant="ghost" onClick={() => setShowFix((v) => !v)}>{showFix ? "إخفاء" : "عرض التغييرات"}</Button>
             <Button size="sm" variant="brass" loading={fixing} onClick={applyFix}>غيّر الأكواد</Button>
           </div>
@@ -174,7 +174,7 @@ function Body() {
       ) : null}
       <Segmented label="عرض" value={view} onChange={setView} options={[
         { value: "menu", label: "المنيو" },
-        { value: "prices", label: "جدول الأسعار" },
+        { value: "prices", label: "عرض في قائمة" },
         { value: "recommended", label: "المميزة" },
         { value: "discount", label: "عليها خصم" },
         { value: "off", label: "مش متاحة" },
@@ -196,7 +196,7 @@ function Body() {
                       <span className={cn("min-w-0 flex-1 text-[13.5px] font-semibold leading-tight", !c.active && "text-faint line-through")}>
                         {c.name.ar}
                         {c.name.en && c.name.en !== c.name.ar ? <span className="block text-[11.5px] font-medium text-muted" dir="ltr">{c.name.en}</span> : null}
-                        <span className="num block text-[11.5px] font-medium text-muted">{branchItems.filter((i) => i.categoryId === c.id).length} صنف{c.code != null ? ` · أكواد ${blockRange(c.code).from}–${blockRange(c.code).to}` : ""}</span>
+                        <span className="num block text-[11.5px] font-medium text-muted">{branchItems.filter((i) => i.categoryId === c.id).length} صنف{rangeOf(c) ? ` · أكواد ${rangeOf(c)!.from}–${rangeOf(c)!.to}` : ""}</span>
                       </span>
                     </button>
                     {manage ? (
@@ -260,7 +260,7 @@ function Body() {
           </Card>
         </div>
       )}
-      {cat ? <CategoryDialog key={cat === "new" ? "new" : cat.id} cat={cat === "new" ? null : cat} sort={cats.length + 1} count={cat === "new" ? 0 : items.filter((i) => i.categoryId === cat.id).length} onClose={() => setCat(null)} /> : null}
+      {cat ? <CategoryDialog key={cat === "new" ? "new" : cat.id} cat={cat === "new" ? null : cat} cats={cats} sort={cats.length + 1} count={cat === "new" ? 0 : items.filter((i) => i.categoryId === cat.id).length} onClose={() => setCat(null)} /> : null}
       {item ? <ItemDialog key={item === "new" ? "new" : item.id} item={item === "new" ? null : item} cats={cats} items={items} defaultCat={current?.id ?? ""} sort={items.length + 1} onClose={() => setItem(null)} onSaved={(id) => setDetail(id)} /> : null}
       {open ? <ItemDetail item={open} cats={cats} groups={groups} mods={mods} manage={manage} canDelete={area.delete} onEdit={() => setItem(open)} onClose={() => setDetail(null)} /> : null}
     </div>
@@ -427,18 +427,24 @@ function Info({ label, children }: { label: string; children: React.ReactNode })
   );
 }
 
-function CategoryDialog({ cat, sort, count, onClose }: { cat: MenuCategory | null; sort: number; count: number; onClose: () => void }) {
+function CategoryDialog({ cat, cats, sort, count, onClose }: { cat: MenuCategory | null; cats: MenuCategory[]; sort: number; count: number; onClose: () => void }) {
   const db = useDb();
   const menuBranch = useMenuBranch();
   const { toast } = useToast();
   const area = useArea();
-  const [d, setD] = useState({ ar: cat?.name.ar ?? "", en: cat?.name.en ?? "", imageUrl: cat?.imageUrl ?? null, active: cat?.active ?? true });
+  // بداية الكود وعدد الأصناف (Saqr 2026-11-28): a new category is offered the numbers right after the last category, editable
+  const r0 = (cat && rangeOf(cat)) ?? (() => { const s = suggestRange(cats); return { from: s.from, to: s.from + s.count - 1 }; })();
+  const [d, setD] = useState({ ar: cat?.name.ar ?? "", en: cat?.name.en ?? "", imageUrl: cat?.imageUrl ?? null, active: cat?.active ?? true, from: String(r0.from), count: String(r0.to - r0.from + 1) });
+  const from = Math.round(Number(d.from) || 0);
+  const size = Math.round(Number(d.count) || 0);
+  const clash = from > 0 && size > 0 ? rangeClash(cats, cat?.id ?? null, from, size) : null;
+  const badRange = from < 1 || size < 1 || !!clash;
   const [busy, setBusy] = useState(false);
   const [drop, setDrop] = useState(false);
   const save = async () => {
     setBusy(true);
     try {
-      const row = { name: { ar: d.ar.trim(), en: d.en.trim() || d.ar.trim() }, imageUrl: d.imageUrl, active: d.active };
+      const row = { name: { ar: d.ar.trim(), en: d.en.trim() || d.ar.trim() }, imageUrl: d.imageUrl, active: d.active, code: from, codeCount: size };
       if (cat) await db.update("menuCategories", cat.id, row);
       else await db.insert("menuCategories", { ...row, sort, color: "#F8BB18", icon: "utensils", stationId: null, branchId: menuBranch });
       toast({ tone: "success", title: "اتحفظت الفئة" });
@@ -466,13 +472,20 @@ function CategoryDialog({ cat, sort, count, onClose }: { cat: MenuCategory | nul
     <Dialog open onClose={onClose} size="md" title={cat ? "تعديل الفئة" : "إضافة فئة"}
       footer={<div className="flex w-full justify-between gap-2">
         <div>{cat && area.delete ? <Button variant="danger-soft" icon={<Trash2 />} disabled={count > 0} title={count ? "انقل أصنافها أو احذفها الأول" : undefined} onClick={() => setDrop(true)}>حذف</Button> : null}</div>
-        <div className="flex gap-2"><Button variant="ghost" onClick={onClose}>إلغاء</Button><Button loading={busy} disabled={!d.ar.trim()} onClick={save}>حفظ</Button></div>
+        <div className="flex gap-2"><Button variant="ghost" onClick={onClose}>إلغاء</Button><Button loading={busy} disabled={!d.ar.trim() || badRange} onClick={save}>حفظ</Button></div>
       </div>}>
       <div className="grid gap-3">
         <div className="grid gap-3 sm:grid-cols-2">
           <Input label="الاسم بالعربي" value={d.ar} onChange={(e) => setD({ ...d, ar: e.target.value })} />
           <Input label="الاسم بالإنجليزي" dir="ltr" value={d.en} onChange={(e) => setD({ ...d, en: e.target.value })} />
         </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Input label="بداية الكود" hint="رقم تلقائي بعد آخر فئة، وتقدر تغيره" inputMode="numeric" dir="ltr" className="num" value={d.from} onChange={(e) => setD({ ...d, from: e.target.value.replace(/\D/g, "") })} />
+          <Input label="عدد الأصناف" hint="كام كود محجوز للفئة دي" inputMode="numeric" dir="ltr" className="num" value={d.count} onChange={(e) => setD({ ...d, count: e.target.value.replace(/\D/g, "") })} />
+        </div>
+        <p className={cn("rounded-lg px-3 py-2 text-[13px]", badRange ? "bg-danger-soft text-danger" : "bg-surface-2 text-muted")}>
+          {clash ? `الأكواد دي داخلة في أكواد فئة «${clash.name.ar}». اختار بداية أو عدد تاني.` : badRange ? "اكتب بداية الكود وعدد الأصناف." : <>أكواد الفئة من <b className="num">{from}</b> لـ <b className="num">{from + size - 1}</b>. الصنف الجديد بياخد أول كود فاضي فيها.</>}
+        </p>
         <ImageField value={d.imageUrl} onChange={(imageUrl) => setD({ ...d, imageUrl })} />
         <Switch checked={d.active} onChange={(active) => setD({ ...d, active })} label="ظاهرة" description="الفئة المخفية ما بتظهرش للكاشير" />
         {cat && count ? <p className="text-[12.5px] text-muted">فيها {count} صنف، فما ينفعش تتحذف قبل ما أصنافها تتنقل أو تتحذف.</p> : null}
